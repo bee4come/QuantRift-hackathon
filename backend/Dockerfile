@@ -23,14 +23,11 @@ COPY backend/api/ ./api/
 COPY backend/services/ ./services/
 COPY backend/src/ ./src/
 
-# Copy data (player packs for deployment)
-COPY data/player_packs/ ./data/player_packs/
+# Create data directories (player packs will be generated at runtime)
+RUN mkdir -p data/player_packs data/bronze data/silver data/gold
 
-# Copy test_agents (required by some backend agents)
-COPY test_agents/ ./test_agents/
-
-# Create additional data directories
-RUN mkdir -p data/bronze data/silver data/gold
+# Create test_agents directory if needed
+RUN mkdir -p test_agents
 
 # Set environment variables
 ENV PYTHONPATH=/app
