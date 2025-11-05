@@ -26,9 +26,6 @@ COPY backend/src/ ./src/
 # Create data directories (player packs will be generated at runtime)
 RUN mkdir -p data/player_packs data/bronze data/silver data/gold
 
-# Create test_agents directory if needed
-RUN mkdir -p test_agents
-
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1

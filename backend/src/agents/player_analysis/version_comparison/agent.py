@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 # Reuse original CoachCardGenerator
-from test_agents.player_coach.coach_card_generator import CoachCardGenerator as OriginalGenerator
+from .coach_card_generator import CoachCardGenerator as OriginalGenerator
 
 
 class VersionComparisonAgent:

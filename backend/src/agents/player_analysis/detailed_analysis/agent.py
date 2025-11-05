@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 # Reuse original DetailedAnalyzer, modified to use shared BedrockLLM
-from test_agents.player_coach.detailed_analyzer import DetailedAnalyzer as OriginalAnalyzer
+from .detailed_analyzer import DetailedAnalyzer as OriginalAnalyzer
 
 
 class DetailedAnalysisAgent:
