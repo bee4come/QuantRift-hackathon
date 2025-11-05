@@ -113,7 +113,7 @@ class PlayerDataManager:
             job = self.jobs[puuid]
             # 如果任务完成时间在5分钟内，复用缓存
             if job.completed_at and (datetime.utcnow() - job.completed_at) < timedelta(minutes=5):
-                print(f"✅ 复用现有数据缓存 for {game_name}#{tag_line}")
+                print(f"✅ Reusing existing data cache for {game_name}#{tag_line}")
                 return job
 
         # 创建新任务（使用days而不是count）
@@ -130,9 +130,9 @@ class PlayerDataManager:
         后台任务：拉取数据并计算metrics
         """
         try:
-            print(f"\n🔄 开始准备玩家数据: {game_name}#{tag_line}")
+            print(f"\n🔄 Starting player data preparation: {game_name}#{tag_line}")
             print(f"   PUUID: {job.puuid[:30]}...")
-            print(f"   时间范围: 过去 {job.days} 天")
+            print(f"   Time range: Past {job.days} days")
 
             # 阶段1: 拉取match list (基于时间范围自动检测)
             job.status = DataStatus.FETCHING_MATCHES
@@ -147,12 +147,12 @@ class PlayerDataManager:
             if not match_ids:
                 raise Exception(f"No matches found for {game_name}#{tag_line}")
 
-            print(f"✅ 获取到 {len(match_ids)} 场比赛")
+            print(f"✅ Retrieved {len(match_ids)} matches")
             job.progress = 0.3
 
             # ⚡ 阶段2-A: 只拉取match details (pipeline优化第一阶段)
             job.status = DataStatus.FETCHING_MATCHES
-            print(f"⚡ Pipeline优化: 先拉取matches，后台处理timelines")
+            print(f"⚡ Pipeline optimization: Fetching matches first, timelines in background")
 
             matches_data = []
 
@@ -167,7 +167,7 @@ class PlayerDataManager:
 
                 import time
                 batch_start = time.time()
-                print(f"   📦 批次 {batch_idx + 1}/{total_batches}: 拉取 {len(batch_match_ids)} 场match...")
+                print(f"   📦 Batch {batch_idx + 1}/{total_batches}: Fetching {len(batch_match_ids)} matches...")
 
                 # 并行拉取本批次的matches
                 batch_tasks = [self._fetch_match(match_id, job.region) for match_id in batch_match_ids]
@@ -178,19 +178,19 @@ class PlayerDataManager:
                 batch_success = 0
                 for result in batch_results:
                     if isinstance(result, Exception):
-                        print(f"      ⚠️  跳过失败的match: {result}")
+                        print(f"      ⚠️  Skipping failed match: {result}")
                         continue
                     if result:
                         matches_data.append(result)
                         batch_success += 1
 
-                print(f"      ✅ 本批成功 {batch_success}/{len(batch_match_ids)} 场 (耗时: {batch_duration:.1f}秒)")
+                print(f"      ✅ Batch successful {batch_success}/{len(batch_match_ids)} matches (took: {batch_duration:.1f}s)")
 
                 # 更新进度（0.3-0.7区间）
                 progress = 0.3 + (0.4 * (batch_idx + 1) / total_batches)
                 job.progress = progress
 
-            print(f"✅ Match拉取完成: {len(matches_data)} 场")
+            print(f"✅ Match fetch complete: {len(matches_data)} matches")
             job.progress = 0.7
 
             # 阶段3: 计算metrics并生成Player-Pack (使用默认time_to_core)
@@ -198,7 +198,7 @@ class PlayerDataManager:
 
             import time
             calc_start = time.time()
-            print(f"\n⏱️  开始计算metrics (time_to_core使用默认值)...")
+            print(f"\n⏱️  Starting metrics calculation (time_to_core using default values)...")
 
             player_packs = self._generate_player_pack(
                 puuid=job.puuid,
@@ -209,7 +209,7 @@ class PlayerDataManager:
             )
 
             calc_duration = time.time() - calc_start
-            print(f"⏱️  计算完成耗时: {calc_duration:.2f}秒")
+            print(f"⏱️  Calculation complete, took: {calc_duration:.2f} seconds")
 
             # ✅ 保存最新的pack到job.player_pack (用于前端显示)
             job.player_pack = player_packs[-1] if player_packs else {}
@@ -241,23 +241,23 @@ class PlayerDataManager:
 
                         if new_games < existing_games:
                             should_save = False
-                            print(f"⏭️  跳过保存 pack_{patch}.json: 现有数据更完整 ({existing_games}场 vs {new_games}场)")
+                            print(f"⏭️  Skipping save pack_{patch}.json: Existing data more complete ({existing_games} games vs {new_games} games)")
                     except Exception as e:
-                        print(f"⚠️  无法读取现有 pack_{patch}.json，将覆盖: {e}")
+                        print(f"⚠️  Cannot read existing pack_{patch}.json, will overwrite: {e}")
 
                 if should_save:
                     with open(cache_file, 'w', encoding='utf-8') as f:
                         json.dump(pack, f, indent=2, ensure_ascii=False)
-                    print(f"✅ 保存 pack_{patch}.json: {pack['total_games']}场游戏")
+                    print(f"✅ Saved pack_{patch}.json: {pack['total_games']} games")
 
-            print(f"✅ 数据准备完成 (第一阶段): {game_name}#{tag_line}")
-            print(f"   总游戏数: {total_games}")
-            print(f"   Patch数: {total_patches}")
-            print(f"   缓存位置: {player_dir}")
-            print(f"   ⚡ 65%的agents现在可以使用数据了")
+            print(f"✅ Data preparation complete (phase 1): {game_name}#{tag_line}")
+            print(f"   Total games: {total_games}")
+            print(f"   Patches: {total_patches}")
+            print(f"   Cache location: {player_dir}")
+            print(f"   ⚡ 65% of agents can now use the data")
 
             # ⚡ 阶段2-B: 后台拉取timelines并更新time_to_core
-            print(f"\n🔄 启动后台任务：拉取timelines...")
+            print(f"\n🔄 Starting background task: Fetching timelines...")
             asyncio.create_task(
                 self._fetch_timelines_background(
                     match_ids=match_ids,
@@ -268,7 +268,7 @@ class PlayerDataManager:
             )
 
         except Exception as e:
-            print(f"❌ 数据准备失败: {e}")
+            print(f"❌ Data preparation failed: {e}")
             job.status = DataStatus.FAILED
             job.error = str(e)
             job.completed_at = datetime.utcnow()
@@ -290,16 +290,16 @@ class PlayerDataManager:
         end_time = int(datetime.utcnow().timestamp())
         start_time = int((datetime.utcnow() - timedelta(days=days)).timestamp())
 
-        print(f"   📅 时间范围: 过去 {days} 天")
-        print(f"   🕐 开始: {datetime.fromtimestamp(start_time)}")
-        print(f"   🕐 结束: {datetime.fromtimestamp(end_time)}")
+        print(f"   📅 Time range: Past {days} days")
+        print(f"   🕐 Start: {datetime.fromtimestamp(start_time)}")
+        print(f"   🕐 End: {datetime.fromtimestamp(end_time)}")
 
         all_match_ids = []
         start_index = 0
         batch_size = 100  # Riot API单次最多返回100场
 
         while True:
-            print(f"   📥 拉取第 {start_index}-{start_index + batch_size} 场比赛...")
+            print(f"   📥 Fetching matches {start_index}-{start_index + batch_size}...")
 
             # 使用时间范围查询
             batch = await riot_client.get_match_history(
@@ -314,15 +314,15 @@ class PlayerDataManager:
 
             if not batch or len(batch) == 0:
                 # 没有更多比赛了
-                print(f"   ✅ 已拉取完所有可用比赛: {len(all_match_ids)} 场")
+                print(f"   ✅ All available matches fetched: {len(all_match_ids)} matches")
                 break
 
             all_match_ids.extend(batch)
-            print(f"   ✅ 本批获取 {len(batch)} 场，累计 {len(all_match_ids)} 场")
+            print(f"   ✅ Batch retrieved {len(batch)} matches, total {len(all_match_ids)} matches")
 
             # 如果返回数量少于请求数量，说明已经到末尾了
             if len(batch) < batch_size:
-                print(f"   ℹ️  已到达玩家比赛历史末尾")
+                print(f"   ℹ️  Reached end of player match history")
                 break
 
             start_index += len(batch)
@@ -352,7 +352,7 @@ class PlayerDataManager:
                 return match_data
 
         except Exception as e:
-            print(f"⚠️  拉取match {match_id} 失败: {e}")
+            print(f"⚠️  Failed to fetch match {match_id}: {e}")
             return None
 
     async def _fetch_timeline(self, match_id: str, platform: str):
@@ -378,7 +378,7 @@ class PlayerDataManager:
                 return timeline_data
 
         except Exception as e:
-            print(f"⚠️  拉取timeline {match_id} 失败: {e}")
+            print(f"⚠️  Failed to fetch timeline {match_id}: {e}")
             return None
 
     def _generate_player_pack(
@@ -423,7 +423,7 @@ class PlayerDataManager:
 
         # 创建timeline映射
         timelines_map = {t['metadata']['matchId']: t for t in timelines_data}
-        print(f"     ⏱️  创建timeline映射: {time.time()-t0:.3f}秒")
+        print(f"     ⏱️  Creating timeline mapping: {time.time()-t0:.3f}s")
 
         # ✅ 按(patch, champ_id, role)聚合数据
         patch_cr_data = defaultdict(lambda: defaultdict(list))
@@ -493,20 +493,20 @@ class PlayerDataManager:
             patch_cr_data[patch][key].append(game_stats)
             filter_stats['processed'] += 1
 
-        print(f"     ⏱️  数据提取循环({len(matches_data)}场): {time.time()-t1:.3f}秒")
-        print(f"     📊 过滤统计:")
-        print(f"        - 总match数: {filter_stats['total_matches']}")
-        print(f"        - 玩家不在场: {filter_stats['player_not_found']}")
-        print(f"        - Role无效: {filter_stats['invalid_role']}")
-        print(f"        - ✅ 成功处理: {filter_stats['processed']}")
+        print(f"     ⏱️  Data extraction loop ({len(matches_data)} matches): {time.time()-t1:.3f}s")
+        print(f"     📊 Filter statistics:")
+        print(f"        - Total matches: {filter_stats['total_matches']}")
+        print(f"        - Player not found: {filter_stats['player_not_found']}")
+        print(f"        - Invalid role: {filter_stats['invalid_role']}")
+        print(f"        - ✅ Successfully processed: {filter_stats['processed']}")
 
         # 🔍 输出玩家匹配调试信息
         if filtered_matches_debug:
-            print(f"     🔍 调试：前{len(filtered_matches_debug)}个被过滤match的玩家名对比:")
-            print(f"        目标玩家: {game_name}#{tag_line}")
+            print(f"     🔍 Debug: First {len(filtered_matches_debug)} filtered matches player name comparison:")
+            print(f"        Target player: {game_name}#{tag_line}")
             for i, fm in enumerate(filtered_matches_debug, 1):
                 print(f"        Match {i} (ID: {fm['match_id'][:20]}..., QueueID: {fm['queue_id']}):")
-                print(f"          参与者样本: {fm['participants_names']}")
+                print(f"          Participant sample: {fm['participants_names']}")
 
         # ✅ 为每个patch生成一个pack
         t2 = time.time()
@@ -591,7 +591,7 @@ class PlayerDataManager:
             }
             packs.append(pack)
 
-        print(f"     ⏱️  聚合计算+Pack生成: {time.time()-t2:.3f}秒")
+        print(f"     ⏱️  Aggregation calculation + Pack generation: {time.time()-t2:.3f}s")
 
         return packs
 
@@ -716,7 +716,7 @@ class PlayerDataManager:
             await asyncio.sleep(1)
 
         # 超时
-        print(f"⚠️  等待数据超时: {puuid}")
+        print(f"⚠️  Data wait timeout: {puuid}")
         return None
 
     def get_data(self, puuid: str) -> Optional[Dict[str, Any]]:
@@ -820,7 +820,7 @@ class PlayerDataManager:
             return role_stats
 
         except Exception as e:
-            print(f"⚠️  获取role stats失败: {e}")
+            print(f"⚠️  Failed to get role stats: {e}")
             import traceback
             traceback.print_exc()
             return []
@@ -891,7 +891,7 @@ class PlayerDataManager:
             return best_champions[:limit]
 
         except Exception as e:
-            print(f"⚠️  获取best champions失败: {e}")
+            print(f"⚠️  Failed to get best champions: {e}")
             import traceback
             traceback.print_exc()
             return []
@@ -951,7 +951,7 @@ class PlayerDataManager:
                                 'assists': 0
                             })
                         except Exception as e:
-                            print(f"⚠️  读取timeline失败 {match_id}: {e}")
+                            print(f"⚠️  Failed to read timeline {match_id}: {e}")
                             continue
 
                     return matches
@@ -1005,13 +1005,13 @@ class PlayerDataManager:
                     })
 
                 except Exception as e:
-                    print(f"⚠️  解析match失败: {e}")
+                    print(f"⚠️  Failed to parse match: {e}")
                     continue
 
             return matches
 
         except Exception as e:
-            print(f"⚠️  获取recent matches失败: {e}")
+            print(f"⚠️  Failed to get recent matches: {e}")
             import traceback
             traceback.print_exc()
             return []
@@ -1031,7 +1031,7 @@ class PlayerDataManager:
         try:
             import time
             bg_start = time.time()
-            print(f"\n🔄 后台任务开始：拉取 {len(match_ids)} 场timelines")
+            print(f"\n🔄 Background task started: Fetching {len(match_ids)} timelines")
 
             timelines_data = []
 
@@ -1045,7 +1045,7 @@ class PlayerDataManager:
                 batch_match_ids = match_ids[start_idx:end_idx]
 
                 batch_start = time.time()
-                print(f"   📦 后台批次 {batch_idx + 1}/{total_batches}: 拉取 {len(batch_match_ids)} 场timeline...")
+                print(f"   📦 Background batch {batch_idx + 1}/{total_batches}: Fetching {len(batch_match_ids)} timelines...")
 
                 # 并行拉取本批次的timelines
                 batch_tasks = [self._fetch_timeline(match_id, region) for match_id in batch_match_ids]
@@ -1061,16 +1061,16 @@ class PlayerDataManager:
                         timelines_data.append(result)
                         batch_success += 1
 
-                print(f"      ✅ 后台批次成功 {batch_success}/{len(batch_match_ids)} 场 (耗时: {batch_duration:.1f}秒)")
+                print(f"      ✅ Background batch successful {batch_success}/{len(batch_match_ids)} timelines (took: {batch_duration:.1f}s)")
 
             bg_duration = time.time() - bg_start
-            print(f"✅ 后台timeline拉取完成: {len(timelines_data)} 场 (总耗时: {bg_duration:.1f}秒)")
+            print(f"✅ Background timeline fetch complete: {len(timelines_data)} timelines (total time: {bg_duration:.1f}s)")
 
             # 保存timeline数据到job（供API使用）
             job = self.jobs.get(puuid)
             if job:
                 job.timelines_data = timelines_data
-                print(f"💾 Timeline数据已保存到job: {len(timelines_data)} 场")
+                print(f"💾 Timeline data saved to job: {len(timelines_data)} timelines")
 
             # 保存timeline数据到磁盘（供timeline_deep_dive agent使用）
             timelines_dir = player_dir / "timelines"
@@ -1087,9 +1087,9 @@ class PlayerDataManager:
                     # 🛡️ 【关键验证】：只保存包含目标玩家的timeline
                     if puuid not in participants:
                         skipped_count += 1
-                        print(f"⚠️  跳过timeline {match_id}: 不包含目标玩家")
-                        print(f"     目标PUUID: {puuid[:40]}...")
-                        print(f"     第1个参与者: {participants[0][:40]}...")
+                        print(f"⚠️  Skipping timeline {match_id}: Does not contain target player")
+                        print(f"     Target PUUID: {puuid[:40]}...")
+                        print(f"     First participant: {participants[0][:40]}...")
                         continue
 
                     # ✅ 验证通过，保存timeline
@@ -1099,19 +1099,19 @@ class PlayerDataManager:
                     saved_count += 1
 
                 except Exception as e:
-                    print(f"⚠️  保存timeline失败: {e}")
+                    print(f"⚠️  Failed to save timeline: {e}")
 
-            print(f"💾 Timeline文件已保存到磁盘: {saved_count}/{len(timelines_data)} 场")
+            print(f"💾 Timeline files saved to disk: {saved_count}/{len(timelines_data)} timelines")
             if skipped_count > 0:
-                print(f"🛡️ 数据安全：过滤掉 {skipped_count} 个不属于目标玩家的timeline")
+                print(f"🛡️ Data security: Filtered out {skipped_count} timelines not belonging to target player")
 
             # 更新player packs中的time_to_core
-            print(f"🔄 更新time_to_core...")
+            print(f"🔄 Updating time_to_core...")
             await self._update_time_to_core(puuid, player_dir, timelines_data)
-            print(f"✅ 后台任务完成，timeline_deep_dive agent现在可以使用完整数据了")
+            print(f"✅ Background task complete, timeline_deep_dive agent can now use full data")
 
         except Exception as e:
-            print(f"⚠️  后台timeline拉取失败（不影响其他agents）: {e}")
+            print(f"⚠️  Background timeline fetch failed (does not affect other agents): {e}")
 
     async def _update_time_to_core(
         self,
@@ -1125,16 +1125,16 @@ class PlayerDataManager:
         try:
             # 创建timeline映射: match_id -> timeline_data
             timelines_map = {t['metadata']['matchId']: t for t in timelines_data}
-            print(f"   📊 可用timeline数据: {len(timelines_map)} 场")
+            print(f"   📊 Available timeline data: {len(timelines_map)} timelines")
 
             # 从job中获取原始matches_data
             job = self.jobs.get(puuid)
             if not job or not job.matches_data:
-                print(f"   ⚠️  未找到原始match数据，无法更新time_to_core")
+                print(f"   ⚠️  Original match data not found, cannot update time_to_core")
                 return
 
             matches_data = job.matches_data
-            print(f"   📊 可用match数据: {len(matches_data)} 场")
+            print(f"   📊 Available match data: {len(matches_data)} matches")
 
             # 为每场比赛计算真实的time_to_core
             match_time_to_core = {}  # {match_id: {participant_id: time_to_core}}
@@ -1158,7 +1158,7 @@ class PlayerDataManager:
                         match_time_to_core[match_id] = {}
                     match_time_to_core[match_id][participant_id] = time_to_core
 
-            print(f"   ✅ 计算完成: {len(match_time_to_core)} 场比赛的time_to_core")
+            print(f"   ✅ Calculation complete: {len(match_time_to_core)} matches time_to_core")
 
             # 更新每个pack文件
             updated_packs = 0
@@ -1213,12 +1213,12 @@ class PlayerDataManager:
                     with open(pack_file, 'w', encoding='utf-8') as f:
                         json.dump(pack, f, indent=2, ensure_ascii=False)
                     updated_packs += 1
-                    print(f"   ✅ 更新 {pack_file.name}: avg_time_to_core已更新")
+                    print(f"   ✅ Updated {pack_file.name}: avg_time_to_core updated")
 
-            print(f"   ✅ 后台更新完成: {updated_packs} 个pack文件已更新")
+            print(f"   ✅ Background update complete: {updated_packs} pack files updated")
 
         except Exception as e:
-            print(f"⚠️  更新time_to_core失败: {e}")
+            print(f"⚠️  Failed to update time_to_core: {e}")
             import traceback
             traceback.print_exc()
 
