@@ -26,7 +26,7 @@ export async function GET(
     console.log('Backend URL:', BACKEND_URL);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for year data
     
     try {
       const response = await fetch(url, {
@@ -65,9 +65,9 @@ export async function GET(
       // Handle abort/timeout
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
         return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Request timed out after 30 seconds. The backend is taking too long to respond.',
+          {
+            success: false,
+            error: 'Request timed out after 120 seconds. Backend may be processing large dataset. Please try again.',
             backendUrl: url
           },
           { status: 504 }
