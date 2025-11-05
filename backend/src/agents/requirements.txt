@@ -1,0 +1,13 @@
+# AWS Bedrock Agent Core SDK
+boto3>=1.39.15
+bedrock-agentcore>=1.0.0
+
+# Google ADK Python
+google-adk>=0.1.0
+google-genai>=0.3.0
+
+# Environment and Configuration
+python-dotenv>=1.0.0
+
+# Data Processing
+pathlib>=1.0.1

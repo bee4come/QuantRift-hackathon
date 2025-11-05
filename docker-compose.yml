@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Backend FastAPI Server
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: rift-rewind-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # AWS Bedrock Configuration (Required)
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
+
+      # Riot API Configuration (Required)
+      - RIOT_API_KEY=${RIOT_API_KEY}
+      - RIOT_API_KEY_SECONDARY=${RIOT_API_KEY_SECONDARY:-}
+      - RIOT_API_KEY_THIRD=${RIOT_API_KEY_THIRD:-}
+      - RIOT_API_KEY_FOURTH=${RIOT_API_KEY_FOURTH:-}
+      - RIOT_API_KEY_FIFTH=${RIOT_API_KEY_FIFTH:-}
+
+      # Application Configuration
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - rift-rewind-network
+
+  # Frontend Next.js App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rift-rewind-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:8000
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - rift-rewind-network
+
+networks:
+  rift-rewind-network:
+    driver: bridge

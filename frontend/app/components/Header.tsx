@@ -1,0 +1,588 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Clock, MapPin, ChevronDown, X, Sun, Moon, Info, Github, Trophy } from 'lucide-react';
+import { useTimeOfDay, type TimeOfDay } from '../hooks/useTimeOfDay';
+import { useServerStatus } from '../hooks/useServerStatus';
+import { useServerContext } from '../context/ServerContext';
+import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import { useSearch } from '../context/SearchContext';
+import AboutModal from './AboutModal';
+import LocationPermissionModal from './LocationPermissionModal';
+import EsportsAnnouncements from './EsportsAnnouncements';
+import ShinyText from './ui/ShinyText';
+import ClickSpark from './ui/ClickSpark';
+import Link from 'next/link';
+
+const TIME_LABELS: Record<TimeOfDay, string> = {
+  midnight: 'Midnight',
+  'before-dawn': 'Before Dawn',
+  dawn: 'Daybreak',
+  sunrise: 'Sunrise',
+  morning: 'Morning',
+  'late-morning': 'Late Morning',
+  noon: 'Noon',
+  'early-afternoon': 'Early Afternoon',
+  'late-afternoon': 'Late Afternoon',
+  sunset: 'Sunset',
+  'early-evening': 'Early Evening',
+  night: 'Night',
+};
+
+const IS_DAYTIME: Record<TimeOfDay, boolean> = {
+  midnight: false,
+  'before-dawn': false,
+  dawn: false,
+  sunrise: true,
+  morning: true,
+  'late-morning': true,
+  noon: true,
+  'early-afternoon': true,
+  'late-afternoon': true,
+  sunset: false,
+  'early-evening': false,
+  night: false,
+};
+
+interface HeaderProps {
+  hideServerAndEsports?: boolean;
+}
+
+export default function Header({ hideServerAndEsports = false }: HeaderProps) {
+  const { selectedServer, servers, selectServer, currentTimezone, timeDiff, showLocationModal, handleLocationAllow, handleLocationDeny } = useServerContext();
+  const { isSearched, clearPlayers } = useSearch();
+  const timeOfDay = useTimeOfDay(currentTimezone);
+  const serverStatus = useServerStatus(selectedServer.code.toLowerCase());
+  const colors = useAdaptiveColors();
+  const [currentTime, setCurrentTime] = useState('');
+  const [isGatewayOpen, setIsGatewayOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  const formatters = useMemo(() => ({
+    time: new Intl.DateTimeFormat('en-US', {
+      timeZone: currentTimezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }),
+    tz: new Intl.DateTimeFormat('en-US', {
+      timeZone: currentTimezone,
+      timeZoneName: 'short'
+    })
+  }), [currentTimezone]);
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const timeString = formatters.time.format(now);
+      const tzAbbr = formatters.tz.formatToParts(now).find(part => part.type === 'timeZoneName')?.value || '';
+      setCurrentTime(`${timeString} ${tzAbbr}`);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+
+    return () => clearInterval(interval);
+  }, [formatters]);
+
+  // Fix hydration mismatch for timeDiff
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const formatTimeDiff = (diff: number) => {
+    if (diff === 0) return '';
+    const sign = diff > 0 ? '+' : '';
+    return `${sign}${diff}h`;
+  };
+
+  const handleServerSelect = (serverCode: string) => {
+    selectServer(serverCode);
+    setIsGatewayOpen(false);
+  };
+
+  const handleTitleClick = () => {
+    if (isSearched) {
+      clearPlayers();
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -30 }}
+      animate={{ 
+        opacity: 1, 
+        y: 0,
+      }}
+      transition={{ duration: 0.8, ease: 'easeOut' }}
+      className={`w-full px-4 transition-all duration-500 ${
+        isSearched ? 'pt-4 pb-2' : 'pt-12 pb-6'
+      }`}
+      style={{ zIndex: 1000 }}
+    >
+      {/* Top Right Icons - Only on first page */}
+      {!isSearched && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+          className="absolute top-6 right-6 flex items-center gap-3"
+          style={{ zIndex: 100 }}
+        >
+          <Link href="/champions">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-3 rounded-xl transition-all cursor-pointer"
+              style={{
+                background: 'linear-gradient(135deg, rgba(10, 132, 255, 0.2) 0%, rgba(191, 90, 242, 0.2) 100%)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(10, 132, 255, 0.3) 0%, rgba(191, 90, 242, 0.3) 100%)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(10, 132, 255, 0.2) 0%, rgba(191, 90, 242, 0.2) 100%)'}
+            >
+              <Trophy className="w-5 h-5" style={{ color: '#F5F5F7' }} />
+            </motion.div>
+          </Link>
+
+          <motion.a
+            href="https://github.com/uzerone"
+            target="_blank"
+            rel="noopener noreferrer"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="p-3 rounded-xl transition-all"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+          >
+            <Github className="w-5 h-5" style={{ color: '#F5F5F7' }} />
+          </motion.a>
+          
+          <ClickSpark
+            sparkColor="#F5F5F7"
+            sparkSize={8}
+            sparkRadius={12}
+            sparkCount={6}
+            duration={300}
+            inline={true}
+          >
+            <motion.button
+              onClick={() => setIsAboutOpen(true)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-3 rounded-xl transition-all"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+            >
+              <Info className="w-5 h-5" style={{ color: '#F5F5F7' }} />
+            </motion.button>
+          </ClickSpark>
+        </motion.div>
+      )}
+
+      {/* About Modal */}
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+
+      {/* Location Permission Modal */}
+      <LocationPermissionModal 
+        isOpen={showLocationModal} 
+        onAllow={handleLocationAllow}
+        onDeny={handleLocationDeny}
+      />
+
+      <div className={`transition-all duration-500 ${
+        isSearched 
+          ? 'max-w-7xl mx-auto flex items-center justify-between' 
+          : 'max-w-4xl mx-auto text-center'
+      }`}>
+        {/* Logo and Title */}
+        <motion.div
+          initial={{ scale: 0.9 }}
+          animate={{ 
+            scale: 1,
+            justifyContent: isSearched ? 'flex-start' : 'center'
+          }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className={`flex items-center transition-all duration-500 ${
+            isSearched ? 'mb-0' : 'justify-center mb-3'
+          }`}
+        >
+          {isSearched ? (
+            <ClickSpark
+              sparkColor="#FFFFFF"
+              sparkSize={10}
+              sparkRadius={15}
+              sparkCount={8}
+              duration={400}
+            >
+              <button 
+                onClick={handleTitleClick}
+                className="hover:opacity-80 transition-opacity duration-300"
+              >
+                <h1 style={{ 
+                  fontFamily: '"Hunters K-Pop", sans-serif',
+                  fontSize: '3rem',
+                  fontWeight: 400,
+                  letterSpacing: '0.02em',
+                  backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.15) 25%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.12) 75%, rgba(255, 255, 255, 0.07) 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  color: 'transparent',
+                  filter: 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1))',
+                  textShadow: '0 1px 2px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.08)',
+                  position: 'relative',
+                  WebkitTextStroke: '0.5px rgba(255, 255, 255, 0.15)',
+                  transition: 'font-size 0.5s ease, filter 0.3s ease',
+                  cursor: 'pointer'
+                }}>
+                  QuantRift
+                </h1>
+              </button>
+            </ClickSpark>
+          ) : (
+            <Link href="/" className="hover:opacity-80 transition-opacity duration-300">
+              <h1 style={{ 
+                fontFamily: '"Hunters K-Pop", sans-serif',
+                fontSize: '9rem',
+                fontWeight: 400,
+                letterSpacing: '0.02em',
+                backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.15) 25%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.12) 75%, rgba(255, 255, 255, 0.07) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                color: 'transparent',
+                filter: 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1))',
+                textShadow: '0 1px 2px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.08)',
+                position: 'relative',
+                WebkitTextStroke: '0.5px rgba(255, 255, 255, 0.15)',
+                transition: 'font-size 0.5s ease, filter 0.3s ease',
+                cursor: 'pointer'
+              }}>
+                QuantRift
+              </h1>
+            </Link>
+          )}
+        </motion.div>
+
+        {/* Season & Patch - Fixed Info */}
+        {!isSearched && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.25, duration: 0.6 }}
+            className="flex items-center justify-center gap-3 mb-4"
+          >
+            <ShinyText text="Season 2025" speed={3} className="text-base font-medium" />
+            <div className="w-px h-4" style={{ backgroundColor: colors.borderColor }}></div>
+            <a 
+              href="https://www.leagueoflegends.com/en-us/news/game-updates/patch-25-20-notes/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-base font-medium hover:opacity-70 transition-opacity"
+              style={{ color: colors.textSecondary }}
+            >
+              <ShinyText text="Patch 25.20" speed={3} className="text-base font-medium" />
+            </a>
+          </motion.div>
+        )}
+
+        {/* Server & Time Info Block / Gateway */}
+        {!isSearched && !hideServerAndEsports && (
+          <div className="flex justify-center">
+            <AnimatePresence mode="wait">
+              {!isGatewayOpen ? (
+              <motion.div
+                key="info-bar"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="fluid-glass rounded-2xl px-6 py-3 inline-flex items-center gap-4 mb-3 overflow-hidden"
+              >
+              {/* Server Selector with Status */}
+              <ClickSpark
+                sparkColor="#32D74B"
+                sparkSize={8}
+                sparkRadius={12}
+                sparkCount={6}
+                duration={300}
+                inline={true}
+              >
+                <button
+                  onClick={() => setIsGatewayOpen(true)}
+                  className="flex items-center gap-2 relative z-10 hover:opacity-80 transition-opacity"
+                >
+                <MapPin className="w-4 h-4" style={{ color: '#32D74B' }} />
+                <ShinyText
+                  text={`${selectedServer.code} Server`}
+                  speed={3}
+                  className="text-sm font-medium"
+                />
+                {isMounted && timeDiff !== 0 && (
+                  <span
+                    className="text-xs font-mono px-1.5 py-0.5 rounded"
+                    style={{
+                      color: timeDiff > 0 ? '#32D74B' : '#FF453A',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                    }}
+                  >
+                    <ShinyText
+                      text={formatTimeDiff(timeDiff)}
+                      speed={2}
+                      className="text-xs font-mono"
+                    />
+                  </span>
+                )}
+                <ChevronDown className="w-3 h-3" style={{ color: '#AEAEB2' }} />
+                <div 
+                  className="w-2 h-2 rounded-full"
+                  style={{ 
+                    backgroundColor: serverStatus === 'online' ? '#32D74B' : serverStatus === 'issues' ? '#FF453A' : '#8E8E93',
+                    animation: serverStatus === 'issues' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
+                    boxShadow: serverStatus === 'online' ? '0 0 8px rgba(50, 215, 75, 0.6)' : serverStatus === 'issues' ? '0 0 8px rgba(255, 69, 58, 0.6)' : 'none'
+                  }}
+                />
+              </button>
+              </ClickSpark>
+              
+              <div className="w-px h-4 relative z-10" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}></div>
+              
+              {/* Time */}
+              <div className="flex items-center gap-2 relative z-10">
+                <Clock className="w-4 h-4" style={{ color: '#5AC8FA' }} />
+                <ShinyText 
+                  text={currentTime} 
+                  speed={2} 
+                  className="text-sm font-mono tabular-nums"
+                />
+              </div>
+              
+              <div className="w-px h-4 relative z-10" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}></div>
+              
+              {/* Day/Night */}
+              <div className="flex items-center gap-2 relative z-10">
+                {IS_DAYTIME[timeOfDay] ? (
+                  <Sun className="w-4 h-4" style={{ color: '#FFD60A' }} />
+                ) : (
+                  <Moon className="w-4 h-4" style={{ color: '#FFD60A' }} />
+                )}
+                <ShinyText 
+                  text={TIME_LABELS[timeOfDay]} 
+                  speed={3} 
+                  className="text-sm font-medium"
+                />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="gateway"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="fluid-glass rounded-3xl overflow-hidden mb-3"
+              style={{ 
+                width: '580px',
+                maxHeight: '520px',
+                border: '2px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 25px 80px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.2) inset'
+              }}
+            >
+              {/* Gateway Header */}
+              <div 
+                className="px-8 py-5 border-b relative z-10 flex items-center justify-between"
+                style={{ 
+                  background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.25) 100%)',
+                  borderColor: 'rgba(255, 255, 255, 0.12)'
+                }}
+              >
+                <div>
+                  <ShinyText 
+                    text="SERVER GATEWAY" 
+                    speed={4} 
+                    className="text-2xl font-bold tracking-tight mb-1"
+                  />
+                  <ShinyText 
+                    text="League of Legends • Regional Selection" 
+                    speed={3} 
+                    className="text-xs tracking-wider uppercase"
+                  />
+                </div>
+                <ClickSpark
+                  sparkColor="#8E8E93"
+                  sparkSize={6}
+                  sparkRadius={10}
+                  sparkCount={4}
+                  duration={250}
+                  inline={true}
+                >
+                  <button
+                    onClick={() => setIsGatewayOpen(false)}
+                    className="hover:opacity-70 transition-opacity"
+                  >
+                    <X className="w-6 h-6" style={{ color: '#8E8E93' }} />
+                  </button>
+                </ClickSpark>
+              </div>
+
+              {/* Gateway Grid Header */}
+              <div 
+                className="grid grid-cols-12 gap-4 px-8 py-3.5 text-xs font-bold tracking-widest uppercase border-b relative z-10"
+                style={{ 
+                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#8E8E93',
+                  fontFamily: 'var(--font-geist-mono), monospace'
+                }}
+              >
+                <div className="col-span-2">GATE</div>
+                <div className="col-span-5">DESTINATION</div>
+                <div className="col-span-2 text-center">TIME</div>
+                <div className="col-span-3 text-right">STATUS</div>
+              </div>
+
+              {/* Server List */}
+              <div 
+                className="overflow-y-auto" 
+                style={{ 
+                  maxHeight: '400px',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollBehavior: 'smooth'
+                }}
+              >
+                {servers.map((server) => {
+                  const localOffset = -new Date().getTimezoneOffset() / 60;
+                  const serverTimeDiff = server.offset - localOffset;
+                  const isSelected = selectedServer.code === server.code;
+                  
+                  return (
+                    <ClickSpark
+                      key={server.code}
+                      sparkColor={isSelected ? "#0A84FF" : "#FFFFFF"}
+                      sparkSize={6}
+                      sparkRadius={10}
+                      sparkCount={4}
+                      duration={250}
+                    >
+                      <button
+                        onClick={() => handleServerSelect(server.code)}
+                        className="w-full grid grid-cols-12 gap-4 px-8 py-4 border-b relative z-10"
+                        style={{ 
+                          backgroundColor: isSelected ? 'rgba(10, 132, 255, 0.2)' : 'transparent',
+                          borderColor: 'rgba(255, 255, 255, 0.06)',
+                          fontFamily: 'var(--font-geist-mono), monospace',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = isSelected ? 'rgba(10, 132, 255, 0.25)' : 'rgba(255, 255, 255, 0.08)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isSelected ? 'rgba(10, 132, 255, 0.2)' : 'transparent';
+                        }}
+                      >
+                      {/* Gate/Server Code */}
+                      <div className="col-span-2 flex items-center">
+                        <div 
+                          className="font-mono text-lg font-black tracking-widest px-3 py-1.5 rounded"
+                          style={{ 
+                            color: isSelected ? '#0A84FF' : '#F5F5F7',
+                            backgroundColor: isSelected ? 'rgba(10, 132, 255, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                            border: `1px solid ${isSelected ? 'rgba(10, 132, 255, 0.4)' : 'rgba(255, 255, 255, 0.15)'}`
+                          }}
+                        >
+                          {server.code}
+                        </div>
+                      </div>
+
+                      {/* Destination/Server Name */}
+                      <div className="col-span-5 flex items-center">
+                        <span 
+                          className="text-sm font-semibold tracking-wide"
+                          style={{ color: '#F5F5F7' }}
+                        >
+                          {server.name}
+                        </span>
+                      </div>
+
+                      {/* Time Difference */}
+                      <div className="col-span-2 flex items-center justify-center">
+                        {serverTimeDiff !== 0 ? (
+                          <span 
+                            className="font-mono text-sm font-bold px-2.5 py-1 rounded"
+                            style={{ 
+                              color: serverTimeDiff > 0 ? '#32D74B' : '#FFD60A',
+                              backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                              border: `1px solid ${serverTimeDiff > 0 ? 'rgba(50, 215, 75, 0.3)' : 'rgba(255, 214, 10, 0.3)'}`
+                            }}
+                          >
+                            {formatTimeDiff(serverTimeDiff)}
+                          </span>
+                        ) : (
+                          <span 
+                            className="font-mono text-sm font-bold"
+                            style={{ color: '#5AC8FA' }}
+                          >
+                            UTC
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Status Indicator */}
+                      <div className="col-span-3 flex items-center justify-end gap-2">
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full animate-pulse"
+                          style={{ 
+                            backgroundColor: '#32D74B',
+                            boxShadow: '0 0 10px rgba(50, 215, 75, 0.8)'
+                          }}
+                        />
+                        <span 
+                          className="text-xs font-bold tracking-wider"
+                          style={{ color: '#32D74B' }}
+                        >
+                          ONLINE
+                        </span>
+                      </div>
+                      </button>
+                    </ClickSpark>
+                  );
+                })}
+              </div>
+            </motion.div>
+            )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Esports Schedule - Small block below server selection */}
+        {!isSearched && !hideServerAndEsports && (
+          <div className="w-full max-w-2xl mx-auto px-4">
+            <EsportsAnnouncements />
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+

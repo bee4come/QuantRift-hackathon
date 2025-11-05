@@ -1,0 +1,14 @@
+# Test configuration for quantitative metrics
+user_mode:
+  enabled: true
+  patch_version: "14.1"
+  analysis_mode: "comprehensive"
+
+governance:
+  confidence_threshold: 0.85
+  min_sample_size: 10
+
+output:
+  precision: 3
+  include_metadata: true
+  save_intermediate: false

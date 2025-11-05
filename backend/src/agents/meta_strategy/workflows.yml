@@ -1,0 +1,566 @@
+# MetaStrategyAgent Workflow Configurations
+# 定义预设的 Agent 协同工作流
+
+# ==============================================================================
+# Workflow 1: Quick Diagnosis (快速诊断)
+# ==============================================================================
+quick_diagnosis:
+  description: "快速诊断和改进建议 (5-7分钟)"
+  estimated_time: "5-7 min"
+  efficiency_gain: "50%"
+
+  phases:
+    - phase: 1
+      name: "弱点诊断"
+      agents:
+        - name: weakness_analysis
+          class: WeaknessAnalysisAgent
+          init_params:
+            model: "haiku"
+          params:
+            packs_dir: "{packs_dir}"
+            recent_count: 5
+            output_dir: "{output_dir}/weakness_analysis"
+      mode: sequential
+
+    - phase: 2
+      name: "英雄推荐"
+      agents:
+        - name: champion_recommendation
+          class: ChampionRecommendationAgent
+          init_params:
+            model: "haiku"
+            enable_rl: true
+          params:
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/champion_recommendation"
+      mode: sequential
+      dependencies:
+        - weakness_analysis
+
+  data_sharing:
+    weakness_data:
+      source: weakness_analysis
+      targets:
+        - champion_recommendation
+      fields:
+        - low_winrate_champions
+        - weak_roles
+        - recent_performance
+
+# ==============================================================================
+# Workflow 2: Comprehensive Profile (全面档案)
+# ==============================================================================
+comprehensive_profile:
+  description: "全面玩家档案 (15-18分钟)"
+  estimated_time: "15-18 min"
+  efficiency_gain: "60%"
+
+  phases:
+    - phase: 1
+      name: "年度总结 (基础数据加载)"
+      agents:
+        - name: annual_summary
+          class: AnnualSummaryAgent
+          init_params:
+            model: "haiku"
+          params:
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/annual_summary"
+          cache_output: all_packs
+      mode: sequential
+
+    - phase: 2
+      name: "专项分析 (并行执行)"
+      agents:
+        - name: weakness_analysis
+          class: WeaknessAnalysisAgent
+          init_params:
+            model: "haiku"
+          params:
+            packs_dir: "{packs_dir}"
+            recent_count: 5
+            output_dir: "{output_dir}/weakness_analysis"
+          use_cache: all_packs
+
+        - name: role_specialization
+          class: RoleSpecializationAgent
+          init_params:
+            model: "haiku"
+          params:
+            packs_dir: "{packs_dir}"
+            role: "{main_role}"
+            output_dir: "{output_dir}/role_specialization"
+          use_cache: all_packs
+
+        - name: progress_tracker
+          class: ProgressTrackerAgent
+          init_params:
+            model: "haiku"
+          params:
+            packs_dir: "{packs_dir}"
+            window_size: 10
+            output_dir: "{output_dir}/progress_tracker"
+          use_cache: all_packs
+
+        - name: peer_comparison
+          class: PeerComparisonAgent
+          init_params:
+            model: "haiku"
+          params:
+            packs_dir: "{packs_dir}"
+            rank: "{rank}"
+            output_dir: "{output_dir}/peer_comparison"
+      mode: parallel
+      dependencies:
+        - annual_summary
+
+    - phase: 3
+      name: "英雄推荐"
+      agents:
+        - name: champion_recommendation
+          class: ChampionRecommendationAgent
+          init_params:
+            model: "haiku"
+            enable_rl: true
+          params:
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/champion_recommendation"
+      mode: sequential
+      dependencies:
+        - weakness_analysis
+        - role_specialization
+
+  data_sharing:
+    all_packs_cache:
+      source: annual_summary
+      targets:
+        - weakness_analysis
+        - role_specialization
+        - progress_tracker
+      fields:
+        - all_packs_data
+
+    analysis_results:
+      source:
+        - weakness_analysis
+        - role_specialization
+      targets:
+        - champion_recommendation
+      fields:
+        - weak_champions
+        - main_role
+        - champion_pool
+
+# ==============================================================================
+# Workflow 3: Role Mastery Analysis (位置精通)
+# ==============================================================================
+role_mastery:
+  description: "位置精通分析 (10-12分钟)"
+  estimated_time: "10-12 min"
+  efficiency_gain: "45%"
+
+  phases:
+    - phase: 1
+      name: "年度总结"
+      agents:
+        - name: annual_summary
+          class: AnnualSummaryAgent
+          params:
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/annual_summary"
+      mode: sequential
+      cache_output: all_packs
+
+    - phase: 2
+      name: "位置专精分析"
+      agents:
+        - name: role_specialization
+          class: RoleSpecializationAgent
+          params:
+            packs_dir: "{packs_dir}"
+            role: "{main_role}"
+            output_dir: "{output_dir}/role_specialization"
+          use_cache: all_packs
+      mode: sequential
+      dependencies:
+        - annual_summary
+
+    - phase: 3
+      name: "英雄掌握度分析 (并行)"
+      agents:
+        # 动态生成，基于 phase 2 的 top N champions
+        - name: champion_mastery_dynamic
+          class: ChampionMasteryAgent
+          params:
+            packs_dir: "{packs_dir}"
+            champion_id: "{dynamic}"  # 从 role_specialization 结果获取
+            output_dir: "{output_dir}/champion_mastery"
+          use_cache: all_packs
+      mode: parallel
+      dependencies:
+        - role_specialization
+      dynamic_count: 3  # Top 3 champions
+      params_source: phase2_top_champions
+
+# ==============================================================================
+# Workflow 4: Team Optimization (组队优化)
+# ==============================================================================
+team_optimization:
+  description: "组队优化建议 (8-10分钟)"
+  estimated_time: "8-10 min"
+  efficiency_gain: "65%"
+
+  requirements:
+    - gold_layer_parquet
+    - player_keys
+    - compositions
+
+  phases:
+    - phase: 1
+      name: "团队分析 (完全并行)"
+      agents:
+        - name: team_synergy
+          class: TeamSynergyAgent
+          params:
+            player_keys: "{player_keys}"
+            parquet_path: "{parquet_path}"
+            output_dir: "{output_dir}/team_synergy"
+
+        - name: risk_forecaster
+          class: RiskForecasterAgent
+          params:
+            our_composition: "{our_composition}"
+            enemy_composition: "{enemy_composition}"
+            output_dir: "{output_dir}/risk_forecaster"
+
+        - name: drafting_coach
+          class: DraftingCoachAgent
+          params:
+            our_composition: "{our_composition}"
+            enemy_composition: "{enemy_composition}"
+            output_dir: "{output_dir}/drafting_coach"
+      mode: parallel
+
+# ==============================================================================
+# Workflow 5: Postgame Review (赛后复盘)
+# ==============================================================================
+postgame_review:
+  description: "单局快速复盘 (30秒-2分钟)"
+  estimated_time: "30s-2 min"
+  efficiency_gain: "N/A"
+
+  requirements:
+    - match_features
+    - timeline_features
+
+  phases:
+    - phase: 1
+      name: "赛后诊断"
+      agents:
+        - name: postgame_review
+          class: PostgameReviewAgent
+          init_params:
+            use_llm: false
+            model: "haiku"
+          params:
+            match_features: "{match_features}"
+            timeline_features: "{timeline_features}"
+            output_dir: "{output_dir}/postgame_review"
+      mode: sequential
+
+  optional_phases:
+    - phase: 2
+      name: "出装对比"
+      condition: "{compare_builds}"
+      agents:
+        - name: build_simulator
+          class: BuildSimulatorAgent
+          params:
+            champion_id: "{champion_id}"
+            role: "{role}"
+            build_a: "{build_a}"
+            build_b: "{build_b}"
+            output_dir: "{output_dir}/build_simulator"
+
+# ==============================================================================
+# Workflow 6: Seasonal Review (赛季总结)
+# ==============================================================================
+seasonal_review:
+  description: "赛季完整总结 (20-25分钟)"
+  estimated_time: "20-25 min"
+  efficiency_gain: "60%"
+
+  phases:
+    - phase: 1
+      name: "年度总结"
+      agents:
+        - name: annual_summary
+          class: AnnualSummaryAgent
+          params:
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/annual_summary"
+      mode: sequential
+      cache_output: all_packs
+
+    - phase: 2
+      name: "跨版本分析 (并行)"
+      agents:
+        - name: multi_version
+          class: MultiVersionAgent
+          params:
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/multi_version"
+          use_cache: all_packs
+
+        - name: progress_tracker
+          class: ProgressTrackerAgent
+          params:
+            packs_dir: "{packs_dir}"
+            window_size: 10
+            output_dir: "{output_dir}/progress_tracker"
+          use_cache: all_packs
+      mode: parallel
+      dependencies:
+        - annual_summary
+
+    - phase: 3
+      name: "专项诊断 (并行)"
+      agents:
+        - name: weakness_analysis
+          class: WeaknessAnalysisAgent
+          params:
+            packs_dir: "{packs_dir}"
+            recent_count: 5
+            output_dir: "{output_dir}/weakness_analysis"
+          use_cache: all_packs
+
+        - name: role_specialization
+          class: RoleSpecializationAgent
+          params:
+            packs_dir: "{packs_dir}"
+            role: "{main_role}"
+            output_dir: "{output_dir}/role_specialization"
+          use_cache: all_packs
+
+        - name: peer_comparison
+          class: PeerComparisonAgent
+          params:
+            packs_dir: "{packs_dir}"
+            rank: "{rank}"
+            output_dir: "{output_dir}/peer_comparison"
+      mode: parallel
+      dependencies:
+        - annual_summary
+
+    - phase: 4
+      name: "英雄推荐"
+      agents:
+        - name: champion_recommendation
+          class: ChampionRecommendationAgent
+          init_params:
+            model: "haiku"
+            enable_rl: true
+          params:
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/champion_recommendation"
+      mode: sequential
+      dependencies:
+        - weakness_analysis
+        - role_specialization
+
+# ==============================================================================
+# Workflow 7: Champion Deep Dive (英雄深度分析)
+# ==============================================================================
+champion_deep_dive:
+  description: "单个英雄的深度掌握分析 (8-10分钟)"
+  estimated_time: "8-10 min"
+  efficiency_gain: "55%"
+
+  phases:
+    - phase: 1
+      name: "数据加载"
+      agents:
+        - name: annual_summary
+          class: AnnualSummaryAgent
+          init_params:
+            model: "haiku"
+          params:
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/annual_summary"
+          cache_output: all_packs
+      mode: sequential
+
+    - phase: 2
+      name: "英雄掌握度深度分析"
+      agents:
+        - name: champion_mastery
+          class: ChampionMasteryAgent
+          init_params:
+            model: "sonnet"
+          params:
+            champion_id: "{champion_id}"
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/champion_mastery"
+          use_cache: all_packs
+      mode: sequential
+      dependencies:
+        - annual_summary
+
+    - phase: 3
+      name: "出装优化分析 (可选)"
+      agents:
+        - name: build_simulator
+          class: BuildSimulatorAgent
+          init_params:
+            model_id: "haiku"
+            parquet_path: "{parquet_path}"
+          params:
+            champion_id: "{champion_id}"
+            role: "{role}"
+            build_a: "{build_a}"
+            build_b: "{build_b}"
+            output_dir: "{output_dir}/build_simulator"
+      mode: sequential
+      optional: true
+      dependencies:
+        - champion_mastery
+
+  data_sharing:
+    all_packs_cache:
+      source: annual_summary
+      targets:
+        - champion_mastery
+      fields:
+        - all_packs_data
+
+# ==============================================================================
+# Workflow 8: Peer Benchmark (同段位基准对比)
+# ==============================================================================
+peer_benchmark:
+  description: "全面的同段位对比分析 (10-12分钟)"
+  estimated_time: "10-12 min"
+  efficiency_gain: "50%"
+
+  phases:
+    - phase: 1
+      name: "数据加载"
+      agents:
+        - name: annual_summary
+          class: AnnualSummaryAgent
+          init_params:
+            model: "haiku"
+          params:
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/annual_summary"
+          cache_output: all_packs
+      mode: sequential
+
+    - phase: 2
+      name: "多维度对比分析 (并行)"
+      agents:
+        - name: peer_comparison
+          class: PeerComparisonAgent
+          init_params:
+            model: "sonnet"
+          params:
+            packs_dir: "{packs_dir}"
+            rank: "{rank}"
+            output_dir: "{output_dir}/peer_comparison"
+          use_cache: all_packs
+
+        - name: role_specialization
+          class: RoleSpecializationAgent
+          init_params:
+            model: "haiku"
+          params:
+            packs_dir: "{packs_dir}"
+            role: "{main_role}"
+            output_dir: "{output_dir}/role_specialization"
+          use_cache: all_packs
+
+        - name: weakness_analysis
+          class: WeaknessAnalysisAgent
+          init_params:
+            model: "haiku"
+          params:
+            packs_dir: "{packs_dir}"
+            recent_count: 10
+            output_dir: "{output_dir}/weakness_analysis"
+          use_cache: all_packs
+      mode: parallel
+      dependencies:
+        - annual_summary
+
+    - phase: 3
+      name: "改进建议"
+      agents:
+        - name: champion_recommendation
+          class: ChampionRecommendationAgent
+          init_params:
+            model: "haiku"
+            enable_rl: true
+          params:
+            packs_dir: "{packs_dir}"
+            output_dir: "{output_dir}/champion_recommendation"
+      mode: sequential
+      dependencies:
+        - peer_comparison
+        - weakness_analysis
+
+  data_sharing:
+    all_packs_cache:
+      source: annual_summary
+      targets:
+        - peer_comparison
+        - role_specialization
+        - weakness_analysis
+      fields:
+        - all_packs_data
+
+    analysis_results:
+      source:
+        - peer_comparison
+        - weakness_analysis
+      targets:
+        - champion_recommendation
+      fields:
+        - comparison_data
+        - weak_champions
+
+# ==============================================================================
+# Agent Class Mappings
+# ==============================================================================
+agent_classes:
+  annual_summary: "src.agents.player_analysis.annual_summary.agent.AnnualSummaryAgent"
+  weakness_analysis: "src.agents.player_analysis.weakness_analysis.agent.WeaknessAnalysisAgent"
+  progress_tracker: "src.agents.player_analysis.progress_tracker.agent.ProgressTrackerAgent"
+  role_specialization: "src.agents.player_analysis.role_specialization.agent.RoleSpecializationAgent"
+  champion_mastery: "src.agents.player_analysis.champion_mastery.agent.ChampionMasteryAgent"
+  champion_recommendation: "src.agents.player_analysis.champion_recommendation.agent.ChampionRecommendationAgent"
+  peer_comparison: "src.agents.player_analysis.peer_comparison.agent.PeerComparisonAgent"
+  multi_version: "src.agents.player_analysis.multi_version.agent.MultiVersionAgent"
+  team_synergy: "src.agents.player_analysis.team_synergy.agent.TeamSynergyAgent"
+  risk_forecaster: "src.agents.player_analysis.risk_forecaster.agent.RiskForecasterAgent"
+  drafting_coach: "src.agents.player_analysis.drafting_coach.agent.DraftingCoachAgent"
+  build_simulator: "src.agents.player_analysis.build_simulator.agent.BuildSimulatorAgent"
+  postgame_review: "src.agents.player_analysis.postgame_review.agent.PostgameReviewAgent"
+
+# ==============================================================================
+# Parameter Templates
+# ==============================================================================
+default_params:
+  packs_dir: "path/to/packs"
+  output_dir: "output/workflow_name"
+  rank: "PLATINUM"
+  main_role: "TOP"
+  recent_count: 5
+  window_size: 10
+  enable_rl: true
+  parquet_path: "data/gold/parquet/fact_match_performance.parquet"
+
+  # Champion Deep Dive specific parameters
+  champion_id: 92  # Example: Riven
+  role: "TOP"
+  build_a: [3071, 3142, 3053]  # Example build A
+  build_b: [3078, 3074, 3053]  # Example build B

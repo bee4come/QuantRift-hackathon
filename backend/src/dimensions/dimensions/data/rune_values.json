@@ -1,0 +1,440 @@
+{
+  "metadata": {
+    "table_name": "DimRuneValue",
+    "description": "Rune trigger rates and values for quantitative analysis",
+    "last_updated": "2025-09-29T11:54:05.827351",
+    "record_count": 25
+  },
+  "records": [
+    {
+      "row_id": "rune_value_8005_14.1",
+      "rune_id": 8005,
+      "rune_name": "Press the Attack",
+      "rune_type": "keystone",
+      "tree_name": "Precision",
+      "trigger_rate_per_min": 3.2,
+      "value_per_proc": 180.0,
+      "scaling_type": "ad_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "adc",
+        "jungle",
+        "top"
+      ],
+      "notes": "3-hit proc, 120+12%AD damage"
+    },
+    {
+      "row_id": "rune_value_8008_14.1",
+      "rune_id": 8008,
+      "rune_name": "Lethal Tempo",
+      "rune_type": "keystone",
+      "tree_name": "Precision",
+      "trigger_rate_per_min": 2.8,
+      "value_per_proc": 0.0,
+      "scaling_type": "fixed",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "adc",
+        "top"
+      ],
+      "notes": "Attack speed steroid, no direct damage"
+    },
+    {
+      "row_id": "rune_value_8021_14.1",
+      "rune_id": 8021,
+      "rune_name": "Fleet Footwork",
+      "rune_type": "keystone",
+      "tree_name": "Precision",
+      "trigger_rate_per_min": 4.5,
+      "value_per_proc": 85.0,
+      "scaling_type": "level",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "adc",
+        "mid"
+      ],
+      "notes": "Heal + movement speed, 30-240+30%bAD+30%AP"
+    },
+    {
+      "row_id": "rune_value_8010_14.1",
+      "rune_id": 8010,
+      "rune_name": "Conqueror",
+      "rune_type": "keystone",
+      "tree_name": "Precision",
+      "trigger_rate_per_min": 2.1,
+      "value_per_proc": 220.0,
+      "scaling_type": "ad_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "top",
+        "jungle",
+        "mid"
+      ],
+      "notes": "Stacking AD + healing, high value when stacked"
+    },
+    {
+      "row_id": "rune_value_8112_14.1",
+      "rune_id": 8112,
+      "rune_name": "Electrocute",
+      "rune_type": "keystone",
+      "tree_name": "Domination",
+      "trigger_rate_per_min": 2.8,
+      "value_per_proc": 195.0,
+      "scaling_type": "ap_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "mid",
+        "jungle",
+        "support"
+      ],
+      "notes": "3 separate attacks, 30-180+50%bAD+25%AP"
+    },
+    {
+      "row_id": "rune_value_8124_14.1",
+      "rune_id": 8124,
+      "rune_name": "Predator",
+      "rune_type": "keystone",
+      "tree_name": "Domination",
+      "trigger_rate_per_min": 1.2,
+      "value_per_proc": 150.0,
+      "scaling_type": "level",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "jungle"
+      ],
+      "notes": "Active ganking tool, 40-120+25%bAD+15%AP"
+    },
+    {
+      "row_id": "rune_value_8128_14.1",
+      "rune_id": 8128,
+      "rune_name": "Dark Harvest",
+      "rune_type": "keystone",
+      "tree_name": "Domination",
+      "trigger_rate_per_min": 3.8,
+      "value_per_proc": 160.0,
+      "scaling_type": "ap_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "mid",
+        "jungle"
+      ],
+      "notes": "Scaling execution, 20-60+25%bAD+15%AP per soul"
+    },
+    {
+      "row_id": "rune_value_9923_14.1",
+      "rune_id": 9923,
+      "rune_name": "Hail of Blades",
+      "rune_type": "keystone",
+      "tree_name": "Domination",
+      "trigger_rate_per_min": 2.5,
+      "value_per_proc": 0.0,
+      "scaling_type": "fixed",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "adc",
+        "jungle"
+      ],
+      "notes": "Attack speed burst, no direct damage"
+    },
+    {
+      "row_id": "rune_value_8214_14.1",
+      "rune_id": 8214,
+      "rune_name": "Summon Aery",
+      "rune_type": "keystone",
+      "tree_name": "Sorcery",
+      "trigger_rate_per_min": 8.5,
+      "value_per_proc": 65.0,
+      "scaling_type": "ap_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "support",
+        "mid"
+      ],
+      "notes": "Poke/shield, 10-40+10%AP+15%bAD"
+    },
+    {
+      "row_id": "rune_value_8229_14.1",
+      "rune_id": 8229,
+      "rune_name": "Arcane Comet",
+      "rune_type": "keystone",
+      "tree_name": "Sorcery",
+      "trigger_rate_per_min": 4.2,
+      "value_per_proc": 110.0,
+      "scaling_type": "ap_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "mid",
+        "support"
+      ],
+      "notes": "Skillshot follow-up, 30-100+20%AP+35%bAD"
+    },
+    {
+      "row_id": "rune_value_8230_14.1",
+      "rune_id": 8230,
+      "rune_name": "Phase Rush",
+      "rune_type": "keystone",
+      "tree_name": "Sorcery",
+      "trigger_rate_per_min": 1.8,
+      "value_per_proc": 0.0,
+      "scaling_type": "fixed",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "mid",
+        "top"
+      ],
+      "notes": "Movement speed utility, no direct damage"
+    },
+    {
+      "row_id": "rune_value_8437_14.1",
+      "rune_id": 8437,
+      "rune_name": "Grasp of the Undying",
+      "rune_type": "keystone",
+      "tree_name": "Resolve",
+      "trigger_rate_per_min": 3.5,
+      "value_per_proc": 95.0,
+      "scaling_type": "level",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "top",
+        "support"
+      ],
+      "notes": "Sustain in extended trades, 4%maxHP damage"
+    },
+    {
+      "row_id": "rune_value_8439_14.1",
+      "rune_id": 8439,
+      "rune_name": "Aftershock",
+      "rune_type": "keystone",
+      "tree_name": "Resolve",
+      "trigger_rate_per_min": 2.1,
+      "value_per_proc": 140.0,
+      "scaling_type": "level",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "support",
+        "jungle",
+        "top"
+      ],
+      "notes": "Post-CC burst, 25-120+8%bHP"
+    },
+    {
+      "row_id": "rune_value_8465_14.1",
+      "rune_id": 8465,
+      "rune_name": "Guardian",
+      "rune_type": "keystone",
+      "tree_name": "Resolve",
+      "trigger_rate_per_min": 1.9,
+      "value_per_proc": 120.0,
+      "scaling_type": "level",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "support"
+      ],
+      "notes": "Shield ally, 50-130+15%bAD+25%AP"
+    },
+    {
+      "row_id": "rune_value_8360_14.1",
+      "rune_id": 8360,
+      "rune_name": "Unsealed Spellbook",
+      "rune_type": "keystone",
+      "tree_name": "Inspiration",
+      "trigger_rate_per_min": 0.8,
+      "value_per_proc": 0.0,
+      "scaling_type": "fixed",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "top",
+        "support"
+      ],
+      "notes": "Utility keystone, no direct damage value"
+    },
+    {
+      "row_id": "rune_value_8351_14.1",
+      "rune_id": 8351,
+      "rune_name": "Glacial Augment",
+      "rune_type": "keystone",
+      "tree_name": "Inspiration",
+      "trigger_rate_per_min": 2.3,
+      "value_per_proc": 45.0,
+      "scaling_type": "ap_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "support",
+        "mid"
+      ],
+      "notes": "Slow utility with damage, 15-45+5%AP"
+    },
+    {
+      "row_id": "rune_value_8358_14.1",
+      "rune_id": 8358,
+      "rune_name": "First Strike",
+      "rune_type": "keystone",
+      "tree_name": "Inspiration",
+      "trigger_rate_per_min": 2.7,
+      "value_per_proc": 175.0,
+      "scaling_type": "ad_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "mid",
+        "adc",
+        "top"
+      ],
+      "notes": "Damage amp + gold, 10%+8%AD/12%AP extra damage"
+    },
+    {
+      "row_id": "rune_value_8009_14.1",
+      "rune_id": 8009,
+      "rune_name": "Presence of Mind",
+      "rune_type": "secondary",
+      "tree_name": "Precision",
+      "trigger_rate_per_min": 6.0,
+      "value_per_proc": 35.0,
+      "scaling_type": "level",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "mid",
+        "adc"
+      ],
+      "notes": "Mana sustain + max mana/energy"
+    },
+    {
+      "row_id": "rune_value_8014_14.1",
+      "rune_id": 8014,
+      "rune_name": "Coup de Grace",
+      "rune_type": "secondary",
+      "tree_name": "Precision",
+      "trigger_rate_per_min": 4.5,
+      "value_per_proc": 85.0,
+      "scaling_type": "ad_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "adc",
+        "mid",
+        "jungle"
+      ],
+      "notes": "Execute damage, 8% extra damage <40% HP"
+    },
+    {
+      "row_id": "rune_value_8126_14.1",
+      "rune_id": 8126,
+      "rune_name": "Cheap Shot",
+      "rune_type": "secondary",
+      "tree_name": "Domination",
+      "trigger_rate_per_min": 5.2,
+      "value_per_proc": 45.0,
+      "scaling_type": "ap_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "mid",
+        "jungle",
+        "support"
+      ],
+      "notes": "CC follow-up, 10-45 true damage"
+    },
+    {
+      "row_id": "rune_value_8139_14.1",
+      "rune_id": 8139,
+      "rune_name": "Taste of Blood",
+      "rune_type": "secondary",
+      "tree_name": "Domination",
+      "trigger_rate_per_min": 3.8,
+      "value_per_proc": 28.0,
+      "scaling_type": "ap_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "mid",
+        "top"
+      ],
+      "notes": "Sustain, 16-30+15%bAD+8%AP heal"
+    },
+    {
+      "row_id": "rune_value_8237_14.1",
+      "rune_id": 8237,
+      "rune_name": "Scorch",
+      "rune_type": "secondary",
+      "tree_name": "Sorcery",
+      "trigger_rate_per_min": 6.8,
+      "value_per_proc": 32.0,
+      "scaling_type": "ap_ratio",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "mid",
+        "support"
+      ],
+      "notes": "Poke enhancement, 15-35+10%AP"
+    },
+    {
+      "row_id": "rune_value_8232_14.1",
+      "rune_id": 8232,
+      "rune_name": "Waterwalking",
+      "rune_type": "secondary",
+      "tree_name": "Sorcery",
+      "trigger_rate_per_min": 0.0,
+      "value_per_proc": 0.0,
+      "scaling_type": "fixed",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "jungle"
+      ],
+      "notes": "River movement + AD/AP, no direct damage"
+    },
+    {
+      "row_id": "rune_value_8444_14.1",
+      "rune_id": 8444,
+      "rune_name": "Second Wind",
+      "rune_type": "secondary",
+      "tree_name": "Resolve",
+      "trigger_rate_per_min": 4.2,
+      "value_per_proc": 18.0,
+      "scaling_type": "level",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "top",
+        "mid"
+      ],
+      "notes": "Sustain after damage, 6+4%missing HP heal"
+    },
+    {
+      "row_id": "rune_value_8451_14.1",
+      "rune_id": 8451,
+      "rune_name": "Overgrowth",
+      "rune_type": "secondary",
+      "tree_name": "Resolve",
+      "trigger_rate_per_min": 0.0,
+      "value_per_proc": 0.0,
+      "scaling_type": "fixed",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "champion_roles": [
+        "top",
+        "jungle",
+        "support"
+      ],
+      "notes": "Scaling health, no direct damage value"
+    }
+  ]
+}

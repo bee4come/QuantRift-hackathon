@@ -1,0 +1,97 @@
+.shiny-text {
+  background: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #f0f0f0 25%,
+    #ffffff 50%,
+    #f0f0f0 75%,
+    #ffffff 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shiny-sweep 5s ease-in-out infinite;
+  display: inline-block;
+}
+
+.shiny-text.disabled {
+  animation: none;
+  background: none;
+  -webkit-text-fill-color: inherit;
+  color: inherit;
+}
+
+@keyframes shiny-sweep {
+  0% {
+    background-position: -200% 0;
+  }
+  50% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Dark theme variant */
+.shiny-text.dark {
+  background: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #e0e0e0 25%,
+    #ffffff 50%,
+    #e0e0e0 75%,
+    #ffffff 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Colored variants */
+.shiny-text.blue {
+  background: linear-gradient(
+    90deg,
+    #5AC8FA 0%,
+    #0A84FF 25%,
+    #5AC8FA 50%,
+    #0A84FF 75%,
+    #5AC8FA 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.shiny-text.green {
+  background: linear-gradient(
+    90deg,
+    #32D74B 0%,
+    #28A745 25%,
+    #32D74B 50%,
+    #28A745 75%,
+    #32D74B 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.shiny-text.purple {
+  background: linear-gradient(
+    90deg,
+    #BF5AF2 0%,
+    #8E44AD 25%,
+    #BF5AF2 50%,
+    #8E44AD 75%,
+    #BF5AF2 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

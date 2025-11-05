@@ -1,0 +1,848 @@
+{
+  "metadata": {
+    "table_name": "DimItemPassive",
+    "description": "Item statistics and passive effects for top 50 items",
+    "last_updated": "2025-09-29T11:18:49.631191",
+    "record_count": 50
+  },
+  "records": [
+    {
+      "row_id": "item_3364_14.1_trinket",
+      "item_id": 3364,
+      "item_name": "Oracle Lens",
+      "cost": 0,
+      "stats": {},
+      "passive_effects": [
+        "reveals_stealth"
+      ],
+      "item_class": "trinket",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": "Sweeping trinket"
+    },
+    {
+      "row_id": "item_3363_14.1_trinket",
+      "item_id": 3363,
+      "item_name": "Farsight Orb",
+      "cost": 0,
+      "stats": {},
+      "passive_effects": [
+        "long_range_ward"
+      ],
+      "item_class": "trinket",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": "Blue trinket"
+    },
+    {
+      "row_id": "item_1055_14.1_basic",
+      "item_id": 1055,
+      "item_name": "Doran's Blade",
+      "cost": 450,
+      "stats": {
+        "attack_damage": 8,
+        "health": 80
+      },
+      "passive_effects": [
+        "on_hit_healing"
+      ],
+      "item_class": "basic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3340_14.1_trinket",
+      "item_id": 3340,
+      "item_name": "Stealth Ward",
+      "cost": 0,
+      "stats": {},
+      "passive_effects": [
+        "ward"
+      ],
+      "item_class": "trinket",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3158_14.1_boots",
+      "item_id": 3158,
+      "item_name": "Ionian Boots of Lucidity",
+      "cost": 950,
+      "stats": {
+        "ability_haste": 20,
+        "movement_speed": 45
+      },
+      "passive_effects": [],
+      "item_class": "boots",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_1082_14.1_basic",
+      "item_id": 1082,
+      "item_name": "Dark Seal",
+      "cost": 350,
+      "stats": {
+        "ability_power": 15,
+        "mana": 100,
+        "health": 40
+      },
+      "passive_effects": [
+        "glory_stacks"
+      ],
+      "item_class": "basic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3006_14.1_boots",
+      "item_id": 3006,
+      "item_name": "Berserker's Greaves",
+      "cost": 1100,
+      "stats": {
+        "attack_speed": 35,
+        "movement_speed": 45
+      },
+      "passive_effects": [],
+      "item_class": "boots",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3047_14.1_boots",
+      "item_id": 3047,
+      "item_name": "Plated Steelcaps",
+      "cost": 1100,
+      "stats": {
+        "armor": 20,
+        "movement_speed": 45
+      },
+      "passive_effects": [
+        "basic_attack_reduction"
+      ],
+      "item_class": "boots",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_2055_14.1_consumable",
+      "item_id": 2055,
+      "item_name": "Control Ward",
+      "cost": 75,
+      "stats": {},
+      "passive_effects": [
+        "reveals_stealth"
+      ],
+      "item_class": "consumable",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_1056_14.1_basic",
+      "item_id": 1056,
+      "item_name": "Doran's Ring",
+      "cost": 400,
+      "stats": {
+        "ability_power": 15,
+        "mana": 120,
+        "health": 70
+      },
+      "passive_effects": [
+        "mana_on_kill"
+      ],
+      "item_class": "basic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3031_14.1_legendary",
+      "item_id": 3031,
+      "item_name": "Infinity Edge",
+      "cost": 3400,
+      "stats": {
+        "attack_damage": 70,
+        "critical_strike_chance": 20
+      },
+      "passive_effects": [
+        "crit_damage_amplification"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3078_14.1_legendary",
+      "item_id": 3078,
+      "item_name": "Trinity Force",
+      "cost": 3333,
+      "stats": {
+        "attack_damage": 25,
+        "health": 300,
+        "mana": 200,
+        "attack_speed": 30,
+        "ability_haste": 20
+      },
+      "passive_effects": [
+        "spellblade"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3869_14.1_legendary",
+      "item_id": 3869,
+      "item_name": "Thornmail",
+      "cost": 2700,
+      "stats": {
+        "armor": 60,
+        "health": 350
+      },
+      "passive_effects": [
+        "grievous_wounds",
+        "return_damage"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_1036_14.1_basic",
+      "item_id": 1036,
+      "item_name": "Long Sword",
+      "cost": 350,
+      "stats": {
+        "attack_damage": 10
+      },
+      "passive_effects": [],
+      "item_class": "basic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3111_14.1_boots",
+      "item_id": 3111,
+      "item_name": "Mercury's Treads",
+      "cost": 1100,
+      "stats": {
+        "magic_resistance": 25,
+        "movement_speed": 45
+      },
+      "passive_effects": [
+        "tenacity"
+      ],
+      "item_class": "boots",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3107_14.1_legendary",
+      "item_id": 3107,
+      "item_name": "Redemption",
+      "cost": 2300,
+      "stats": {
+        "health": 200,
+        "mana_regen": 125,
+        "ability_haste": 10
+      },
+      "passive_effects": [
+        "heal_active"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3020_14.1_boots",
+      "item_id": 3020,
+      "item_name": "Sorcerer's Shoes",
+      "cost": 1100,
+      "stats": {
+        "magic_penetration": 18,
+        "movement_speed": 45
+      },
+      "passive_effects": [],
+      "item_class": "boots",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_6610_14.1_legendary",
+      "item_id": 6610,
+      "item_name": "Sundered Sky",
+      "cost": 3100,
+      "stats": {
+        "attack_damage": 50,
+        "health": 400,
+        "ability_haste": 15
+      },
+      "passive_effects": [
+        "lightshield_strike"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3171_14.1_legendary",
+      "item_id": 3171,
+      "item_name": "Moonflair Spellblade",
+      "cost": 2200,
+      "stats": {
+        "ability_power": 50,
+        "armor": 50,
+        "magic_resistance": 50
+      },
+      "passive_effects": [
+        "tenacity"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_6692_14.1_legendary",
+      "item_id": 6692,
+      "item_name": "Hubris",
+      "cost": 3000,
+      "stats": {
+        "attack_damage": 55,
+        "lethality": 18,
+        "ability_haste": 15
+      },
+      "passive_effects": [
+        "hubris_stacks"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_1058_14.1_basic",
+      "item_id": 1058,
+      "item_name": "Needlessly Large Rod",
+      "cost": 1250,
+      "stats": {
+        "ability_power": 60
+      },
+      "passive_effects": [],
+      "item_class": "basic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3152_14.1_legendary",
+      "item_id": 3152,
+      "item_name": "Hextech Rocketbelt",
+      "cost": 2600,
+      "stats": {
+        "ability_power": 80,
+        "health": 250,
+        "ability_haste": 15
+      },
+      "passive_effects": [
+        "dash_active"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3190_14.1_legendary",
+      "item_id": 3190,
+      "item_name": "Locket of the Iron Solari",
+      "cost": 2200,
+      "stats": {
+        "health": 200,
+        "armor": 30,
+        "magic_resistance": 30,
+        "ability_haste": 10
+      },
+      "passive_effects": [
+        "shield_active"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3009_14.1_boots",
+      "item_id": 3009,
+      "item_name": "Boots of Swiftness",
+      "cost": 900,
+      "stats": {
+        "movement_speed": 60
+      },
+      "passive_effects": [
+        "slow_resistance"
+      ],
+      "item_class": "boots",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3161_14.1_legendary",
+      "item_id": 3161,
+      "item_name": "Spear of Shojin",
+      "cost": 3100,
+      "stats": {
+        "attack_damage": 60,
+        "health": 300,
+        "ability_haste": 20
+      },
+      "passive_effects": [
+        "focused_will"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_1052_14.1_basic",
+      "item_id": 1052,
+      "item_name": "Amplifying Tome",
+      "cost": 435,
+      "stats": {
+        "ability_power": 20
+      },
+      "passive_effects": [],
+      "item_class": "basic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_6672_14.1_legendary",
+      "item_id": 6672,
+      "item_name": "Kraken Slayer",
+      "cost": 3400,
+      "stats": {
+        "attack_damage": 50,
+        "attack_speed": 25,
+        "critical_strike_chance": 20
+      },
+      "passive_effects": [
+        "bring_it_down"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_6653_14.1_legendary",
+      "item_id": 6653,
+      "item_name": "Liandry's Torment",
+      "cost": 3200,
+      "stats": {
+        "ability_power": 80,
+        "health": 300,
+        "ability_haste": 20
+      },
+      "passive_effects": [
+        "burn_damage"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3071_14.1_legendary",
+      "item_id": 3071,
+      "item_name": "Black Cleaver",
+      "cost": 3100,
+      "stats": {
+        "attack_damage": 50,
+        "health": 400,
+        "ability_haste": 25
+      },
+      "passive_effects": [
+        "armor_shred"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3877_14.1_epic",
+      "item_id": 3877,
+      "item_name": "Bloodward",
+      "cost": 1300,
+      "stats": {
+        "health": 150
+      },
+      "passive_effects": [
+        "ward_generation"
+      ],
+      "item_class": "epic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3142_14.1_legendary",
+      "item_id": 3142,
+      "item_name": "Youmuu's Ghostblade",
+      "cost": 2900,
+      "stats": {
+        "attack_damage": 60,
+        "lethality": 18,
+        "ability_haste": 15
+      },
+      "passive_effects": [
+        "movement_speed_active"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3067_14.1_epic",
+      "item_id": 3067,
+      "item_name": "Kindlegem",
+      "cost": 800,
+      "stats": {
+        "health": 200,
+        "ability_haste": 10
+      },
+      "passive_effects": [],
+      "item_class": "epic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3040_14.1_legendary",
+      "item_id": 3040,
+      "item_name": "Seraph's Embrace",
+      "cost": 2900,
+      "stats": {
+        "ability_power": 70,
+        "mana": 850,
+        "ability_haste": 10
+      },
+      "passive_effects": [
+        "mana_shield"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3089_14.1_legendary",
+      "item_id": 3089,
+      "item_name": "Rabadon's Deathcap",
+      "cost": 3600,
+      "stats": {
+        "ability_power": 120
+      },
+      "passive_effects": [
+        "ap_amplification"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_1054_14.1_basic",
+      "item_id": 1054,
+      "item_name": "Doran's Shield",
+      "cost": 450,
+      "stats": {
+        "health": 80,
+        "health_regen": 6
+      },
+      "passive_effects": [
+        "damage_reduction"
+      ],
+      "item_class": "basic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_4645_14.1_legendary",
+      "item_id": 4645,
+      "item_name": "Shadowflame",
+      "cost": 3000,
+      "stats": {
+        "ability_power": 100,
+        "health": 200
+      },
+      "passive_effects": [
+        "magic_penetration_scaling"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_1028_14.1_basic",
+      "item_id": 1028,
+      "item_name": "Ruby Crystal",
+      "cost": 400,
+      "stats": {
+        "health": 150
+      },
+      "passive_effects": [],
+      "item_class": "basic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3042_14.1_legendary",
+      "item_id": 3042,
+      "item_name": "Muramana",
+      "cost": 2900,
+      "stats": {
+        "attack_damage": 35,
+        "mana": 860
+      },
+      "passive_effects": [
+        "shock"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_6676_14.1_legendary",
+      "item_id": 6676,
+      "item_name": "The Collector",
+      "cost": 3000,
+      "stats": {
+        "attack_damage": 50,
+        "critical_strike_chance": 20,
+        "lethality": 12
+      },
+      "passive_effects": [
+        "execute"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3032_14.1_legendary",
+      "item_id": 3032,
+      "item_name": "Yun Tal Wildarrows",
+      "cost": 2800,
+      "stats": {
+        "attack_damage": 60,
+        "critical_strike_chance": 20
+      },
+      "passive_effects": [
+        "crit_energize"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_4628_14.1_legendary",
+      "item_id": 4628,
+      "item_name": "Horizon Focus",
+      "cost": 2700,
+      "stats": {
+        "ability_power": 85,
+        "ability_haste": 15
+      },
+      "passive_effects": [
+        "hypershot"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3157_14.1_legendary",
+      "item_id": 3157,
+      "item_name": "Zhonya's Hourglass",
+      "cost": 2600,
+      "stats": {
+        "ability_power": 80,
+        "armor": 45,
+        "ability_haste": 10
+      },
+      "passive_effects": [
+        "stasis_active"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_6655_14.1_legendary",
+      "item_id": 6655,
+      "item_name": "Luden's Companion",
+      "cost": 3200,
+      "stats": {
+        "ability_power": 85,
+        "mana": 600,
+        "ability_haste": 25
+      },
+      "passive_effects": [
+        "echo"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3153_14.1_legendary",
+      "item_id": 3153,
+      "item_name": "Blade of the Ruined King",
+      "cost": 3200,
+      "stats": {
+        "attack_damage": 40,
+        "attack_speed": 25,
+        "life_steal": 12
+      },
+      "passive_effects": [
+        "current_health_damage"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_1018_14.1_basic",
+      "item_id": 1018,
+      "item_name": "Cloak of Agility",
+      "cost": 600,
+      "stats": {
+        "critical_strike_chance": 15
+      },
+      "passive_effects": [],
+      "item_class": "basic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_6333_14.1_legendary",
+      "item_id": 6333,
+      "item_name": "Death's Dance",
+      "cost": 3200,
+      "stats": {
+        "attack_damage": 55,
+        "armor": 45,
+        "ability_haste": 15
+      },
+      "passive_effects": [
+        "ignore_pain"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3870_14.1_basic",
+      "item_id": 3870,
+      "item_name": "Solstice Sleigh",
+      "cost": 400,
+      "stats": {
+        "health": 50
+      },
+      "passive_effects": [
+        "holiday_item"
+      ],
+      "item_class": "basic",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3036_14.1_legendary",
+      "item_id": 3036,
+      "item_name": "Lord Dominik's Regards",
+      "cost": 3000,
+      "stats": {
+        "attack_damage": 35,
+        "critical_strike_chance": 20,
+        "armor_penetration": 35
+      },
+      "passive_effects": [
+        "giant_slayer"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_2503_14.1_legendary",
+      "item_id": 2503,
+      "item_name": "Blackfire Torch",
+      "cost": 3200,
+      "stats": {
+        "ability_power": 80,
+        "health": 300,
+        "ability_haste": 15
+      },
+      "passive_effects": [
+        "burn_damage"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    },
+    {
+      "row_id": "item_3115_14.1_legendary",
+      "item_id": 3115,
+      "item_name": "Nashor's Tooth",
+      "cost": 3000,
+      "stats": {
+        "ability_power": 90,
+        "attack_speed": 50,
+        "ability_haste": 15
+      },
+      "passive_effects": [
+        "ap_on_hit"
+      ],
+      "item_class": "legendary",
+      "valid_from_patch": "14.1",
+      "valid_to_patch": null,
+      "notes": null
+    }
+  ]
+}

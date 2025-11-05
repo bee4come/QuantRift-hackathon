@@ -1,0 +1,359 @@
+{
+  "metadata": {
+    "description": "Top 50 most frequently attached items",
+    "total_items_analyzed": 50,
+    "ranking_criteria": "total_occurrences"
+  },
+  "top_items": [
+    {
+      "rank": 1,
+      "item_id": 3364,
+      "total_occurrences": 3180,
+      "avg_attach_rate": 0.696939495798319,
+      "total_games": 4704
+    },
+    {
+      "rank": 2,
+      "item_id": 3363,
+      "total_occurrences": 2595,
+      "avg_attach_rate": 0.6225318584070797,
+      "total_games": 4242
+    },
+    {
+      "rank": 3,
+      "item_id": 1055,
+      "total_occurrences": 1545,
+      "avg_attach_rate": 0.5639857142857142,
+      "total_games": 2793
+    },
+    {
+      "rank": 4,
+      "item_id": 3340,
+      "total_occurrences": 1123,
+      "avg_attach_rate": 0.3147988372093024,
+      "total_games": 3783
+    },
+    {
+      "rank": 5,
+      "item_id": 3158,
+      "total_occurrences": 1000,
+      "avg_attach_rate": 0.34020131578947366,
+      "total_games": 3158
+    },
+    {
+      "rank": 6,
+      "item_id": 1082,
+      "total_occurrences": 846,
+      "avg_attach_rate": 0.37540166666666674,
+      "total_games": 2219
+    },
+    {
+      "rank": 7,
+      "item_id": 3006,
+      "total_occurrences": 745,
+      "avg_attach_rate": 0.5952441176470589,
+      "total_games": 1221
+    },
+    {
+      "rank": 8,
+      "item_id": 3047,
+      "total_occurrences": 724,
+      "avg_attach_rate": 0.29552881355932203,
+      "total_games": 2621
+    },
+    {
+      "rank": 9,
+      "item_id": 2055,
+      "total_occurrences": 712,
+      "avg_attach_rate": 0.25971194029850747,
+      "total_games": 3049
+    },
+    {
+      "rank": 10,
+      "item_id": 1056,
+      "total_occurrences": 707,
+      "avg_attach_rate": 0.40595714285714285,
+      "total_games": 1824
+    },
+    {
+      "rank": 11,
+      "item_id": 3031,
+      "total_occurrences": 697,
+      "avg_attach_rate": 0.47078571428571425,
+      "total_games": 1628
+    },
+    {
+      "rank": 12,
+      "item_id": 3078,
+      "total_occurrences": 583,
+      "avg_attach_rate": 0.7201578947368421,
+      "total_games": 818
+    },
+    {
+      "rank": 13,
+      "item_id": 3869,
+      "total_occurrences": 576,
+      "avg_attach_rate": 0.5192206896551724,
+      "total_games": 1192
+    },
+    {
+      "rank": 14,
+      "item_id": 1036,
+      "total_occurrences": 572,
+      "avg_attach_rate": 0.24901636363636365,
+      "total_games": 2553
+    },
+    {
+      "rank": 15,
+      "item_id": 3111,
+      "total_occurrences": 565,
+      "avg_attach_rate": 0.21817258064516132,
+      "total_games": 2891
+    },
+    {
+      "rank": 16,
+      "item_id": 3107,
+      "total_occurrences": 531,
+      "avg_attach_rate": 0.4733821428571429,
+      "total_games": 1097
+    },
+    {
+      "rank": 17,
+      "item_id": 3020,
+      "total_occurrences": 518,
+      "avg_attach_rate": 0.3446853658536585,
+      "total_games": 1563
+    },
+    {
+      "rank": 18,
+      "item_id": 6610,
+      "total_occurrences": 496,
+      "avg_attach_rate": 0.5505909090909091,
+      "total_games": 1033
+    },
+    {
+      "rank": 19,
+      "item_id": 3171,
+      "total_occurrences": 457,
+      "avg_attach_rate": 0.24512,
+      "total_games": 2040
+    },
+    {
+      "rank": 20,
+      "item_id": 6692,
+      "total_occurrences": 431,
+      "avg_attach_rate": 0.4853315789473684,
+      "total_games": 871
+    },
+    {
+      "rank": 21,
+      "item_id": 1058,
+      "total_occurrences": 423,
+      "avg_attach_rate": 0.2563690476190477,
+      "total_games": 1724
+    },
+    {
+      "rank": 22,
+      "item_id": 3152,
+      "total_occurrences": 421,
+      "avg_attach_rate": 0.6132333333333334,
+      "total_games": 642
+    },
+    {
+      "rank": 23,
+      "item_id": 3190,
+      "total_occurrences": 405,
+      "avg_attach_rate": 0.509905,
+      "total_games": 820
+    },
+    {
+      "rank": 24,
+      "item_id": 3009,
+      "total_occurrences": 398,
+      "avg_attach_rate": 0.29532941176470595,
+      "total_games": 1470
+    },
+    {
+      "rank": 25,
+      "item_id": 3161,
+      "total_occurrences": 381,
+      "avg_attach_rate": 0.3806954545454546,
+      "total_games": 1063
+    },
+    {
+      "rank": 26,
+      "item_id": 1052,
+      "total_occurrences": 380,
+      "avg_attach_rate": 0.2110363636363637,
+      "total_games": 1854
+    },
+    {
+      "rank": 27,
+      "item_id": 6672,
+      "total_occurrences": 377,
+      "avg_attach_rate": 0.58350625,
+      "total_games": 673
+    },
+    {
+      "rank": 28,
+      "item_id": 6653,
+      "total_occurrences": 367,
+      "avg_attach_rate": 0.3710214285714285,
+      "total_games": 1084
+    },
+    {
+      "rank": 29,
+      "item_id": 3071,
+      "total_occurrences": 366,
+      "avg_attach_rate": 0.3718,
+      "total_games": 1319
+    },
+    {
+      "rank": 30,
+      "item_id": 3877,
+      "total_occurrences": 358,
+      "avg_attach_rate": 0.38180869565217396,
+      "total_games": 948
+    },
+    {
+      "rank": 31,
+      "item_id": 3142,
+      "total_occurrences": 346,
+      "avg_attach_rate": 0.5353058823529412,
+      "total_games": 635
+    },
+    {
+      "rank": 32,
+      "item_id": 3067,
+      "total_occurrences": 344,
+      "avg_attach_rate": 0.29741034482758616,
+      "total_games": 1196
+    },
+    {
+      "rank": 33,
+      "item_id": 3040,
+      "total_occurrences": 333,
+      "avg_attach_rate": 0.5100789473684211,
+      "total_games": 672
+    },
+    {
+      "rank": 34,
+      "item_id": 3089,
+      "total_occurrences": 329,
+      "avg_attach_rate": 0.2669823529411765,
+      "total_games": 1286
+    },
+    {
+      "rank": 35,
+      "item_id": 1054,
+      "total_occurrences": 327,
+      "avg_attach_rate": 0.3321875,
+      "total_games": 1023
+    },
+    {
+      "rank": 36,
+      "item_id": 4645,
+      "total_occurrences": 325,
+      "avg_attach_rate": 0.30701481481481485,
+      "total_games": 1130
+    },
+    {
+      "rank": 37,
+      "item_id": 1028,
+      "total_occurrences": 302,
+      "avg_attach_rate": 0.19540000000000002,
+      "total_games": 1738
+    },
+    {
+      "rank": 38,
+      "item_id": 3042,
+      "total_occurrences": 291,
+      "avg_attach_rate": 0.5958222222222223,
+      "total_games": 455
+    },
+    {
+      "rank": 39,
+      "item_id": 6676,
+      "total_occurrences": 290,
+      "avg_attach_rate": 0.4946499999999999,
+      "total_games": 691
+    },
+    {
+      "rank": 40,
+      "item_id": 3032,
+      "total_occurrences": 287,
+      "avg_attach_rate": 0.4427176470588236,
+      "total_games": 637
+    },
+    {
+      "rank": 41,
+      "item_id": 4628,
+      "total_occurrences": 284,
+      "avg_attach_rate": 0.3513608695652174,
+      "total_games": 871
+    },
+    {
+      "rank": 42,
+      "item_id": 3157,
+      "total_occurrences": 273,
+      "avg_attach_rate": 0.238104,
+      "total_games": 1132
+    },
+    {
+      "rank": 43,
+      "item_id": 6655,
+      "total_occurrences": 264,
+      "avg_attach_rate": 0.450625,
+      "total_games": 633
+    },
+    {
+      "rank": 44,
+      "item_id": 3153,
+      "total_occurrences": 253,
+      "avg_attach_rate": 0.4909785714285714,
+      "total_games": 618
+    },
+    {
+      "rank": 45,
+      "item_id": 1018,
+      "total_occurrences": 251,
+      "avg_attach_rate": 0.2257428571428571,
+      "total_games": 1272
+    },
+    {
+      "rank": 46,
+      "item_id": 6333,
+      "total_occurrences": 246,
+      "avg_attach_rate": 0.28898333333333337,
+      "total_games": 877
+    },
+    {
+      "rank": 47,
+      "item_id": 3870,
+      "total_occurrences": 246,
+      "avg_attach_rate": 0.7568444444444444,
+      "total_games": 336
+    },
+    {
+      "rank": 48,
+      "item_id": 3036,
+      "total_occurrences": 244,
+      "avg_attach_rate": 0.2702884615384615,
+      "total_games": 1085
+    },
+    {
+      "rank": 49,
+      "item_id": 2503,
+      "total_occurrences": 239,
+      "avg_attach_rate": 0.40216666666666673,
+      "total_games": 615
+    },
+    {
+      "rank": 50,
+      "item_id": 3115,
+      "total_occurrences": 233,
+      "avg_attach_rate": 0.5919,
+      "total_games": 405
+    }
+  ]
+}
