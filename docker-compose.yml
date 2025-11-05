@@ -16,11 +16,13 @@ services:
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
 
       # Riot API Configuration (Required)
+      # For production: provide all 5 keys for optimal throughput (1800 req/10s)
+      # For development: set RIOT_API_KEY and it will be used for all slots
       - RIOT_API_KEY=${RIOT_API_KEY}
+      - RIOT_API_KEY_PRIMARY=${RIOT_API_KEY_PRIMARY:-${RIOT_API_KEY}}
       - RIOT_API_KEY_SECONDARY=${RIOT_API_KEY_SECONDARY:-}
-      - RIOT_API_KEY_THIRD=${RIOT_API_KEY_THIRD:-}
-      - RIOT_API_KEY_FOURTH=${RIOT_API_KEY_FOURTH:-}
-      - RIOT_API_KEY_FIFTH=${RIOT_API_KEY_FIFTH:-}
+      - RIOT_API_KEY_ALT=${RIOT_API_KEY_ALT:-}
+      - RIOT_API_KEY_TERTIARY=${RIOT_API_KEY_TERTIARY:-}
 
       # Application Configuration
       - PYTHONPATH=/app

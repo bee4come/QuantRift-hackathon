@@ -62,13 +62,13 @@ QuantRift combines rigorous statistical methods, extensive match data processing
 
 2. **Configure environment variables**:
    ```bash
-   # Create backend .env
-   cat > backend/.env << EOF
-   RIOT_API_KEY=your_riot_api_key_here
-   AWS_REGION=us-west-2
-   AWS_ACCESS_KEY_ID=your_aws_access_key
-   AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-   EOF
+   # Copy and configure .env from template
+   cp .env.example .env
+
+   # Edit .env with your actual credentials
+   # Required: RIOT_API_KEY (get from https://developer.riotgames.com/)
+   # Required: AWS credentials (for Bedrock AI services)
+   nano .env  # or use your preferred editor
 
    # Create frontend .env.local
    cat > frontend/.env.local << EOF
@@ -219,6 +219,7 @@ Player-Pack Format (Agent-ready)
 
 - **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)**: Detailed system architecture and design
 - **[QUANTITATIVE_ANALYSIS.md](./docs/QUANTITATIVE_ANALYSIS.md)**: Statistical methods and data pipeline
+- **[AGENTS_OVERVIEW.md](./docs/AGENTS_OVERVIEW.md)**: Complete specifications for all 18 AI agents
 - **Agent DESIGN.md files**: Individual design documentation for each AI agent in `backend/src/agents/`
 
 ## 👥 Authors
