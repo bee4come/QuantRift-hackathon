@@ -13,7 +13,46 @@ import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 function AnnualSummaryWidget({ data }: { data: any }) {
   if (!data) return null;
 
-  const { metadata, summary, time_segments, annual_highlights, version_adaptation, champion_pool_evolution } = data;
+  const { metadata, summary, time_segments, annual_highlights, version_adaptation, champion_pool_evolution, growth_metrics } = data;
+
+  // Calculate average KDA from growth_metrics if available
+  const avgKDA = growth_metrics?.kda_adj ?
+    ((growth_metrics.kda_adj.early + growth_metrics.kda_adj.late) / 2) :
+    null;
+
+  // Convert tri_period data to array format for display
+  const timeSegmentsList = time_segments?.tri_period ? [
+    {
+      label: `早期 Early (${time_segments.tri_period.early?.patches?.length || 0} patches)`,
+      games: time_segments.tri_period.early?.total_games || 0,
+      winrate: (time_segments.tri_period.early?.winrate || 0) * 100
+    },
+    {
+      label: `中期 Mid (${time_segments.tri_period.mid?.patches?.length || 0} patches)`,
+      games: time_segments.tri_period.mid?.total_games || 0,
+      winrate: (time_segments.tri_period.mid?.winrate || 0) * 100
+    },
+    {
+      label: `晚期 Late (${time_segments.tri_period.late?.patches?.length || 0} patches)`,
+      games: time_segments.tri_period.late?.total_games || 0,
+      winrate: (time_segments.tri_period.late?.winrate || 0) * 100
+    }
+  ] : [];
+
+  // Extract highlight strings from annual_highlights object
+  const highlightStrings: string[] = [];
+  if (annual_highlights?.best_champion_role) {
+    const bcr = annual_highlights.best_champion_role;
+    highlightStrings.push(`🏆 Best Performance: Champion ID ${bcr.champion_id} (${bcr.role}) - ${(bcr.winrate * 100).toFixed(1)}% WR in ${bcr.games} games`);
+  }
+  if (annual_highlights?.most_played_champion) {
+    const mpc = annual_highlights.most_played_champion;
+    highlightStrings.push(`🎮 Most Played: Champion ID ${mpc.champion_id} - ${mpc.total_games} games`);
+  }
+  if (annual_highlights?.best_quarter) {
+    const bq = annual_highlights.best_quarter;
+    highlightStrings.push(`📈 Best Quarter: ${bq.quarter} - ${(bq.winrate * 100).toFixed(1)}% WR in ${bq.games} games`);
+  }
 
   return (
     <div className="mb-6 space-y-4">
@@ -32,14 +71,14 @@ function AnnualSummaryWidget({ data }: { data: any }) {
                 <div className="text-sm text-gray-400 mt-1">Total Games</div>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(90, 200, 250, 0.1)' }}>
-                <div className="text-2xl font-bold" style={{ color: summary.win_rate >= 50 ? '#34C759' : '#FF453A' }}>
-                  {summary.win_rate ? `${summary.win_rate.toFixed(1)}%` : 'N/A'}
+                <div className="text-2xl font-bold" style={{ color: (summary.overall_winrate || 0) * 100 >= 50 ? '#34C759' : '#FF453A' }}>
+                  {summary.overall_winrate ? `${(summary.overall_winrate * 100).toFixed(1)}%` : 'N/A'}
                 </div>
                 <div className="text-sm text-gray-400 mt-1">Win Rate</div>
               </div>
               <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(90, 200, 250, 0.1)' }}>
                 <div className="text-2xl font-bold" style={{ color: '#5AC8FA' }}>
-                  {summary.kda_avg ? summary.kda_avg.toFixed(2) : 'N/A'}
+                  {avgKDA ? avgKDA.toFixed(2) : 'N/A'}
                 </div>
                 <div className="text-sm text-gray-400 mt-1">Avg KDA</div>
               </div>
@@ -55,20 +94,20 @@ function AnnualSummaryWidget({ data }: { data: any }) {
       </div>
 
       {/* Time Segments Visualization */}
-      {time_segments && time_segments.length > 0 && (
+      {timeSegmentsList.length > 0 && (
         <div className="fluid-glass rounded-xl p-6 border border-white/10">
           <h3 className="text-lg font-bold mb-4" style={{ color: '#5AC8FA' }}>
             📅 时间段分析 Time Period Analysis
           </h3>
           <div className="space-y-3">
-            {time_segments.map((segment: any, idx: number) => (
+            {timeSegmentsList.map((segment: any, idx: number) => (
               <div key={idx} className="flex items-center gap-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
                 <div className="flex-1">
                   <div className="font-medium" style={{ color: '#F5F5F7' }}>
-                    {segment.label || `Period ${idx + 1}`}
+                    {segment.label}
                   </div>
                   <div className="text-sm text-gray-400">
-                    {segment.games || 0} games • {segment.win_rate ? `${segment.win_rate.toFixed(1)}%` : 'N/A'} WR
+                    {segment.games} games • {segment.winrate.toFixed(1)}% WR
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -76,8 +115,8 @@ function AnnualSummaryWidget({ data }: { data: any }) {
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
-                        width: `${segment.win_rate || 0}%`,
-                        backgroundColor: segment.win_rate >= 50 ? '#34C759' : '#FF453A'
+                        width: `${segment.winrate}%`,
+                        backgroundColor: segment.winrate >= 50 ? '#34C759' : '#FF453A'
                       }}
                     />
                   </div>
@@ -89,13 +128,13 @@ function AnnualSummaryWidget({ data }: { data: any }) {
       )}
 
       {/* Highlights */}
-      {annual_highlights && annual_highlights.length > 0 && (
+      {highlightStrings.length > 0 && (
         <div className="fluid-glass rounded-xl p-6 border border-white/10">
           <h3 className="text-lg font-bold mb-4" style={{ color: '#5AC8FA' }}>
             ⭐ 年度亮点 Annual Highlights
           </h3>
           <div className="space-y-2">
-            {annual_highlights.map((highlight: string, idx: number) => (
+            {highlightStrings.map((highlight: string, idx: number) => (
               <div key={idx} className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: 'rgba(90, 200, 250, 0.05)' }}>
                 <span className="text-xl">✨</span>
                 <span className="text-sm" style={{ color: '#F5F5F7' }}>{highlight}</span>
@@ -114,6 +153,12 @@ function ProgressTrackerWidget({ data }: { data: any }) {
 
   const { early_half, late_half, improvement, trend } = data;
 
+  // Convert winrate from decimal to percentage if needed
+  const earlyWinrate = early_half?.winrate !== undefined ? (early_half.winrate * 100) :
+                       early_half?.win_rate !== undefined ? early_half.win_rate : null;
+  const lateWinrate = late_half?.winrate !== undefined ? (late_half.winrate * 100) :
+                      late_half?.win_rate !== undefined ? late_half.win_rate : null;
+
   return (
     <div className="mb-6 space-y-4">
       {/* Early vs Late Comparison */}
@@ -131,8 +176,8 @@ function ProgressTrackerWidget({ data }: { data: any }) {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-400">Win Rate</span>
-                  <span className="font-medium" style={{ color: early_half.win_rate >= 50 ? '#34C759' : '#FF453A' }}>
-                    {early_half.win_rate ? `${early_half.win_rate.toFixed(1)}%` : 'N/A'}
+                  <span className="font-medium" style={{ color: earlyWinrate && earlyWinrate >= 50 ? '#34C759' : '#FF453A' }}>
+                    {earlyWinrate ? `${earlyWinrate.toFixed(1)}%` : 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -158,8 +203,8 @@ function ProgressTrackerWidget({ data }: { data: any }) {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-400">Win Rate</span>
-                  <span className="font-medium" style={{ color: late_half.win_rate >= 50 ? '#34C759' : '#FF453A' }}>
-                    {late_half.win_rate ? `${late_half.win_rate.toFixed(1)}%` : 'N/A'}
+                  <span className="font-medium" style={{ color: lateWinrate && lateWinrate >= 50 ? '#34C759' : '#FF453A' }}>
+                    {lateWinrate ? `${lateWinrate.toFixed(1)}%` : 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -189,17 +234,20 @@ function ProgressTrackerWidget({ data }: { data: any }) {
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
               <div className="text-2xl font-bold" style={{
-                color: improvement.win_rate_delta >= 0 ? '#34C759' : '#FF453A'
+                color: (improvement.win_rate_delta || improvement.winrate_delta || 0) >= 0 ? '#34C759' : '#FF453A'
               }}>
-                {improvement.win_rate_delta >= 0 ? '+' : ''}{improvement.win_rate_delta ? improvement.win_rate_delta.toFixed(1) : '0'}%
+                {(improvement.win_rate_delta || improvement.winrate_delta || 0) >= 0 ? '+' : ''}
+                {(improvement.win_rate_delta || improvement.winrate_delta) ?
+                  (improvement.win_rate_delta || improvement.winrate_delta).toFixed(1) : '0.0'}%
               </div>
               <div className="text-sm text-gray-400 mt-1">Win Rate Change</div>
             </div>
             <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
               <div className="text-2xl font-bold" style={{
-                color: improvement.kda_delta >= 0 ? '#34C759' : '#FF453A'
+                color: (improvement.kda_delta || 0) >= 0 ? '#34C759' : '#FF453A'
               }}>
-                {improvement.kda_delta >= 0 ? '+' : ''}{improvement.kda_delta ? improvement.kda_delta.toFixed(2) : '0.00'}
+                {(improvement.kda_delta || 0) >= 0 ? '+' : ''}
+                {improvement.kda_delta ? improvement.kda_delta.toFixed(2) : '0.00'}
               </div>
               <div className="text-sm text-gray-400 mt-1">KDA Change</div>
             </div>
