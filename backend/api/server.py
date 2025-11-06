@@ -2045,13 +2045,14 @@ async def comparison_hub(request: AgentRequest):
                 friend_puuid = friend_account['puuid']
                 print(f"✅ Got friend PUUID: {friend_puuid[:20]}...")
 
-                # Trigger friend data preparation (20 days like current player)
+                # Trigger friend data preparation (full year data)
                 print(f"📊 Preparing friend data...")
                 friend_job = await player_data_manager.prepare_player_data(
-                    request.friend_game_name,
-                    request.friend_tag_line,
-                    request.region,
-                    days=20
+                    puuid=friend_puuid,
+                    region=request.region,
+                    game_name=request.friend_game_name,
+                    tag_line=request.friend_tag_line,
+                    days=365  # Full year data
                 )
 
                 # Wait for friend data
