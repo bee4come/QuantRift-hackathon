@@ -2020,27 +2020,51 @@ async def comparison_hub(request: AgentRequest):
                 # === Friend Comparison logic ===
                 print(f"\n{'='*60}\n👥 Comparison Hub - Friend Comparison ({request.friend_game_name}#{request.friend_tag_line})\n{'='*60}")
 
+                # Wait for current player data
                 await player_data_manager.wait_for_data(puuid=request.puuid, timeout=120)
-                packs_dir = player_data_manager.get_packs_dir(request.puuid)
-                if not packs_dir:
+                player_packs_dir = player_data_manager.get_packs_dir(request.puuid)
+                if not player_packs_dir:
                     yield f"data: {{\"error\": \"Player data not ready\"}}\n\n"
                     return
 
+                # Get friend PUUID and prepare friend data
+                print(f"🔍 Fetching friend PUUID for {request.friend_game_name}#{request.friend_tag_line}...")
+                friend_puuid = await riot_client.get_puuid(request.friend_game_name, request.friend_tag_line, request.region)
+                if not friend_puuid:
+                    yield f"data: {{\"error\": \"Could not find friend {request.friend_game_name}#{request.friend_tag_line}\"}}\n\n"
+                    return
+
+                # Trigger friend data preparation (20 days like current player)
+                print(f"📊 Preparing friend data...")
+                friend_job = await player_data_manager.prepare_player_data(
+                    request.friend_game_name,
+                    request.friend_tag_line,
+                    request.region,
+                    days=20
+                )
+
+                # Wait for friend data
+                await player_data_manager.wait_for_data(puuid=friend_puuid, timeout=120)
+                friend_packs_dir = player_data_manager.get_packs_dir(friend_puuid)
+                if not friend_packs_dir:
+                    yield f"data: {{\"error\": \"Friend data preparation failed\"}}\n\n"
+                    return
+
+                # Load both players' data
                 from src.agents.player_analysis.friend_comparison.tools import (
-                    load_player_summary, load_friend_data, compare_players, format_comparison_for_prompt
+                    load_player_data, compare_two_players, format_comparison_for_prompt
                 )
                 from src.agents.player_analysis.friend_comparison.prompts import build_narrative_prompt as build_friend_prompt
 
-                player_summary = load_player_summary(packs_dir)
-                friend_data = load_friend_data(request.friend_game_name, request.friend_tag_line, request.region)
+                player_data = load_player_data(player_packs_dir)
+                friend_data = load_player_data(friend_packs_dir)
 
-                if friend_data is None:
-                    yield f"data: {{\"error\": \"Could not load friend data for {request.friend_game_name}#{request.friend_tag_line}\"}}\n\n"
-                    return
-
-                comparison = compare_players(player_summary, friend_data)
-                formatted_data = format_comparison_for_prompt(comparison)
-                prompts = build_friend_prompt(comparison, formatted_data)
+                # Compare
+                player_name = f"{request.game_name}#{request.tag_line}"
+                friend_name = f"{request.friend_game_name}#{request.friend_tag_line}"
+                comparison = compare_two_players(player_data, friend_data, player_name, friend_name)
+                formatted_data = format_comparison_for_prompt(comparison, player_name, friend_name)
+                prompts = build_friend_prompt(comparison, formatted_data, player_name, friend_name)
 
                 for message in stream_agent_with_thinking(
                     prompt=prompts['user'],
