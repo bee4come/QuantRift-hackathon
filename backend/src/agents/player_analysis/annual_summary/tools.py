@@ -1,7 +1,7 @@
 """
-Annual Summary Tools - 年度分析数据处理工具
+Annual Summary Tools - Data Processing Tools for Annual Analysis
 
-提供年度分析所需的所有数据处理函数
+Provides all data processing functions required for annual analysis
 """
 
 import json
@@ -26,11 +26,11 @@ from src.utils.id_mappings import get_champion_name
 
 def load_all_annual_packs(packs_dir: str, time_range: str = None) -> Dict[str, Any]:
     """
-    加载整个赛季的所有Player-Pack文件
+    Load all Player-Pack files for the entire season
 
     Args:
-        packs_dir: Player-Pack目录路径
-        time_range: 时间范围过滤
+        packs_dir: Player-Pack directory path
+        time_range: Time range filter
             - "2024-01-01": Load data from 2024-01-01 to today
             - "past-365": Load data from past 365 days
             - None: Load all available data
@@ -77,10 +77,10 @@ def load_all_annual_packs(packs_dir: str, time_range: str = None) -> Dict[str, A
 
 def segment_by_time(all_packs: Dict[str, Any], segment_type: str = "monthly") -> Dict[str, Any]:
     """
-    按时间分段聚合数据
+    Aggregate data by time segments
 
     Args:
-        all_packs: 所有Player-Pack数据
+        all_packs: All Player-Pack data
         segment_type: "monthly", "quarterly", or "tri-period"
 
     Returns:

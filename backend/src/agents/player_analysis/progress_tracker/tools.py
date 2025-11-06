@@ -9,12 +9,12 @@ from src.core.statistical_utils import wilson_ci_tuple as wilson_confidence_inte
 
 def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = None) -> Dict[str, Any]:
     """
-    加载最近N个版本的packs
+    Load recent N patch versions of Player-Packs
 
     Args:
-        packs_dir: Player-Pack目录路径
-        window_size: 加载最近N个版本
-        time_range: 时间范围过滤
+        packs_dir: Player-Pack directory path
+        window_size: Number of recent patches to load
+        time_range: Time range filter
             - "2024-01-01": Load data from 2024-01-01 to today
             - "past-365": Load data from past 365 days
             - None: Load recent window_size patches
@@ -68,7 +68,7 @@ def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = N
 
 
 def analyze_progress(recent_packs: Dict[str, Any]) -> Dict[str, Any]:
-    """分析进步趋势（前半 vs 后半对比）"""
+    """Analyze progress trends (first half vs second half comparison)"""
     patches = sorted(recent_packs.keys())
     mid = len(patches) // 2
 
@@ -103,23 +103,23 @@ def analyze_progress(recent_packs: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def format_analysis_for_prompt(analysis: Dict[str, Any]) -> str:
-    """格式化分析数据"""
+    """Format analysis data for LLM prompt"""
     early = analysis["early_half"]
     late = analysis["late_half"]
 
-    return f"""# 进步追踪分析数据
+    return f"""# Progress Tracking Analysis Data
 
-**总版本数**: {analysis['total_patches']}
-**整体趋势**: {analysis['trend']}
-**进步幅度**: {analysis['improvement']:+.1%}
+**Total Patches**: {analysis['total_patches']}
+**Overall Trend**: {analysis['trend']}
+**Improvement Magnitude**: {analysis['improvement']:+.1%}
 
-## 早期阶段 (前 {len(analysis['patches_analyzed']['early'])} 个版本)
-- 游戏数: {early['games']}
-- 胜率: {early['winrate']:.1%} (CI: {early['ci_lo']:.1%} - {early['ci_hi']:.1%})
+## Early Phase (First {len(analysis['patches_analyzed']['early'])} patches)
+- Games Played: {early['games']}
+- Win Rate: {early['winrate']:.1%} (CI: {early['ci_lo']:.1%} - {early['ci_hi']:.1%})
 
-## 后期阶段 (后 {len(analysis['patches_analyzed']['late'])} 个版本)
-- 游戏数: {late['games']}
-- 胜率: {late['winrate']:.1%} (CI: {late['ci_lo']:.1%} - {late['ci_hi']:.1%})
+## Late Phase (Last {len(analysis['patches_analyzed']['late'])} patches)
+- Games Played: {late['games']}
+- Win Rate: {late['winrate']:.1%} (CI: {late['ci_lo']:.1%} - {late['ci_hi']:.1%})
 
-**对比**: 后期相比早期胜率变化 {analysis['improvement']:+.1%}
+**Comparison**: Win rate change from early to late: {analysis['improvement']:+.1%}
 """

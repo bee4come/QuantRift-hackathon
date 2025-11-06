@@ -177,7 +177,7 @@ class AnnualSummaryAgent(DataAutoFetcher):
         result = self.llm.generate_sync(
             prompt=prompt_dict["user"],
             system=prompt_dict["system"],
-            max_tokens=16000,  # 3000-5000字中文需要12000-20000 tokens，16000确保完整生成
+            max_tokens=16000,  # 3000-5000 words in English requires ~12000-16000 tokens, ensuring complete generation
             temperature=0.7
         )
 
