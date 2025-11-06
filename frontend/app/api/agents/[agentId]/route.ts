@@ -13,6 +13,7 @@ const AGENT_ENDPOINTS: Record<string, string> = {
   'progress-tracker': '/v1/agents/progress-tracker',
   'peer-comparison': '/v1/agents/peer-comparison',
   'friend-comparison': '/v1/agents/friend-comparison',
+  'comparison-hub': '/v1/agents/comparison-hub', // Unified comparison endpoint
   'role-specialization': '/v1/agents/role-specialization',
   'champion-recommendation': '/v1/agents/champion-recommendation',
   'version-comparison': '/v1/agents/version-comparison',
@@ -49,7 +50,7 @@ export async function POST(
     console.log(`🔄 Proxying agent request: ${agentId} → ${url}`);
 
     // Different timeout for different agents
-    const timeoutMs = agentId === 'friend-comparison' ? 180000 : 120000; // 180s for friend-comparison, 120s for others
+    const timeoutMs = (agentId === 'friend-comparison' || agentId === 'comparison-hub') ? 180000 : 120000; // 180s for comparison agents, 120s for others
     console.log(`⏱️  Timeout set to ${timeoutMs / 1000}s for ${agentId}`);
 
     const controller = new AbortController();
