@@ -20,6 +20,7 @@ const AGENT_ENDPOINTS: Record<string, string> = {
   'build-simulator': '/v1/agents/build-simulator',
   'drafting-coach': '/v1/agents/drafting-coach',
   'team-synergy': '/v1/agents/team-synergy',
+  'match-analysis': '/v1/agents/match-analysis', // Match Analysis (Timeline Deep Dive + Postgame Review)
   'timeline-deep-dive': '/v1/agents/timeline-deep-dive',
   'postgame-review': '/v1/agents/postgame-review',
   'risk-forecaster': '/v1/agents/risk-forecaster',
