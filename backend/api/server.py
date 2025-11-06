@@ -1967,6 +1967,14 @@ async def comparison_hub(request: AgentRequest):
     from fastapi.responses import StreamingResponse
     from src.agents.shared.stream_helper import stream_agent_with_thinking
 
+    # Debug: Print request parameters
+    print(f"\n🔍 DEBUG Comparison Hub Request:")
+    print(f"   rank: {request.rank}")
+    print(f"   friend_game_name: {request.friend_game_name}")
+    print(f"   friend_tag_line: {request.friend_tag_line}")
+    print(f"   puuid: {request.puuid}")
+    print(f"   region: {request.region}\n")
+
     # Validate parameters before starting stream
     if not request.rank and (not request.friend_game_name or not request.friend_tag_line):
         raise HTTPException(
@@ -2029,10 +2037,13 @@ async def comparison_hub(request: AgentRequest):
 
                 # Get friend PUUID and prepare friend data
                 print(f"🔍 Fetching friend PUUID for {request.friend_game_name}#{request.friend_tag_line}...")
-                friend_puuid = await riot_client.get_puuid(request.friend_game_name, request.friend_tag_line, request.region)
-                if not friend_puuid:
+                friend_account = await riot_client.get_account_by_riot_id(request.friend_game_name, request.friend_tag_line, "americas")
+                if not friend_account or 'puuid' not in friend_account:
                     yield f"data: {{\"error\": \"Could not find friend {request.friend_game_name}#{request.friend_tag_line}\"}}\n\n"
                     return
+
+                friend_puuid = friend_account['puuid']
+                print(f"✅ Got friend PUUID: {friend_puuid[:20]}...")
 
                 # Trigger friend data preparation (20 days like current player)
                 print(f"📊 Preparing friend data...")
