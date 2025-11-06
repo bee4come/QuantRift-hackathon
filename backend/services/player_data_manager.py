@@ -108,19 +108,27 @@ class PlayerDataManager:
         Returns:
             PlayerDataJob对象（后台继续处理）
         """
-        # 检查是否已有任务
+        # Check if there's an existing task for this player
         if puuid in self.jobs:
             job = self.jobs[puuid]
-            # 如果任务完成时间在5分钟内，复用缓存
-            if job.completed_at and (datetime.utcnow() - job.completed_at) < timedelta(minutes=5):
-                print(f"✅ Reusing existing data cache for {game_name}#{tag_line}")
+            # If task is in progress (not COMPLETED or FAILED), reuse it
+            if job.status not in [DataStatus.COMPLETED, DataStatus.FAILED]:
+                print(f"🔄 Task already in progress for {game_name}#{tag_line}, status: {job.status.value}")
+                return job
+            # If task completed with same time range within 1 minute, reuse cache
+            elif (job.status == DataStatus.COMPLETED and
+                  job.days == days and
+                  job.completed_at and
+                  (datetime.utcnow() - job.completed_at) < timedelta(minutes=1)):
+                print(f"✅ Reusing recent cache for {game_name}#{tag_line} (completed {(datetime.utcnow() - job.completed_at).seconds}s ago)")
                 return job
 
-        # 创建新任务（使用days而不是count）
+        # Create new task (always fetch latest match list from Riot API)
+        print(f"🆕 Creating new data fetch task for {game_name}#{tag_line} (past {days} days)")
         job = PlayerDataJob(puuid, region, game_name, tag_line, days)
         self.jobs[puuid] = job
 
-        # 启动后台任务
+        # Start background task
         asyncio.create_task(self._fetch_and_calculate(job, game_name, tag_line))
 
         return job

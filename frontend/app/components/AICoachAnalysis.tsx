@@ -313,8 +313,8 @@ export default function AICoachAnalysis({
     }
   };
 
-  // Handler for friend comparison (now part of comparison-hub)
-  const handleFriendSelect = async (friendGameName: string, friendTagLine: string) => {
+  // Handler for friend comparison or rank comparison (now part of comparison-hub)
+  const handleFriendSelect = async (friendGameName: string, friendTagLine: string, rank?: string) => {
     const agentId = 'comparison-hub';
     updateAgentStatus(agentId, { status: 'generating', error: undefined });
 
@@ -322,16 +322,22 @@ export default function AICoachAnalysis({
       const { fetchAgentStream } = await import('@/app/lib/streamUtils');
 
       const url = `/api/agents/${agentId}`;
-      const body = {
+      const body: any = {
         puuid,
         region,
         game_name: gameName,
         tag_line: tagLine,
         recent_count: 20,
-        model: 'sonnet',
-        friend_game_name: friendGameName,
-        friend_tag_line: friendTagLine
+        model: 'sonnet'
       };
+
+      // Add either friend info or rank parameter
+      if (rank) {
+        body.rank = rank;
+      } else {
+        body.friend_game_name = friendGameName;
+        body.friend_tag_line = friendTagLine;
+      }
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
@@ -347,7 +353,7 @@ export default function AICoachAnalysis({
         setSelectedAgent({ ...agent, detailedReport });
       }
     } catch (error) {
-      console.error('Friend comparison error:', error);
+      console.error('Comparison hub error:', error);
       updateAgentStatus(agentId, {
         status: 'error',
         error: error instanceof Error ? error.message : 'Analysis failed'
