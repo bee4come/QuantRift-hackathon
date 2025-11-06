@@ -40,7 +40,9 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
       return;
     }
 
-    const [gameName, tagLine] = parts;
+    // Trim leading/trailing spaces only, preserve internal spaces
+    const gameName = parts[0].trim();
+    const tagLine = parts[1].trim();
     const display = `${gameName}#${tagLine}`;
     
     if (playerTags.some(tag => tag.display === display)) {
