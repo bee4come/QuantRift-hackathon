@@ -23,17 +23,17 @@ function AnnualSummaryWidget({ data }: { data: any }) {
   // Convert tri_period data to array format for display
   const timeSegmentsList = time_segments?.tri_period ? [
     {
-      label: `早期 Early (${time_segments.tri_period.early?.patches?.length || 0} patches)`,
+      label: `Early (${time_segments.tri_period.early?.patches?.length || 0} patches)`,
       games: time_segments.tri_period.early?.total_games || 0,
       winrate: (time_segments.tri_period.early?.winrate || 0) * 100
     },
     {
-      label: `中期 Mid (${time_segments.tri_period.mid?.patches?.length || 0} patches)`,
+      label: `Mid (${time_segments.tri_period.mid?.patches?.length || 0} patches)`,
       games: time_segments.tri_period.mid?.total_games || 0,
       winrate: (time_segments.tri_period.mid?.winrate || 0) * 100
     },
     {
-      label: `晚期 Late (${time_segments.tri_period.late?.patches?.length || 0} patches)`,
+      label: `Late (${time_segments.tri_period.late?.patches?.length || 0} patches)`,
       games: time_segments.tri_period.late?.total_games || 0,
       winrate: (time_segments.tri_period.late?.winrate || 0) * 100
     }
@@ -59,7 +59,7 @@ function AnnualSummaryWidget({ data }: { data: any }) {
       {/* Summary Header */}
       <div className="fluid-glass rounded-xl p-6 border border-white/10">
         <h3 className="text-xl font-bold mb-4" style={{ color: '#5AC8FA' }}>
-          📊 年度数据总览 Annual Overview
+          📊 Annual Overview
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {summary && (
@@ -97,7 +97,7 @@ function AnnualSummaryWidget({ data }: { data: any }) {
       {timeSegmentsList.length > 0 && (
         <div className="fluid-glass rounded-xl p-6 border border-white/10">
           <h3 className="text-lg font-bold mb-4" style={{ color: '#5AC8FA' }}>
-            📅 时间段分析 Time Period Analysis
+            📅 Time Period Analysis
           </h3>
           <div className="space-y-3">
             {timeSegmentsList.map((segment: any, idx: number) => (
@@ -131,7 +131,7 @@ function AnnualSummaryWidget({ data }: { data: any }) {
       {highlightStrings.length > 0 && (
         <div className="fluid-glass rounded-xl p-6 border border-white/10">
           <h3 className="text-lg font-bold mb-4" style={{ color: '#5AC8FA' }}>
-            ⭐ 年度亮点 Annual Highlights
+            ⭐ Annual Highlights
           </h3>
           <div className="space-y-2">
             {highlightStrings.map((highlight: string, idx: number) => (
@@ -165,13 +165,13 @@ function ProgressTrackerWidget({ data }: { data: any }) {
       {early_half && late_half && (
         <div className="fluid-glass rounded-xl p-6 border border-white/10">
           <h3 className="text-xl font-bold mb-4" style={{ color: '#5AC8FA' }}>
-            📈 进步追踪 Progress Tracker
+            📈 Progress Tracker
           </h3>
           <div className="grid grid-cols-2 gap-6">
             {/* Early Half */}
             <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(90, 200, 250, 0.1)' }}>
               <div className="text-lg font-bold mb-3" style={{ color: '#5AC8FA' }}>
-                前半段 Early Period
+                Early Period
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
@@ -198,7 +198,7 @@ function ProgressTrackerWidget({ data }: { data: any }) {
             {/* Late Half */}
             <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(52, 199, 89, 0.1)' }}>
               <div className="text-lg font-bold mb-3" style={{ color: '#34C759' }}>
-                后半段 Late Period
+                Late Period
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
@@ -229,7 +229,7 @@ function ProgressTrackerWidget({ data }: { data: any }) {
       {improvement && (
         <div className="fluid-glass rounded-xl p-6 border border-white/10">
           <h3 className="text-lg font-bold mb-4" style={{ color: '#5AC8FA' }}>
-            💪 进步指标 Improvement Metrics
+            💪 Improvement Metrics
           </h3>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
