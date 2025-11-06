@@ -34,7 +34,7 @@ from src.combatpower.services.patch_manager import patch_manager
 from src.combatpower.services.multi_patch_data import multi_patch_data
 from src.combatpower.services.build_tracker import build_tracker
 from src.combatpower.custom_build_manager import custom_build_manager
-from services.player_data_manager import player_data_manager
+from services.player_data_manager import player_data_manager, DataStatus
 import requests
 import os
 import time as time_module
@@ -593,8 +593,7 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
     """
     try:
         import uuid
-        import subprocess
-        import threading
+        import asyncio
 
         print(f"\n{'='*60}")
         print(f"📥 Data Fetch Request: {request.game_name}#{request.tag_line}")
@@ -604,8 +603,28 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
         # Generate task ID
         task_id = str(uuid.uuid4())
 
-        # TODO: Get PUUID from Riot API
-        # For now, we'll use the task to fetch it
+        # Step 1: Get PUUID from Riot API
+        print(f"📡 Fetching PUUID for {request.game_name}#{request.tag_line}...")
+
+        # Map platform region to routing region
+        routing_map = {
+            'na1': 'americas', 'br1': 'americas', 'la1': 'americas', 'la2': 'americas',
+            'euw1': 'europe', 'eun1': 'europe', 'tr1': 'europe', 'ru': 'europe',
+            'kr': 'asia', 'jp1': 'asia'
+        }
+        routing_region = routing_map.get(request.region, 'americas')
+
+        account_data = await riot_client.get_account_by_riot_id(
+            request.game_name,
+            request.tag_line,
+            routing_region
+        )
+
+        if not account_data or 'puuid' not in account_data:
+            raise HTTPException(status_code=404, detail=f"Account not found: {request.game_name}#{request.tag_line}")
+
+        puuid = account_data['puuid']
+        print(f"✅ Found PUUID: {puuid}")
 
         # Create task entry
         with task_lock:
@@ -614,6 +633,7 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
                 "game_name": request.game_name,
                 "tag_line": request.tag_line,
                 "region": request.region,
+                "puuid": puuid,
                 "days": request.days,
                 "include_timeline": request.include_timeline,
                 "created_at": datetime.now().isoformat(),
@@ -624,147 +644,41 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
                 }
             }
 
-        # Start background task
-        def run_fetch_task():
-            """Background task to fetch player data"""
+        # Start background task using PlayerDataManager
+        async def run_fetch_task_async():
+            """Background task to fetch player data using PlayerDataManager"""
             try:
-                import requests
-                import os
-                from pathlib import Path
-
                 with task_lock:
                     fetch_tasks[task_id]["status"] = "in_progress"
                     fetch_tasks[task_id]["started_at"] = datetime.now().isoformat()
 
-                # Step 1: Get player PUUID from Riot Account API
-                print(f"📡 Fetching PUUID for {request.game_name}#{request.tag_line}...")
-
-                api_key = os.getenv('RIOT_API_KEY')
-                if not api_key:
-                    raise ValueError("RIOT_API_KEY not found in environment")
-
-                # Riot Account API uses americas routing for NA
-                routing_map = {
-                    'na1': 'americas',
-                    'br1': 'americas',
-                    'la1': 'americas',
-                    'la2': 'americas',
-                    'euw1': 'europe',
-                    'eun1': 'europe',
-                    'tr1': 'europe',
-                    'ru': 'europe',
-                    'kr': 'asia',
-                    'jp1': 'asia',
-                }
-                routing = routing_map.get(request.region, 'americas')
-
-                account_url = f"https://{routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{request.game_name}/{request.tag_line}"
-                headers = {"X-Riot-Token": api_key}
-
-                response = requests.get(account_url, headers=headers)
-                response.raise_for_status()
-                account_data = response.json()
-                puuid = account_data['puuid']
-
-                print(f"✅ Found PUUID: {puuid}")
-
-                with task_lock:
-                    fetch_tasks[task_id]["puuid"] = puuid
-                    fetch_tasks[task_id]["progress"]["status"] = "Creating temporary player file..."
-
-                # Step 2: Create temporary player file for fetch script
-                temp_dir = Path(__file__).parent.parent / "data" / "temp"
-                temp_dir.mkdir(parents=True, exist_ok=True)
-
-                temp_player_file = temp_dir / f"player_{task_id}.json"
-                player_data = {
-                    "players": [puuid],
-                    "metadata": {
-                        "game_name": request.game_name,
-                        "tag_line": request.tag_line,
-                        "region": request.region,
-                        "tier": "custom_fetch",
-                        "created_at": datetime.now().isoformat()
-                    }
-                }
-
-                with open(temp_player_file, 'w') as f:
-                    json.dump(player_data, f, indent=2)
-
-                print(f"📄 Created temp player file: {temp_player_file}")
-
-                with task_lock:
-                    fetch_tasks[task_id]["progress"]["status"] = "Fetching matches from Riot API..."
-
-                # Step 3: Call fetch_matches_enhanced.py script
-                scripts_dir = Path(__file__).parent.parent / "scripts" / "data_collection"
-                output_file = temp_dir / f"summary_{task_id}.json"
-
-                cmd = [
-                    "python",
-                    str(scripts_dir / "fetch_matches_enhanced.py"),
-                    "--players-file", str(temp_player_file),
-                    "--region", request.region,
-                    "--days-back", str(request.days),
-                    # No max-matches limit - fetch ALL matches in time range
-                    "--output", str(output_file)
-                ]
-
-                print(f"🚀 Running fetch command: {' '.join(cmd)}")
-
-                # Run the fetch script and capture output
-                process = subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    bufsize=1
+                # Step 2: Use PlayerDataManager to prepare data
+                print(f"🚀 Starting PlayerDataManager.prepare_player_data()...")
+                job = await player_data_manager.prepare_player_data(
+                    puuid=puuid,
+                    region=request.region,
+                    game_name=request.game_name,
+                    tag_line=request.tag_line,
+                    days=request.days
                 )
 
-                # Monitor output for progress
-                for line in process.stdout:
-                    print(f"  {line.rstrip()}")
+                # Step 3: Monitor job progress
+                while job.status not in [DataStatus.COMPLETED, DataStatus.FAILED]:
+                    await asyncio.sleep(2)  # Poll every 2 seconds
 
-                    # Parse progress from output
-                    if "matches_downloaded" in line:
-                        try:
-                            # Extract numbers from log lines like "matches_downloaded: 50"
-                            parts = line.split(":")
-                            if len(parts) >= 2:
-                                count = int(parts[1].strip().split()[0])
-                                with task_lock:
-                                    fetch_tasks[task_id]["progress"]["fetched_matches"] = count
-                        except:
-                            pass
+                    # Update task progress
+                    with task_lock:
+                        fetch_tasks[task_id]["progress"] = {
+                            "status": job.status.value if job.status else "processing",
+                            "progress_percent": int(job.progress * 100),
+                            "total_matches": 0,  # PlayerDataManager doesn't expose these
+                            "fetched_matches": 0,
+                            "fetched_timelines": 0
+                        }
 
-                    if "timelines_downloaded" in line:
-                        try:
-                            parts = line.split(":")
-                            if len(parts) >= 2:
-                                count = int(parts[1].strip().split()[0])
-                                with task_lock:
-                                    fetch_tasks[task_id]["progress"]["fetched_timelines"] = count
-                        except:
-                            pass
-
-                # Wait for completion
-                return_code = process.wait()
-
-                if return_code != 0:
-                    raise RuntimeError(f"Fetch script failed with return code {return_code}")
-
-                # Read summary file
-                matches_fetched = 0
-                timelines_fetched = 0
-                if output_file.exists():
-                    with open(output_file, 'r') as f:
-                        summary = json.load(f)
-                        matches_fetched = summary.get("matches_downloaded", 0)
-                        timelines_fetched = summary.get("timelines_downloaded", 0)
-
-                # Clean up temp files
-                temp_player_file.unlink(missing_ok=True)
-                output_file.unlink(missing_ok=True)
+                # Step 4: Check final status
+                if job.status == DataStatus.FAILED:
+                    raise RuntimeError(job.error_message or "Data fetch failed")
 
                 # Mark as completed
                 with task_lock:
@@ -772,12 +686,11 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
                     fetch_tasks[task_id]["completed_at"] = datetime.now().isoformat()
                     fetch_tasks[task_id]["result"] = {
                         "puuid": puuid,
-                        "matches_fetched": matches_fetched,
-                        "timelines_fetched": timelines_fetched,
-                        "data_path": f"data/bronze/matches/custom_fetch/{request.region}/"
+                        "player_pack_path": f"data/player_packs/{puuid}/",
+                        "message": "Player data prepared successfully"
                     }
 
-                print(f"✅ Data fetch completed for task {task_id}: {matches_fetched} matches, {timelines_fetched} timelines")
+                print(f"✅ Data fetch completed for task {task_id}")
 
             except Exception as e:
                 print(f"❌ Error in fetch task {task_id}: {str(e)}")
@@ -786,10 +699,8 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
                     fetch_tasks[task_id]["error"] = str(e)
                     fetch_tasks[task_id]["failed_at"] = datetime.now().isoformat()
 
-        # Start thread
-        thread = threading.Thread(target=run_fetch_task)
-        thread.daemon = True
-        thread.start()
+        # Start async background task
+        asyncio.create_task(run_fetch_task_async())
 
         # Estimate time (rough: ~100 matches/minute)
         estimated_matches = request.days * 5  # Rough estimate
