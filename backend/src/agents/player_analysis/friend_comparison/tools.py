@@ -64,9 +64,17 @@ def load_player_data(packs_dir: str, all_packs_data: Optional[list] = None) -> D
             role_distribution[role]['games'] += games
             role_distribution[role]['wins'] += wins
 
-            # Governance统计
-            governance = cr.get("governance_tag", "CONTEXT")
-            governance_counts[governance] += games
+    # Re-calculate Governance based on aggregated champion games (not per-patch)
+    # This ensures accurate governance distribution across all patches combined
+    for champ_id, champ_data in champion_pool.items():
+        champ_games = champ_data['games']
+        if champ_games >= 100:
+            governance = "CONFIDENT"
+        elif champ_games >= 30:
+            governance = "CAUTION"
+        else:
+            governance = "CONTEXT"
+        governance_counts[governance] += champ_games
 
     # 计算加权平均值
     avg_kda_adj = total_kda_adj / total_games if total_games > 0 else 0
