@@ -931,36 +931,57 @@ class PlayerDataManager:
             # 从job中获取matches数据
             job = self.jobs.get(puuid)
             if not job or not job.matches_data:
-                # 如果job中没有数据，但有timeline文件，从timeline文件构造基础信息
+                # 如果job中没有数据，但有timeline文件，尝试从match文件读取完整信息
                 if available_match_ids:
                     matches = []
+                    matches_dir = player_dir / "matches"
+
                     for match_id in sorted(available_match_ids, reverse=True)[:limit]:
-                        timeline_file = timelines_dir / f"{match_id}_timeline.json"
-                        try:
-                            with open(timeline_file, 'r', encoding='utf-8') as f:
-                                timeline = json.load(f)
+                        match_file = matches_dir / f"{match_id}.json"
 
-                            # 从timeline提取基础信息
-                            frames = timeline.get('info', {}).get('frames', [])
-                            participants = timeline['metadata']['participants']
-                            player_index = participants.index(puuid) if puuid in participants else 0
+                        # Try to read from match file first
+                        if match_file.exists():
+                            try:
+                                with open(match_file, 'r', encoding='utf-8') as f:
+                                    match_data = json.load(f)
 
-                            # 构造基础match信息（简化版）
-                            matches.append({
-                                'match_id': match_id,
-                                'game_creation': 0,  # timeline没有这个信息
-                                'game_duration': len(frames) * 60,  # 估算：每帧1分钟
-                                'champion_id': 0,
-                                'champion_name': 'Unknown',
-                                'role': 'UNKNOWN',
-                                'win': True,  # 默认值
-                                'kills': 0,
-                                'deaths': 0,
-                                'assists': 0
-                            })
-                        except Exception as e:
-                            print(f"⚠️  Failed to read timeline {match_id}: {e}")
-                            continue
+                                game_creation = match_data['info']['gameCreation']
+                                game_duration = match_data['info']['gameDuration']
+
+                                # Find player data
+                                participants = match_data['info']['participants']
+                                player_data = None
+                                for participant in participants:
+                                    if participant.get('puuid') == puuid:
+                                        player_data = participant
+                                        break
+
+                                if player_data:
+                                    champion_id = player_data.get('championId', 0)
+                                    champion_name = get_champion_name(champion_id)
+                                    role = player_data.get('teamPosition', 'UNKNOWN')
+                                    win = player_data.get('win', False)
+                                    kills = player_data.get('kills', 0)
+                                    deaths = player_data.get('deaths', 0)
+                                    assists = player_data.get('assists', 0)
+
+                                    matches.append({
+                                        'match_id': match_id,
+                                        'game_creation': game_creation,
+                                        'game_duration': game_duration,
+                                        'champion_id': champion_id,
+                                        'champion_name': champion_name,
+                                        'role': role,
+                                        'win': win,
+                                        'kills': kills,
+                                        'deaths': deaths,
+                                        'assists': assists
+                                    })
+                            except Exception as e:
+                                print(f"⚠️  Failed to read match {match_id}: {e}")
+                                continue
+                        else:
+                            print(f"⚠️  Match file not found: {match_file}")
 
                     return matches
                 return []
