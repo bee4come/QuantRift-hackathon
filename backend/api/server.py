@@ -2354,7 +2354,13 @@ Ensure the analysis is comprehensive and actionable."""
 # ============================================================================
 
 @app.get("/api/player/{game_name}/{tag_line}/summary")
-async def get_player_summary(game_name: str, tag_line: str, days: int = 365):
+async def get_player_summary(
+    game_name: str,
+    tag_line: str,
+    days: int = None,
+    count: int = None,
+    time_range: str = None
+):
     """
     Trigger background data preparation and return basic player info
 
@@ -2367,16 +2373,39 @@ async def get_player_summary(game_name: str, tag_line: str, days: int = 365):
     to check when data preparation is complete.
 
     Query params:
-    - days: Number of days to fetch data from (default: 365)
+    - days: Number of days to fetch data from (legacy, optional)
+    - count: Number of matches to fetch (optional, takes priority over days/time_range)
+    - time_range: Time range preset ("2024-01-01" or "past-365")
 
-    Example: /api/player/s1ne/na1/summary?days=365
+    Priority: count > time_range > days (default 365)
+
+    Example: /api/player/s1ne/na1/summary?time_range=2024-01-01
     """
     import time
+    from datetime import datetime, timedelta
     start_time = time.time()
+
+    # Calculate days based on time_range if provided
+    if time_range and not count:
+        if time_range == "2024-01-01":
+            # Calculate days from 2024-01-01 to today
+            start_date = datetime(2024, 1, 1)
+            days_calculated = (datetime.now() - start_date).days
+            days = days_calculated
+            print(f"📅 Time range '2024-01-01' → {days} days")
+        elif time_range == "past-365":
+            days = 365
+            print(f"📅 Time range 'past-365' → {days} days")
+    elif days is None and count is None:
+        # Default to 365 days if nothing specified
+        days = 365
 
     try:
         print(f"\n{'='*60}")
-        print(f"🔍 Player Summary Request: {game_name}#{tag_line} (days={days})")
+        if count:
+            print(f"🔍 Player Summary Request: {game_name}#{tag_line} (count={count})")
+        else:
+            print(f"🔍 Player Summary Request: {game_name}#{tag_line} (days={days})")
         print(f"⏱️  Start time: {time.strftime('%H:%M:%S')}")
         print(f"{'='*60}\n")
 
@@ -2397,14 +2426,24 @@ async def get_player_summary(game_name: str, tag_line: str, days: int = 365):
         print(f"✅ [2/2] Got summoner info ({time.time()-step_start:.2f}s)")
 
         # Step 3: Start background data preparation (non-blocking)
-        print(f"\n🔄 Starting background data preparation for past {days} days...")
-        job = await player_data_manager.prepare_player_data(
-            puuid=puuid,
-            region='na1',
-            game_name=game_name,
-            tag_line=tag_line,
-            days=days
-        )
+        if count:
+            print(f"\n🔄 Starting background data preparation for {count} matches...")
+            job = await player_data_manager.prepare_player_data(
+                puuid=puuid,
+                region='na1',
+                game_name=game_name,
+                tag_line=tag_line,
+                count=count
+            )
+        else:
+            print(f"\n🔄 Starting background data preparation for past {days} days...")
+            job = await player_data_manager.prepare_player_data(
+                puuid=puuid,
+                region='na1',
+                game_name=game_name,
+                tag_line=tag_line,
+                days=days
+            )
 
         # Step 4: Try to get role stats and champion stats if Player-Pack exists
         role_stats = player_data_manager.get_role_stats(puuid)
@@ -2459,8 +2498,10 @@ async def get_player_summary(game_name: str, tag_line: str, days: int = 365):
             'data_preparation': {
                 'status': job.status,
                 'progress': job.progress,
-                'days': days,
-                'message': f'Data preparation started in background for past {days} days. Poll /data-status endpoint to check progress.'
+                'days': days if not count else None,
+                'count': count if count else None,
+                'time_range': time_range,
+                'message': f'Data preparation started in background for {count} matches.' if count else f'Data preparation started in background for past {days} days. Poll /data-status endpoint to check progress.'
             }
         }
 

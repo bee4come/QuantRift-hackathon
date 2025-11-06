@@ -9,15 +9,21 @@ export async function GET(
   try {
     const { gameName, tagLine } = await params;
     const searchParams = request.nextUrl.searchParams;
-    const days = searchParams.get('days') || '365';
+    const days = searchParams.get('days');
     const count = searchParams.get('count');
+    const timeRange = searchParams.get('time_range') || '2024-01-01'; // Default to 2024 full year
 
     // Build query string
     const queryParams = new URLSearchParams();
     if (count) {
       queryParams.append('count', count);
-    } else {
+    } else if (timeRange) {
+      queryParams.append('time_range', timeRange);
+    } else if (days) {
       queryParams.append('days', days);
+    } else {
+      // Fallback: use time_range=2024-01-01 as default
+      queryParams.append('time_range', '2024-01-01');
     }
 
     const url = `${BACKEND_URL}/api/player/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/summary?${queryParams.toString()}`;
