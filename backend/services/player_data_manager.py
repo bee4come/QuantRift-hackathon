@@ -470,8 +470,9 @@ class PlayerDataManager:
             for p in match['info']['participants']:
                 # 同时支持PUUID和gameName#tagLine匹配
                 puuid_match = p.get('puuid') == puuid
-                name_match = (p.get('riotIdGameName') == game_name and
-                             p.get('riotIdTagline') == tag_line)
+                # Case-insensitive name matching (Riot API may return different casing)
+                name_match = (p.get('riotIdGameName', '').lower() == game_name.lower() and
+                             p.get('riotIdTagline', '').lower() == tag_line.lower())
 
                 if puuid_match or name_match:
                     player_data = p
