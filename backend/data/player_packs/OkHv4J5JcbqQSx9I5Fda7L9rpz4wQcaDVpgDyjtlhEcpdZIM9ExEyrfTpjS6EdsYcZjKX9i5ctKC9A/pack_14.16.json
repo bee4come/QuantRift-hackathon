@@ -1,0 +1,56 @@
+{
+  "puuid": "OkHv4J5JcbqQSx9I5Fda7L9rpz4wQcaDVpgDyjtlhEcpdZIM9ExEyrfTpjS6EdsYcZjKX9i5ctKC9A",
+  "patch": "14.16",
+  "generation_timestamp": "2025-11-06T02:17:39.667305",
+  "total_games": 2,
+  "by_cr": [
+    {
+      "champ_id": 202,
+      "role": "BOTTOM",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 1.19,
+      "obj_rate": 0.0,
+      "cp_25": 8043.7,
+      "build_core": [
+        1055,
+        3087,
+        3094
+      ],
+      "avg_time_to_core": 1.0,
+      "rune_keystone": 8021,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 53,
+      "role": "UTILITY",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 0.51,
+      "obj_rate": 1.0,
+      "cp_25": 6450.2,
+      "build_core": [
+        2055,
+        3869,
+        3013
+      ],
+      "avg_time_to_core": 1.0,
+      "rune_keystone": 8351,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    }
+  ]
+}

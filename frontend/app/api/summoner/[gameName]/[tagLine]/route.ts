@@ -26,8 +26,11 @@ export async function GET(
       queryParams.append('time_range', '2024-01-01');
     }
 
+    // Debug: log the actual parameter values
+    console.log('[DEBUG] Raw params - gameName:', JSON.stringify(gameName), 'tagLine:', JSON.stringify(tagLine));
+
     const url = `${BACKEND_URL}/api/player/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/summary?${queryParams.toString()}`;
-    
+
     console.log('Fetching summoner data from:', url);
     console.log('Backend URL:', BACKEND_URL);
 

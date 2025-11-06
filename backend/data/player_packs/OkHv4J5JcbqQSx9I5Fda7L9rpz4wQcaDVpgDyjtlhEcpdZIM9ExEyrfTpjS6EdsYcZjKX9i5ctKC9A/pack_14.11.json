@@ -1,0 +1,104 @@
+{
+  "puuid": "OkHv4J5JcbqQSx9I5Fda7L9rpz4wQcaDVpgDyjtlhEcpdZIM9ExEyrfTpjS6EdsYcZjKX9i5ctKC9A",
+  "patch": "14.11",
+  "generation_timestamp": "2025-11-06T02:27:32.757289",
+  "total_games": 8,
+  "by_cr": [
+    {
+      "champ_id": 202,
+      "role": "BOTTOM",
+      "games": 4,
+      "wins": 4,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.5101,
+        1.0
+      ],
+      "kda_adj": 3.27,
+      "obj_rate": 3.25,
+      "cp_25": 12187.3,
+      "build_core": [
+        6676,
+        3031,
+        3009
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8021,
+      "effective_n": 4,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 901,
+      "role": "BOTTOM",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 0.18,
+      "obj_rate": 0.0,
+      "cp_25": 6510.8,
+      "build_core": [
+        1083,
+        3133,
+        1018
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8021,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 42,
+      "role": "BOTTOM",
+      "games": 2,
+      "wins": 1,
+      "losses": 1,
+      "p_hat": 0.5,
+      "p_hat_ci": [
+        0.0945,
+        0.9055
+      ],
+      "kda_adj": 1.7,
+      "obj_rate": 2.0,
+      "cp_25": 9888.4,
+      "build_core": [
+        1055,
+        6701,
+        3006
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 9923,
+      "effective_n": 2,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 114,
+      "role": "TOP",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 1.52,
+      "obj_rate": 1.5,
+      "cp_25": 12300.0,
+      "build_core": [
+        3026,
+        2501,
+        3074
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8437,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    }
+  ]
+}

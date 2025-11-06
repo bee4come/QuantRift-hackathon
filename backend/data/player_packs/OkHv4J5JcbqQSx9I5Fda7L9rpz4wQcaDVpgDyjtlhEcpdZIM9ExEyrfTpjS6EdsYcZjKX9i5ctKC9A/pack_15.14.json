@@ -1,0 +1,32 @@
+{
+  "puuid": "OkHv4J5JcbqQSx9I5Fda7L9rpz4wQcaDVpgDyjtlhEcpdZIM9ExEyrfTpjS6EdsYcZjKX9i5ctKC9A",
+  "patch": "15.14",
+  "generation_timestamp": "2025-11-06T02:27:32.781970",
+  "total_games": 1,
+  "by_cr": [
+    {
+      "champ_id": 901,
+      "role": "TOP",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 1.11,
+      "obj_rate": 2.0,
+      "cp_25": 10869.7,
+      "build_core": [
+        3094,
+        3508,
+        3009
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8021,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    }
+  ]
+}

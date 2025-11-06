@@ -1,0 +1,56 @@
+{
+  "puuid": "OkHv4J5JcbqQSx9I5Fda7L9rpz4wQcaDVpgDyjtlhEcpdZIM9ExEyrfTpjS6EdsYcZjKX9i5ctKC9A",
+  "patch": "14.9",
+  "generation_timestamp": "2025-11-06T02:17:39.670263",
+  "total_games": 4,
+  "by_cr": [
+    {
+      "champ_id": 59,
+      "role": "JUNGLE",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 6.45,
+      "obj_rate": 4.0,
+      "cp_25": 9517.5,
+      "build_core": [
+        6610,
+        3047,
+        3748
+      ],
+      "avg_time_to_core": 1.0,
+      "rune_keystone": 8010,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 145,
+      "role": "BOTTOM",
+      "games": 3,
+      "wins": 2,
+      "losses": 1,
+      "p_hat": 0.6667,
+      "p_hat_ci": [
+        0.2077,
+        0.9385
+      ],
+      "kda_adj": 1.62,
+      "obj_rate": 0.833,
+      "cp_25": 9788.2,
+      "build_core": [
+        3087,
+        3124,
+        3006
+      ],
+      "avg_time_to_core": 3.33,
+      "rune_keystone": 8008,
+      "effective_n": 3,
+      "governance_tag": "CONTEXT"
+    }
+  ]
+}
