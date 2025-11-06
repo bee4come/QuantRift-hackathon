@@ -18,7 +18,7 @@ export async function GET(
     console.log('[API Route] Fetching matches from:', url);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout (data preparation may take time)
 
     try {
       const response = await fetch(url, {
