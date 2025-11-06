@@ -106,7 +106,7 @@ class PostgameReviewEngine:
         item_purchases = timeline_features.get('item_purchases', [])
         if item_purchases:
             first_major_item_time = next(
-                (item['time'] for item in item_purchases if item['item_id'] > 1000),
+                (item.get('time') for item in item_purchases if item.get('item_id', 0) > 1000 and item.get('time') is not None),
                 None
             )
             if first_major_item_time and first_major_item_time > 6.5:

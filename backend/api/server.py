@@ -849,12 +849,12 @@ async def _extract_postgame_features(timeline_data: dict, target_puuid: str, mat
     import json
     from pathlib import Path
 
-    # Read match data from local matches directory (avoid PUUID mismatch issues)
-    matches_dir = Path(packs_dir) / "matches"
-    match_file = matches_dir / f"{match_id}.json"
+    # Read match data from global matches pool (shared across all players)
+    global_matches_dir = Path("data/matches")
+    match_file = global_matches_dir / f"{match_id}.json"
 
     if not match_file.exists():
-        raise ValueError(f"Match data file not found: {match_file}")
+        raise ValueError(f"Match data file not found in global pool: {match_file}")
 
     with open(match_file, 'r', encoding='utf-8') as f:
         match_data = json.load(f)
@@ -1779,15 +1779,29 @@ async def risk_forecaster_agent(request: AgentRequest):
                 return
 
             # Extract team composition from recent matches
-            matches_dir = Path(packs_dir) / "matches"
-            match_files = sorted(matches_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+            # First, read player's match ID list
+            match_ids_file = Path(packs_dir) / "match_ids.json"
+            if not match_ids_file.exists():
+                yield f"data: {{\"error\": \"No match IDs found for player\"}}\n\n"
+                return
 
-            if not match_files:
+            with open(match_ids_file, 'r', encoding='utf-8') as f:
+                match_ids = json.load(f)
+
+            if not match_ids:
                 yield f"data: {{\"error\": \"No match data available for analysis\"}}\n\n"
                 return
 
-            # Read recent matches
-            with open(match_files[0], 'r', encoding='utf-8') as f:
+            # Read most recent match from global pool
+            global_matches_dir = Path("data/matches")
+            most_recent_match_id = match_ids[0]  # match_ids is already sorted by recency
+            match_file = global_matches_dir / f"{most_recent_match_id}.json"
+
+            if not match_file.exists():
+                yield f"data: {{\"error\": \"Match data not found in global pool\"}}\n\n"
+                return
+
+            with open(match_file, 'r', encoding='utf-8') as f:
                 match_data = json.load(f)
 
             # Extract team compositions
