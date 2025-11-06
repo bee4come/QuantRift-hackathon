@@ -258,12 +258,63 @@ class PlayerDataManager:
                         json.dump(pack, f, indent=2, ensure_ascii=False)
                     print(f"✅ Saved pack_{patch}.json: {pack['total_games']} games")
 
-            # Save matches_data to disk for Timeline Deep Dive
+            # Save individual match files to global pool (shared across players)
+            global_matches_dir = Path("data/matches")
+            global_matches_dir.mkdir(parents=True, exist_ok=True)
+
+            saved_count = 0
+            skipped_count = 0
+            match_ids_list = []
+            verified_matches_data = []  # Only matches where player is present
+
+            for match in matches_data:
+                match_id = match['metadata']['matchId']
+
+                # Verify player is in this match before adding to match_ids
+                player_in_match = False
+                for participant in match['info']['participants']:
+                    if participant.get('puuid') == puuid:
+                        player_in_match = True
+                        break
+
+                if not player_in_match:
+                    print(f"⚠️  Skipping {match_id}: Player not found in match")
+                    continue
+
+                # Add to verified lists
+                match_ids_list.append(match_id)
+                verified_matches_data.append(match)
+
+                match_file = global_matches_dir / f"{match_id}.json"
+
+                # Only save if not already exists (avoid duplicate writes)
+                if not match_file.exists():
+                    try:
+                        with open(match_file, 'w', encoding='utf-8') as f:
+                            json.dump(match, f, indent=2, ensure_ascii=False)
+                        saved_count += 1
+                    except Exception as e:
+                        print(f"⚠️  Failed to save {match_id}.json: {e}")
+                else:
+                    skipped_count += 1
+
+            print(f"✅ Match files: {saved_count} saved, {skipped_count} already cached (global pool)")
+
+            # Save match ID list for this player
+            match_ids_file = player_dir / "match_ids.json"
+            try:
+                with open(match_ids_file, 'w', encoding='utf-8') as f:
+                    json.dump(match_ids_list, f, indent=2)
+                print(f"✅ Saved match_ids.json: {len(match_ids_list)} verified match IDs")
+            except Exception as e:
+                print(f"⚠️  Failed to save match_ids.json: {e}")
+
+            # Save verified matches_data.json (only matches where player is present)
             matches_file = player_dir / "matches_data.json"
             try:
                 with open(matches_file, 'w', encoding='utf-8') as f:
-                    json.dump(matches_data, f, indent=2, ensure_ascii=False)
-                print(f"✅ Saved matches_data.json: {len(matches_data)} match details")
+                    json.dump(verified_matches_data, f, indent=2, ensure_ascii=False)
+                print(f"✅ Saved matches_data.json: {len(verified_matches_data)} verified match details")
             except Exception as e:
                 print(f"⚠️  Failed to save matches_data.json: {e}")
 
@@ -291,54 +342,49 @@ class PlayerDataManager:
             job.completed_at = datetime.utcnow()
 
     async def _fetch_all_match_ids(self, puuid: str, platform: str, days: int = 365) -> List[str]:
-        """根据时间范围拉取所有match IDs，突破count限制
+        """根据count参数拉取最近N场比赛，不使用时间过滤
 
         Args:
             puuid: Player PUUID
             platform: Platform code (e.g., 'na1')
-            days: 过去多少天（默认365天）
+            days: count参数（表示要获取的比赛数量，默认365场）
 
         Returns:
-            List of match IDs within the time range
+            List of match IDs
         """
-        from datetime import datetime, timedelta
-
-        # 计算时间范围（Unix时间戳，秒）
-        end_time = int(datetime.utcnow().timestamp())
-        start_time = int((datetime.utcnow() - timedelta(days=days)).timestamp())
-
-        print(f"   📅 Time range: Past {days} days")
-        print(f"   🕐 Start: {datetime.fromtimestamp(start_time)}")
-        print(f"   🕐 End: {datetime.fromtimestamp(end_time)}")
+        print(f"   📊 Fetching recent {days} matches (no time filter)")
 
         all_match_ids = []
         start_index = 0
         batch_size = 100  # Riot API单次最多返回100场
+        target_count = days  # days参数实际表示要获取的比赛数量
 
-        while True:
-            print(f"   📥 Fetching matches {start_index}-{start_index + batch_size}...")
+        while len(all_match_ids) < target_count:
+            # Calculate how many matches to fetch in this batch
+            remaining = target_count - len(all_match_ids)
+            current_batch_size = min(batch_size, remaining)
 
-            # 使用时间范围查询
+            print(f"   📥 Fetching matches {start_index}-{start_index + current_batch_size}...")
+
+            # Fetch without time filter, only use count and queue_id
             batch = await riot_client.get_match_history(
                 puuid=puuid,
                 platform=platform,
-                count=batch_size,
+                count=current_batch_size,
                 start=start_index,
-                start_time=start_time,  # 添加时间过滤
-                end_time=end_time,
                 queue_id=420  # Ranked Solo/Duo
             )
 
             if not batch or len(batch) == 0:
-                # 没有更多比赛了
+                # No more matches available
                 print(f"   ✅ All available matches fetched: {len(all_match_ids)} matches")
                 break
 
             all_match_ids.extend(batch)
             print(f"   ✅ Batch retrieved {len(batch)} matches, total {len(all_match_ids)} matches")
 
-            # 如果返回数量少于请求数量，说明已经到末尾了
-            if len(batch) < batch_size:
+            # If returned less than requested, we've reached the end
+            if len(batch) < current_batch_size:
                 print(f"   ℹ️  Reached end of player match history")
                 break
 
@@ -937,6 +983,8 @@ class PlayerDataManager:
                 for timeline_file in timelines_dir.glob("*_timeline.json"):
                     match_id = timeline_file.stem.replace("_timeline", "")
                     available_match_ids.add(match_id)
+            print(f"🔍 Available timeline files: {len(available_match_ids)} matches")
+            print(f"   Match IDs: {available_match_ids}")
 
             # Get matches data from job (memory) or matches_data.json (disk)
             job = self.jobs.get(puuid)
@@ -967,10 +1015,13 @@ class PlayerDataManager:
                 try:
                     # 提取基础信息
                     match_id = match['metadata']['matchId']
+                    print(f"🔍 Processing match: {match_id}")
 
                     # 🔍 只返回有timeline文件的matches
                     if match_id not in available_match_ids:
+                        print(f"   ❌ Skipped: No timeline file for {match_id}")
                         continue
+                    print(f"   ✅ Has timeline file")
 
                     game_creation = match['info']['gameCreation']
                     game_duration = match['info']['gameDuration']
@@ -984,7 +1035,11 @@ class PlayerDataManager:
                             break
 
                     if not player_data:
+                        print(f"   ❌ Player not found in match {match_id}")
+                        print(f"      Looking for PUUID: {puuid}")
+                        print(f"      Available PUUIDs: {[p.get('puuid') for p in participants]}")
                         continue
+                    print(f"   ✅ Found player data")
 
                     # 提取玩家数据
                     champion_id = player_data.get('championId', 0)
@@ -1012,6 +1067,7 @@ class PlayerDataManager:
                     print(f"⚠️  Failed to parse match: {e}")
                     continue
 
+            print(f"✅ Returning {len(matches)} matches with timeline files")
             return matches
 
         except Exception as e:

@@ -9,39 +9,39 @@ import json
 
 def build_narrative_prompt(review: Dict[str, Any]) -> str:
     """
-    构建LLM增强叙述的Prompt
+    Build LLM narrative prompt for post-game review
 
     Args:
-        review: 规则引擎生成的诊断结果
+        review: Diagnostic results from rule engine
 
     Returns:
-        完整的LLM提示词
+        Complete LLM prompt
     """
     issues_summary = {
-        '对线期': review['lane_phase']['issues'],
-        '目标控制': review['objective_phase']['issues'],
-        '出装节奏': review['build_timing']['issues'],
-        '团战表现': review['teamfight']['issues']
+        'Laning Phase': review['lane_phase']['issues'],
+        'Objective Control': review['objective_phase']['issues'],
+        'Build Timing': review['build_timing']['issues'],
+        'Teamfight Performance': review['teamfight']['issues']
     }
 
-    prompt = f"""你是一名资深的英雄联盟教练。基于以下量化诊断结果，为玩家生成一份简洁、专业的赛后复盘报告。
+    prompt = f"""You are an experienced League of Legends coach. Based on the following quantitative diagnostic results, generate a concise and professional post-game review report for the player.
 
-**比赛基本信息**:
-- 英雄: {review['champion']} ({review['role']})
-- 结果: {review['result']}
-- 时长: {review['game_duration'] // 60}分{review['game_duration'] % 60}秒
-- 综合评分: {review['overall_score']['grade']} ({review['overall_score']['score']}分)
+**Match Information**:
+- Champion: {review['champion']} ({review['role']})
+- Result: {review['result']}
+- Duration: {review['game_duration'] // 60}m {review['game_duration'] % 60}s
+- Overall Grade: {review['overall_score']['grade']} ({review['overall_score']['score']}/100)
 
-**诊断问题汇总**:
+**Diagnostic Issues Summary**:
 {json.dumps(issues_summary, indent=2, ensure_ascii=False)}
 
-**要求**:
-1. 用2-3句话总结本局表现（突出优势和核心问题）
-2. 针对每个维度的问题，给出1-2条具体改进建议
-3. 语气专业但不苛刻，鼓励性和建设性相结合
-4. 总字数控制在300-500字
+**Requirements**:
+1. Summarize the match performance in 2-3 sentences (highlight strengths and core issues)
+2. For each dimension's issues, provide 1-2 specific improvement suggestions
+3. Use professional but not harsh tone, combine encouragement with constructive feedback
+4. Keep total word count between 300-500 words
 
-请直接输出复盘报告，不需要额外的标题或格式。
+Please output the review report directly without additional titles or formatting.
 """
     return prompt
 
