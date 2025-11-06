@@ -2381,12 +2381,17 @@ async def get_player_summary(
 
     Example: /api/player/s1ne/na1/summary?time_range=2024-01-01
     """
+    # Strip whitespace from URL parameters
+    game_name = game_name.strip()
+    tag_line = tag_line.strip()
+
     import time
     from datetime import datetime, timedelta
     start_time = time.time()
 
-    # Calculate days based on time_range if provided
-    if time_range and not count:
+    # Calculate days based on priority: time_range > count > days > default
+    # Note: count parameter is legacy and should be converted to days
+    if time_range:
         if time_range == "2024-01-01":
             # Calculate days from 2024-01-01 to today
             start_date = datetime(2024, 1, 1)
@@ -2396,9 +2401,14 @@ async def get_player_summary(
         elif time_range == "past-365":
             days = 365
             print(f"📅 Time range 'past-365' → {days} days")
-    elif days is None and count is None:
+    elif count:
+        # Convert count to days (assume ~1 match per day)
+        days = count
+        print(f"📅 Count {count} → {days} days")
+    elif days is None:
         # Default to 365 days if nothing specified
         days = 365
+        print(f"📅 Using default → {days} days")
 
     try:
         print(f"\n{'='*60}")
@@ -2426,24 +2436,14 @@ async def get_player_summary(
         print(f"✅ [2/2] Got summoner info ({time.time()-step_start:.2f}s)")
 
         # Step 3: Start background data preparation (non-blocking)
-        if count:
-            print(f"\n🔄 Starting background data preparation for {count} matches...")
-            job = await player_data_manager.prepare_player_data(
-                puuid=puuid,
-                region='na1',
-                game_name=game_name,
-                tag_line=tag_line,
-                count=count
-            )
-        else:
-            print(f"\n🔄 Starting background data preparation for past {days} days...")
-            job = await player_data_manager.prepare_player_data(
-                puuid=puuid,
-                region='na1',
-                game_name=game_name,
-                tag_line=tag_line,
-                days=days
-            )
+        print(f"\n🔄 Starting background data preparation for past {days} days...")
+        job = await player_data_manager.prepare_player_data(
+            puuid=puuid,
+            region='na1',
+            game_name=game_name,
+            tag_line=tag_line,
+            days=days
+        )
 
         # Step 4: Try to get role stats and champion stats if Player-Pack exists
         role_stats = player_data_manager.get_role_stats(puuid)
@@ -2732,6 +2732,10 @@ async def get_player_data_status(game_name: str, tag_line: str):
     - Earliest and latest patch
     - List of all patches
     """
+    # Strip whitespace from URL parameters
+    game_name = game_name.strip()
+    tag_line = tag_line.strip()
+
     try:
         # Get account info (same as summary endpoint)
         account = await riot_client.get_account_by_riot_id(game_name, tag_line, region='americas')
@@ -2821,6 +2825,10 @@ async def get_player_progress(game_name: str, tag_line: str):
     - Objective Rate
     - Gold Per Minute
     """
+    # Strip whitespace from URL parameters
+    game_name = game_name.strip()
+    tag_line = tag_line.strip()
+
     try:
         # Get account info
         account = await riot_client.get_account_by_riot_id(game_name, tag_line, region='americas')
@@ -2931,6 +2939,10 @@ async def get_player_skills(game_name: str, tag_line: str, top_n: int = 3):
 
     Each skill is normalized to 0-100 scale
     """
+    # Strip whitespace from URL parameters
+    game_name = game_name.strip()
+    tag_line = tag_line.strip()
+
     try:
         # Load champion ID to name mapping
         champion_mapping = {}
@@ -3126,6 +3138,10 @@ async def get_player_matches(game_name: str, tag_line: str, limit: int = 20):
         - win: Win/loss
         - kills, deaths, assists: KDA stats
     """
+    # Strip whitespace from URL parameters
+    game_name = game_name.strip()
+    tag_line = tag_line.strip()
+
     try:
         # Get account info
         account = await riot_client.get_account_by_riot_id(game_name, tag_line, region='americas')
@@ -3251,6 +3267,10 @@ async def get_player_rank(game_name: str, tag_line: str, platform: str = "na1"):
     Returns:
         Player's basic summoner information
     """
+    # Strip whitespace from URL parameters
+    game_name = game_name.strip()
+    tag_line = tag_line.strip()
+
     try:
         # Get account info
         account = await riot_client.get_account_by_riot_id(game_name, tag_line, region='americas')
