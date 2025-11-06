@@ -3,6 +3,8 @@ Patch management system for tracking patch releases and mapping matches to patch
 """
 from datetime import datetime
 from typing import Dict, List, Optional
+import requests
+from functools import lru_cache
 
 
 class PatchManager:
@@ -111,6 +113,8 @@ class PatchManager:
             self.PATCH_DATES.items(),
             key=lambda x: x[1]
         )
+        # Cache for Data Dragon versions (fetched dynamically)
+        self._ddragon_versions_cache = None
     
     def get_patch_for_timestamp(self, timestamp_ms: int) -> str:
         """
@@ -133,17 +137,61 @@ class PatchManager:
         # If before all known patches, return the earliest
         return self.sorted_patches[0][0]
     
+    def _fetch_ddragon_versions(self) -> List[str]:
+        """
+        Fetch available Data Dragon versions from Riot API
+
+        Returns:
+            List of version strings (e.g., ['15.22.1', '15.21.1', ...])
+        """
+        if self._ddragon_versions_cache is not None:
+            return self._ddragon_versions_cache
+
+        try:
+            response = requests.get(
+                'https://ddragon.leagueoflegends.com/api/versions.json',
+                timeout=5
+            )
+            response.raise_for_status()
+            self._ddragon_versions_cache = response.json()
+            return self._ddragon_versions_cache
+        except Exception as e:
+            print(f"⚠️  Failed to fetch Data Dragon versions: {e}")
+            return []
+
     def get_ddragon_version(self, patch: str) -> str:
         """
-        Get the Data Dragon version for a patch
-        
+        Get the Data Dragon version for a patch (supports dynamic versions)
+
         Args:
-            patch: Patch version (e.g., '14.19')
-            
+            patch: Patch version (e.g., '14.19', '15.21')
+
         Returns:
-            Data Dragon version (e.g., '14.19.1')
+            Data Dragon version (e.g., '14.19.1', '15.21.1')
+
+        Strategy:
+        1. Check local DDRAGON_VERSIONS dict (fast path)
+        2. Fetch from Data Dragon API and match (dynamic support)
+        3. Fallback to pattern-based inference (patch + '.1')
         """
-        return self.DDRAGON_VERSIONS.get(patch, f"{patch}.1")
+        # 1. Fast path: Check local dict
+        if patch in self.DDRAGON_VERSIONS:
+            return self.DDRAGON_VERSIONS[patch]
+
+        # 2. Dynamic path: Fetch from API and find matching version
+        ddragon_versions = self._fetch_ddragon_versions()
+        if ddragon_versions:
+            # Look for exact match (e.g., "15.21" matches "15.21.1")
+            for version in ddragon_versions:
+                version_prefix = '.'.join(version.split('.')[:2])
+                if version_prefix == patch:
+                    print(f"🔍 Dynamic match: {patch} → {version}")
+                    return version
+
+        # 3. Fallback: Pattern-based inference
+        inferred_version = f"{patch}.1"
+        print(f"⚙️  Inferred version: {patch} → {inferred_version}")
+        return inferred_version
     
     def get_patch_date(self, patch: str) -> Optional[datetime]:
         """Get the release date for a patch"""
