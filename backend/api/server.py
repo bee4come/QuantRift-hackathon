@@ -678,7 +678,7 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
 
                 # Step 4: Check final status
                 if job.status == DataStatus.FAILED:
-                    raise RuntimeError(job.error_message or "Data fetch failed")
+                    raise RuntimeError(job.error or "Data fetch failed")
 
                 # Mark as completed
                 with task_lock:
@@ -1967,6 +1967,13 @@ async def comparison_hub(request: AgentRequest):
     from fastapi.responses import StreamingResponse
     from src.agents.shared.stream_helper import stream_agent_with_thinking
 
+    # Validate parameters before starting stream
+    if not request.rank and (not request.friend_game_name or not request.friend_tag_line):
+        raise HTTPException(
+            status_code=400,
+            detail="Comparison Hub requires either friend info (friend_game_name + friend_tag_line) or rank parameter"
+        )
+
     async def generate_stream():
         try:
             # Check if friend parameter exists → use friend-comparison
@@ -2011,10 +2018,6 @@ async def comparison_hub(request: AgentRequest):
 
             else:
                 # === Friend Comparison logic ===
-                if not request.friend_game_name or not request.friend_tag_line:
-                    yield f"data: {{\"error\": \"Comparison Hub requires either friend info (friend_game_name + friend_tag_line) or rank parameter\"}}\n\n"
-                    return
-
                 print(f"\n{'='*60}\n👥 Comparison Hub - Friend Comparison ({request.friend_game_name}#{request.friend_tag_line})\n{'='*60}")
 
                 await player_data_manager.wait_for_data(puuid=request.puuid, timeout=120)
