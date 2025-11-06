@@ -491,7 +491,7 @@ export default function AICoachAnalysis({
 
   // Extract data from playerData for modals
   const playerChampions = playerData?.analysis?.best_champions?.map((champ: any) => ({
-    champion_id: parseInt(champ.champion_id || '0'),
+    champion_id: parseInt(champ.champ_id || '0'),
     champion_name: champ.name,
     games_played: champ.games,
     wins: champ.wins,

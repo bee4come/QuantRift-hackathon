@@ -17,6 +17,7 @@ const AGENT_ENDPOINTS: Record<string, string> = {
   'role-specialization': '/v1/agents/role-specialization',
   'champion-recommendation': '/v1/agents/champion-recommendation',
   'version-comparison': '/v1/agents/version-comparison',
+  'version-trends': '/v1/agents/multi-version', // Version Trends uses multi-version endpoint
   'build-simulator': '/v1/agents/build-simulator',
   'drafting-coach': '/v1/agents/drafting-coach',
   'team-synergy': '/v1/agents/team-synergy',
