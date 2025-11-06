@@ -9,6 +9,7 @@ export const maxDuration = 180; // 180 seconds for agent analysis
 const AGENT_ENDPOINTS: Record<string, string> = {
   'annual-summary': '/v1/agents/annual-summary',
   'weakness-analysis': '/v1/agents/weakness-analysis',
+  'performance-insights': '/v1/agents/weakness-analysis', // Performance Insights uses weakness-analysis endpoint
   'champion-mastery': '/v1/agents/champion-mastery',
   'progress-tracker': '/v1/agents/progress-tracker',
   'peer-comparison': '/v1/agents/peer-comparison',
