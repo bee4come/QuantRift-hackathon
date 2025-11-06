@@ -258,6 +258,15 @@ class PlayerDataManager:
                         json.dump(pack, f, indent=2, ensure_ascii=False)
                     print(f"✅ Saved pack_{patch}.json: {pack['total_games']} games")
 
+            # Save matches_data to disk for Timeline Deep Dive
+            matches_file = player_dir / "matches_data.json"
+            try:
+                with open(matches_file, 'w', encoding='utf-8') as f:
+                    json.dump(matches_data, f, indent=2, ensure_ascii=False)
+                print(f"✅ Saved matches_data.json: {len(matches_data)} match details")
+            except Exception as e:
+                print(f"⚠️  Failed to save matches_data.json: {e}")
+
             print(f"✅ Data preparation complete (phase 1): {game_name}#{tag_line}")
             print(f"   Total games: {total_games}")
             print(f"   Patches: {total_patches}")
@@ -928,67 +937,32 @@ class PlayerDataManager:
                     match_id = timeline_file.stem.replace("_timeline", "")
                     available_match_ids.add(match_id)
 
-            # 从job中获取matches数据
+            # Get matches data from job (memory) or matches_data.json (disk)
             job = self.jobs.get(puuid)
-            if not job or not job.matches_data:
-                # 如果job中没有数据，但有timeline文件，尝试从match文件读取完整信息
-                if available_match_ids:
-                    matches = []
-                    matches_dir = player_dir / "matches"
+            matches_data = None
 
-                    for match_id in sorted(available_match_ids, reverse=True)[:limit]:
-                        match_file = matches_dir / f"{match_id}.json"
+            if job and job.matches_data:
+                # Use in-memory data if available
+                matches_data = job.matches_data
+            else:
+                # Try to load from disk cache
+                matches_file = player_dir / "matches_data.json"
+                if matches_file.exists():
+                    try:
+                        with open(matches_file, 'r', encoding='utf-8') as f:
+                            matches_data = json.load(f)
+                        print(f"✅ Loaded matches_data.json from disk: {len(matches_data)} matches")
+                    except Exception as e:
+                        print(f"⚠️  Failed to load matches_data.json: {e}")
 
-                        # Try to read from match file first
-                        if match_file.exists():
-                            try:
-                                with open(match_file, 'r', encoding='utf-8') as f:
-                                    match_data = json.load(f)
-
-                                game_creation = match_data['info']['gameCreation']
-                                game_duration = match_data['info']['gameDuration']
-
-                                # Find player data
-                                participants = match_data['info']['participants']
-                                player_data = None
-                                for participant in participants:
-                                    if participant.get('puuid') == puuid:
-                                        player_data = participant
-                                        break
-
-                                if player_data:
-                                    champion_id = player_data.get('championId', 0)
-                                    champion_name = get_champion_name(champion_id)
-                                    role = player_data.get('teamPosition', 'UNKNOWN')
-                                    win = player_data.get('win', False)
-                                    kills = player_data.get('kills', 0)
-                                    deaths = player_data.get('deaths', 0)
-                                    assists = player_data.get('assists', 0)
-
-                                    matches.append({
-                                        'match_id': match_id,
-                                        'game_creation': game_creation,
-                                        'game_duration': game_duration,
-                                        'champion_id': champion_id,
-                                        'champion_name': champion_name,
-                                        'role': role,
-                                        'win': win,
-                                        'kills': kills,
-                                        'deaths': deaths,
-                                        'assists': assists
-                                    })
-                            except Exception as e:
-                                print(f"⚠️  Failed to read match {match_id}: {e}")
-                                continue
-                        else:
-                            print(f"⚠️  Match file not found: {match_file}")
-
-                    return matches
+            # If no matches data available, return empty list
+            if not matches_data:
+                print(f"⚠️  No matches data available for {puuid}")
                 return []
 
-            # 转换为前端需要的格式，只包含有timeline的matches
+            # Convert to frontend format, only include matches with timeline files
             matches = []
-            for match in job.matches_data:
+            for match in matches_data:
                 try:
                     # 提取基础信息
                     match_id = match['metadata']['matchId']
