@@ -228,8 +228,22 @@ export default function AICoachAnalysis({
     }
     if (agent.id === 'match-analysis') {
       setCurrentMatchAgent(agent.id);
-      await fetchMatches();
-      setMatchModalOpen(true);
+
+      // Show loading state
+      updateAgentStatus(agent.id, { status: 'generating', error: undefined });
+
+      try {
+        await fetchMatches();
+        // Reset status and open modal
+        updateAgentStatus(agent.id, { status: 'idle', error: undefined });
+        setMatchModalOpen(true);
+      } catch (error) {
+        console.error('❌ Failed to fetch matches:', error);
+        updateAgentStatus(agent.id, {
+          status: 'idle',
+          error: error instanceof Error ? error.message : 'Failed to load matches'
+        });
+      }
       return;
     }
 
@@ -402,59 +416,34 @@ export default function AICoachAnalysis({
 
   // Fetch matches for timeline analysis
   const fetchMatches = async () => {
+    console.log('🔍 fetchMatches called for', gameName, tagLine);
+
+    // Directly fetch matches without waiting for data preparation
+    // The backend will return matches if timeline files exist
     try {
-      // Step 1: Check data status
-      const statusResponse = await fetch(`/api/player/${gameName}/${tagLine}/data-status`);
-      const statusData = await statusResponse.json();
+      const response = await fetch(`/api/player/${gameName}/${tagLine}/matches?limit=20`);
 
-      // Step 2: If data not ready, trigger preparation
-      if (!statusData.ready || statusData.status === 'none') {
-        console.log('🔄 Data not ready, triggering preparation...');
-
-        // Trigger data preparation
-        await fetch(`/api/summoner/${gameName}/${tagLine}`, {
-          method: 'GET'
-        });
-
-        // Wait for data to be ready (poll every 2 seconds, max 30 seconds)
-        let attempts = 0;
-        const maxAttempts = 15;
-
-        while (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-          const checkResponse = await fetch(`/api/player/${gameName}/${tagLine}/data-status`);
-          const checkData = await checkResponse.json();
-
-          if (checkData.ready) {
-            console.log('✅ Data ready after', attempts + 1, 'attempts');
-            break;
-          }
-
-          attempts++;
-        }
-
-        if (attempts >= maxAttempts) {
-          console.warn('⚠️  Data preparation timeout, trying to fetch matches anyway...');
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      // Step 3: Fetch matches
-      const response = await fetch(`/api/player/${gameName}/${tagLine}/matches?limit=20`);
       const data = await response.json();
+
       if (data.success) {
+        console.log(`✅ Fetched ${data.matches.length} matches with timelines`);
         setMatchesData(data.matches);
 
         if (data.matches.length === 0) {
-          console.warn('⚠️  No matches available. Data may still be preparing.');
+          throw new Error('No timeline data available. Please ensure player data has been loaded first.');
         }
       } else {
-        console.error('Failed to fetch matches:', data.error);
-        setMatchesData([]);
+        throw new Error(data.error || 'Failed to fetch matches');
       }
     } catch (error) {
-      console.error('Error fetching matches:', error);
+      console.error('❌ Error fetching matches:', error);
       setMatchesData([]);
+      throw error; // Re-throw so the calling code can handle it
     }
   };
 
