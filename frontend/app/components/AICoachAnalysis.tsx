@@ -24,6 +24,13 @@ import MatchSelectorModal from './MatchSelectorModal';
 import ShinyText from './ui/ShinyText';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 
+interface TimeRangeOption {
+  id: string;
+  label: string;
+  value: string;
+  description: string;
+}
+
 interface AgentState {
   id: string;
   name: string;
@@ -33,6 +40,8 @@ interface AgentState {
   status: AgentStatus;
   detailedReport?: string;
   error?: string;
+  timeRangeOptions?: TimeRangeOption[];
+  selectedTimeRange?: string;
 }
 
 interface AICoachAnalysisProps {
@@ -77,7 +86,22 @@ export default function AICoachAnalysis({
       description: 'Year-in-review performance highlights',
       icon: FileText,
       endpoint: '/v1/agents/annual-summary',
-      status: 'idle'
+      status: 'idle',
+      timeRangeOptions: [
+        {
+          id: '2024-full-year',
+          label: '2024 Full Year',
+          value: '2024-01-01',
+          description: 'From January 1st, 2024 to today'
+        },
+        {
+          id: 'past-365-days',
+          label: 'Past 365 Days',
+          value: 'past-365',
+          description: 'Most recent 365 days'
+        }
+      ],
+      selectedTimeRange: '2024-01-01' // Default to 2024 full year
     },
     {
       id: 'comparison-hub',
@@ -137,7 +161,22 @@ export default function AICoachAnalysis({
       description: 'Strengths, weaknesses & growth',
       icon: BarChart3,
       endpoint: '/v1/agents/weakness-analysis', // Merges weakness + detailed + progress
-      status: 'idle'
+      status: 'idle',
+      timeRangeOptions: [
+        {
+          id: '2024-full-year',
+          label: '2024 Full Year',
+          value: '2024-01-01',
+          description: 'From January 1st, 2024 to today'
+        },
+        {
+          id: 'past-365-days',
+          label: 'Past 365 Days',
+          value: 'past-365',
+          description: 'Most recent 365 days'
+        }
+      ],
+      selectedTimeRange: '2024-01-01' // Default to 2024 full year
     },
     {
       id: 'champion-recommendation',
@@ -153,6 +192,10 @@ export default function AICoachAnalysis({
     setAgents((prev) =>
       prev.map((agent) => (agent.id === id ? { ...agent, ...updates } : agent))
     );
+  };
+
+  const handleTimeRangeChange = (agentId: string, timeRange: string) => {
+    updateAgentStatus(agentId, { selectedTimeRange: timeRange });
   };
 
   const handleGenerate = async (agent: AgentState) => {
@@ -197,12 +240,17 @@ export default function AICoachAnalysis({
       const { fetchAgentStream } = await import('@/app/lib/streamUtils');
 
       const url = `/api/agents/${agent.id}`;
-      const body = {
+      const body: any = {
         puuid,
         region,
         recent_count: 20,
         model: 'sonnet' // Use Sonnet for detailed analysis
       };
+
+      // Add time range parameter if agent has time range options
+      if (agent.selectedTimeRange) {
+        body.time_range = agent.selectedTimeRange;
+      }
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
@@ -470,6 +518,7 @@ export default function AICoachAnalysis({
             key={agent.id}
             {...agent}
             onGenerate={() => handleGenerate(agent)}
+            onTimeRangeChange={(timeRange) => handleTimeRangeChange(agent.id, timeRange)}
           />
         ))}
       </div>
@@ -481,6 +530,7 @@ export default function AICoachAnalysis({
             key={agent.id}
             {...agent}
             onGenerate={() => handleGenerate(agent)}
+            onTimeRangeChange={(timeRange) => handleTimeRangeChange(agent.id, timeRange)}
           />
         ))}
       </div>
@@ -492,6 +542,7 @@ export default function AICoachAnalysis({
             key={agent.id}
             {...agent}
             onGenerate={() => handleGenerate(agent)}
+            onTimeRangeChange={(timeRange) => handleTimeRangeChange(agent.id, timeRange)}
           />
         ))}
       </div>

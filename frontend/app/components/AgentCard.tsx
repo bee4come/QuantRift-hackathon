@@ -15,6 +15,13 @@ export type AgentStatus =
   | 'ready'
   | 'error';
 
+interface TimeRangeOption {
+  id: string;
+  label: string;
+  value: string;
+  description: string;
+}
+
 interface AgentCardProps {
   id: string;
   name: string;
@@ -24,6 +31,9 @@ interface AgentCardProps {
   detailedReport?: string;
   error?: string;
   onGenerate: () => void;
+  timeRangeOptions?: TimeRangeOption[];
+  selectedTimeRange?: string;
+  onTimeRangeChange?: (timeRange: string) => void;
 }
 
 export default function AgentCard({
@@ -34,7 +44,10 @@ export default function AgentCard({
   status,
   detailedReport,
   error,
-  onGenerate
+  onGenerate,
+  timeRangeOptions,
+  selectedTimeRange,
+  onTimeRangeChange
 }: AgentCardProps) {
   const colors = useAdaptiveColors();
 
@@ -145,6 +158,37 @@ export default function AgentCard({
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Time Range Selector */}
+        {timeRangeOptions && timeRangeOptions.length > 0 && (
+          <div className="mb-3 relative z-10">
+            <label className="text-xs font-medium mb-2 block" style={{ color: '#8E8E93' }}>
+              Time Range
+            </label>
+            <select
+              value={selectedTimeRange || ''}
+              onChange={(e) => onTimeRangeChange?.(e.target.value)}
+              disabled={status === 'generating'}
+              className="w-full px-3 py-2 rounded-lg text-sm border backdrop-blur-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                color: '#FFFFFF'
+              }}
+            >
+              {timeRangeOptions.map((option) => (
+                <option key={option.id} value={option.value} style={{ backgroundColor: '#1C1C1E', color: '#FFFFFF' }}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {selectedTimeRange && timeRangeOptions.find(opt => opt.value === selectedTimeRange) && (
+              <p className="text-xs mt-1" style={{ color: '#8E8E93' }}>
+                {timeRangeOptions.find(opt => opt.value === selectedTimeRange)?.description}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="space-y-2 relative z-10">

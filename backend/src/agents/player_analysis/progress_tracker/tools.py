@@ -3,14 +3,61 @@
 import json
 from pathlib import Path
 from typing import Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.core.statistical_utils import wilson_ci_tuple as wilson_confidence_interval
 
 
-def load_recent_packs(packs_dir: str, window_size: int = 10) -> Dict[str, Any]:
-    """加载最近N个版本的packs"""
+def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = None) -> Dict[str, Any]:
+    """
+    加载最近N个版本的packs
+
+    Args:
+        packs_dir: Player-Pack目录路径
+        window_size: 加载最近N个版本
+        time_range: 时间范围过滤
+            - "2024-01-01": Load data from 2024-01-01 to today
+            - "past-365": Load data from past 365 days
+            - None: Load recent window_size patches
+
+    Returns:
+        Dict of packs keyed by patch version
+    """
     packs_dir = Path(packs_dir)
-    pack_files = sorted(packs_dir.glob("pack_*.json"))[-window_size:]
+
+    # Calculate time filter if needed
+    cutoff_timestamp = None
+    if time_range == "2024-01-01":
+        cutoff_timestamp = datetime(2024, 1, 1).timestamp()
+    elif time_range == "past-365":
+        cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
+
+    # Get all pack files
+    all_pack_files = sorted(packs_dir.glob("pack_*.json"))
+
+    # Apply time filter if specified
+    if cutoff_timestamp:
+        filtered_pack_files = []
+        for pack_file in all_pack_files:
+            with open(pack_file, 'r') as f:
+                pack_data = json.load(f)
+                # Check if pack has timestamp and is after cutoff
+                if "generation_timestamp" in pack_data:
+                    pack_timestamp = pack_data["generation_timestamp"]
+                    # If timestamp is string, convert to timestamp
+                    if isinstance(pack_timestamp, str):
+                        pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
+
+                    # Include if after cutoff
+                    if pack_timestamp >= cutoff_timestamp:
+                        filtered_pack_files.append(pack_file)
+                else:
+                    # If no timestamp, include by default
+                    filtered_pack_files.append(pack_file)
+
+        pack_files = filtered_pack_files
+    else:
+        # Use most recent window_size packs
+        pack_files = all_pack_files[-window_size:]
 
     packs = {}
     for pack_file in pack_files:

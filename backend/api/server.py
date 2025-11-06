@@ -853,6 +853,7 @@ class AgentRequest(BaseModel):
     match_id: Optional[str] = Field(None, description="Match ID for timeline-deep-dive agent")
     friend_game_name: Optional[str] = Field(None, description="Friend's game name for friend-comparison agent")
     friend_tag_line: Optional[str] = Field(None, description="Friend's tag line for friend-comparison agent")
+    time_range: Optional[str] = Field(None, description="Time range filter: '2024-01-01' for 2024 full year, 'past-365' for past 365 days")
 
 class AgentResponse(BaseModel):
     """Generic Agent Response Model"""
@@ -1052,7 +1053,12 @@ async def annual_summary(request: AgentRequest):
             )
             from src.agents.player_analysis.annual_summary.prompts import build_narrative_prompt
 
-            all_packs_dict = load_all_annual_packs(packs_dir)
+            # Load packs with optional time range filter
+            time_range = getattr(request, 'time_range', None)
+            all_packs_dict = load_all_annual_packs(packs_dir, time_range=time_range)
+
+            print(f"📊 Loaded {len(all_packs_dict)} patches" + (f" (time_range: {time_range})" if time_range else ""))
+
             analysis = generate_comprehensive_annual_analysis(all_packs_dict)
             formatted_analysis = format_analysis_for_prompt(analysis)
             prompts = build_narrative_prompt(analysis, formatted_analysis)
@@ -1183,7 +1189,11 @@ async def progress_tracker(request: AgentRequest):
             from src.agents.player_analysis.progress_tracker.prompts import build_narrative_prompt
 
             window_size = request.recent_count or 10
-            recent_packs = load_recent_packs(packs_dir, window_size=window_size)
+            time_range = getattr(request, 'time_range', None)
+            recent_packs = load_recent_packs(packs_dir, window_size=window_size, time_range=time_range)
+
+            print(f"📊 Loaded {len(recent_packs)} patches" + (f" (time_range: {time_range})" if time_range else ""))
+
             analysis = analyze_progress(recent_packs)
             formatted_data = format_analysis_for_prompt(analysis)
             prompts = build_narrative_prompt(analysis, formatted_data)

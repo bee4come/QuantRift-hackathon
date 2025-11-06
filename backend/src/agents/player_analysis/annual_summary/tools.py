@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
 
 # Add parent path for imports
@@ -24,12 +24,16 @@ from src.agents.player_analysis.multi_version.tools import (
 from src.utils.id_mappings import get_champion_name
 
 
-def load_all_annual_packs(packs_dir: str) -> Dict[str, Any]:
+def load_all_annual_packs(packs_dir: str, time_range: str = None) -> Dict[str, Any]:
     """
     加载整个赛季的所有Player-Pack文件
 
     Args:
         packs_dir: Player-Pack目录路径
+        time_range: 时间范围过滤
+            - "2024-01-01": Load data from 2024-01-01 to today
+            - "past-365": Load data from past 365 days
+            - None: Load all available data
 
     Returns:
         {
@@ -41,12 +45,31 @@ def load_all_annual_packs(packs_dir: str) -> Dict[str, Any]:
     packs_path = Path(packs_dir)
     all_packs = {}
 
+    # Calculate time filter if needed
+    cutoff_timestamp = None
+    if time_range == "2024-01-01":
+        cutoff_timestamp = datetime(2024, 1, 1).timestamp()
+    elif time_range == "past-365":
+        cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
+
     for pack_file in sorted(packs_path.glob("pack_*.json")):
         # Extract patch version from filename (pack_15.18.json → 15.18)
         patch_version = pack_file.stem.replace("pack_", "")
 
         with open(pack_file, 'r', encoding='utf-8') as f:
             pack_data = json.load(f)
+
+            # Apply time range filter if specified
+            if cutoff_timestamp and "generation_timestamp" in pack_data:
+                pack_timestamp = pack_data["generation_timestamp"]
+                # If timestamp is string, convert to timestamp
+                if isinstance(pack_timestamp, str):
+                    pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
+
+                # Skip if before cutoff
+                if pack_timestamp < cutoff_timestamp:
+                    continue
+
             all_packs[patch_version] = pack_data
 
     return all_packs
