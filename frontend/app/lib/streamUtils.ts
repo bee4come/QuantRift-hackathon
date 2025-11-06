@@ -4,11 +4,12 @@
  */
 
 export interface StreamChunk {
-  type: 'thinking_start' | 'thinking' | 'thinking_end' | 'chunk' | 'complete' | 'status';
+  type: 'analysis' | 'thinking_start' | 'thinking' | 'thinking_end' | 'chunk' | 'complete' | 'status';
   content?: string;
   one_liner?: string;
   detailed?: string;
   status?: string;
+  data?: any; // For analysis data (Annual Summary, Progress Tracker widgets)
 }
 
 export interface StreamCallbacks {
@@ -19,6 +20,7 @@ export interface StreamCallbacks {
   onComplete?: (oneLiner: string, detailed: string) => void;
   onStatus?: (status: string) => void;
   onError?: (error: string) => void;
+  onAnalysis?: (data: any) => void; // For analysis data widgets
 }
 
 /**
@@ -103,7 +105,11 @@ export async function handleSSEStream(
             }
 
             // Handle different message types
-            if (chunk.type === 'thinking_start') {
+            if (chunk.type === 'analysis') {
+              // Analysis data for widgets (Annual Summary, Progress Tracker)
+              console.log('[SSE] Received analysis data for widgets');
+              callbacks.onAnalysis?.(chunk.data);
+            } else if (chunk.type === 'thinking_start') {
               thinkingContent = '';
               callbacks.onThinkingStart?.();
             } else if (chunk.type === 'thinking') {
@@ -153,21 +159,26 @@ export async function handleSSEStream(
  * Simplified version: Only get final result (no intermediate stream processing)
  * @param url - API endpoint URL
  * @param body - Request body (JSON)
- * @returns Promise with one_liner and detailed
+ * @returns Promise with one_liner, detailed, and optional analysis data
  */
 export async function fetchAgentStream(
   url: string,
   body: any
-): Promise<{ one_liner: string; detailed: string }> {
+): Promise<{ one_liner: string; detailed: string; analysis?: any }> {
   return new Promise((resolve, reject) => {
     let oneLiner = '';
     let detailed = '';
+    let analysisData: any = undefined;
 
     handleSSEStream(url, body, {
+      onAnalysis: (data) => {
+        analysisData = data;
+        console.log('[fetchAgentStream] Stored analysis data for widgets');
+      },
       onComplete: (liner, det) => {
         oneLiner = liner;
         detailed = det;
-        resolve({ one_liner: oneLiner, detailed });
+        resolve({ one_liner: oneLiner, detailed, analysis: analysisData });
       },
       onError: (error) => {
         reject(new Error(error));

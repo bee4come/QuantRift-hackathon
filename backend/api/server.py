@@ -974,6 +974,10 @@ async def annual_summary(request: AgentRequest):
             formatted_analysis = format_analysis_for_prompt(analysis)
             prompts = build_narrative_prompt(analysis, formatted_analysis)
 
+            # Step 1.5: Send analysis data first (for frontend widgets)
+            yield f"data: {{\"type\": \"analysis\", \"data\": {json.dumps(analysis, ensure_ascii=False)}}}\n\n"
+            print(f"✅ Sent analysis data for frontend widgets")
+
             # Step 2: Use generic stream helper (supports model switching)
             model = "haiku"  # Force use of Haiku 4.5 for best speed
             print(f"🚀 Using model: Haiku 4.5")
@@ -1108,6 +1112,10 @@ async def progress_tracker(request: AgentRequest):
             analysis = analyze_progress(recent_packs)
             formatted_data = format_analysis_for_prompt(analysis)
             prompts = build_narrative_prompt(analysis, formatted_data)
+
+            # Step 1.5: Send analysis data first (for frontend widgets)
+            yield f"data: {{\"type\": \"analysis\", \"data\": {json.dumps(analysis, ensure_ascii=False)}}}\n\n"
+            print(f"✅ Sent analysis data for frontend widgets")
 
             # Step 2: Use generic stream helper (supports model switching)
             model = "haiku"  # Force use of Haiku 4.5 for best speed

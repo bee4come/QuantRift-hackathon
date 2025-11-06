@@ -42,6 +42,7 @@ interface AgentState {
   error?: string;
   timeRangeOptions?: TimeRangeOption[];
   selectedTimeRange?: string;
+  analysisData?: any; // For widgets (Annual Summary, Progress Tracker)
 }
 
 interface AICoachAnalysisProps {
@@ -268,16 +269,18 @@ export default function AICoachAnalysis({
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
+      const analysisData = result.analysis; // Extract analysis data for widgets
 
       updateAgentStatus(agent.id, {
         status: 'ready',
-        detailedReport: detailedReport
+        detailedReport: detailedReport,
+        analysisData: analysisData  // Store analysis data
       });
 
-      // Auto-open modal with report
+      // Auto-open modal with report and analysis data
       const updatedAgent = agents.find((a) => a.id === agent.id);
       if (updatedAgent) {
-        setSelectedAgent({ ...updatedAgent, detailedReport });
+        setSelectedAgent({ ...updatedAgent, detailedReport, analysisData });
       }
     } catch (error) {
       console.error(`❌ Error generating analysis for ${agent.id}:`, error);
@@ -307,16 +310,18 @@ export default function AICoachAnalysis({
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
+      const analysisData = result.analysis; // Extract analysis data for widgets
 
       updateAgentStatus(agentId, {
         status: 'ready',
-        detailedReport: detailedReport
+        detailedReport: detailedReport,
+        analysisData: analysisData  // Store analysis data
       });
 
       // Auto-open modal
       const agent = agents.find((a) => a.id === agentId);
       if (agent) {
-        setSelectedAgent({ ...agent, detailedReport });
+        setSelectedAgent({ ...agent, detailedReport, analysisData });
       }
     } catch (error) {
       console.error('Champion mastery error:', error);
@@ -355,16 +360,18 @@ export default function AICoachAnalysis({
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
+      const analysisData = result.analysis; // Extract analysis data for widgets
 
       updateAgentStatus(agentId, {
         status: 'ready',
-        detailedReport: detailedReport
+        detailedReport: detailedReport,
+        analysisData: analysisData  // Store analysis data
       });
 
       // Auto-open modal
       const agent = agents.find((a) => a.id === agentId);
       if (agent) {
-        setSelectedAgent({ ...agent, detailedReport });
+        setSelectedAgent({ ...agent, detailedReport, analysisData });
       }
     } catch (error) {
       console.error('Comparison hub error:', error);
@@ -394,16 +401,18 @@ export default function AICoachAnalysis({
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
+      const analysisData = result.analysis; // Extract analysis data for widgets
 
       updateAgentStatus(agentId, {
         status: 'ready',
-        detailedReport: detailedReport
+        detailedReport: detailedReport,
+        analysisData: analysisData  // Store analysis data
       });
 
       // Auto-open modal
       const agent = agents.find((a) => a.id === agentId);
       if (agent) {
-        setSelectedAgent({ ...agent, detailedReport });
+        setSelectedAgent({ ...agent, detailedReport, analysisData });
       }
     } catch (error) {
       console.error('Role specialization error:', error);
@@ -588,9 +597,11 @@ export default function AICoachAnalysis({
         <DetailedAnalysisModal
           isOpen={!!selectedAgent}
           onClose={() => setSelectedAgent(null)}
+          agentId={selectedAgent.id}
           agentName={selectedAgent.name}
           agentDescription={selectedAgent.description}
           detailedReport={selectedAgent.detailedReport || ''}
+          analysisData={selectedAgent.analysisData}
         />
       )}
 
