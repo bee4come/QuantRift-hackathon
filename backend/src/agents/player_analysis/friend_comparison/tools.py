@@ -87,7 +87,7 @@ def load_player_data(packs_dir: str, all_packs_data: Optional[list] = None) -> D
         [(champ, data) for champ, data in champion_pool.items()],
         key=lambda x: x[1]['games'],
         reverse=True
-    )[:5]  # Top 5英雄
+    )[:5]  # Top 5 champions
 
     champion_pool_data = []
     for champ_id, data in top_champions:
@@ -147,54 +147,54 @@ def load_player_data(packs_dir: str, all_packs_data: Optional[list] = None) -> D
 def compare_two_players(player1_data: Dict[str, Any], player2_data: Dict[str, Any],
                         player1_name: str, player2_name: str) -> Dict[str, Any]:
     """
-    深度对比两位玩家（使用完整量化指标）
+    Deep comparison of two players using full quantitative metrics
     """
-    # 基础对比
+    # Basic comparison
     wr_diff = player1_data["winrate"] - player2_data["winrate"]
     kda_diff = player1_data["avg_kda_adj"] - player2_data["avg_kda_adj"]
     cp_diff = player1_data["avg_combat_power"] - player2_data["avg_combat_power"]
     obj_diff = player1_data["avg_obj_rate"] - player2_data["avg_obj_rate"]
 
-    # 综合评估
+    # Overall evaluation
     if abs(wr_diff) < 0.02:
-        wr_assessment = "势均力敌"
+        wr_assessment = "Evenly matched"
     elif wr_diff > 0:
-        wr_assessment = f"{player1_name}胜率领先"
+        wr_assessment = f"{player1_name} leads in win rate"
     else:
-        wr_assessment = f"{player2_name}胜率领先"
+        wr_assessment = f"{player2_name} leads in win rate"
 
-    # KDA评估
+    # KDA evaluation
     if abs(kda_diff) < 0.3:
-        kda_assessment = "击杀效率相近"
+        kda_assessment = "Similar kill efficiency"
     elif kda_diff > 0:
-        kda_assessment = f"{player1_name}击杀效率更高"
+        kda_assessment = f"{player1_name} has higher kill efficiency"
     else:
-        kda_assessment = f"{player2_name}击杀效率更高"
+        kda_assessment = f"{player2_name} has higher kill efficiency"
 
-    # Combat Power评估
+    # Combat Power evaluation
     if abs(cp_diff) < 500:
-        cp_assessment = "战斗力相近"
+        cp_assessment = "Similar combat power"
     elif cp_diff > 0:
-        cp_assessment = f"{player1_name}战斗力更强"
+        cp_assessment = f"{player1_name} has stronger combat power"
     else:
-        cp_assessment = f"{player2_name}战斗力更强"
+        cp_assessment = f"{player2_name} has stronger combat power"
 
-    # Objective Rate评估
+    # Objective Rate evaluation
     if abs(obj_diff) < 0.3:
-        obj_assessment = "资源控制相近"
+        obj_assessment = "Similar objective control"
     elif obj_diff > 0:
-        obj_assessment = f"{player1_name}资源控制更好"
+        obj_assessment = f"{player1_name} has better objective control"
     else:
-        obj_assessment = f"{player2_name}资源控制更好"
+        obj_assessment = f"{player2_name} has better objective control"
 
-    # 英雄池对比
+    # Champion pool comparison
     champ_diversity_diff = player1_data["champion_diversity"] - player2_data["champion_diversity"]
     if abs(champ_diversity_diff) < 3:
-        champ_assessment = "英雄池深度相近"
+        champ_assessment = "Similar champion pool depth"
     elif champ_diversity_diff > 0:
-        champ_assessment = f"{player1_name}英雄池更广"
+        champ_assessment = f"{player1_name} has broader champion pool"
     else:
-        champ_assessment = f"{player2_name}英雄池更广"
+        champ_assessment = f"{player2_name} has broader champion pool"
 
     return {
         "player1": {
@@ -247,86 +247,86 @@ def format_comparison_for_prompt(comparison: Dict[str, Any], player1_name: str, 
     diff = comparison["comparison"]
     assess = comparison["assessment"]
 
-    # 格式化英雄池
+    # Format champion pool
     def format_champion_pool(champ_list):
         lines = []
         for i, champ in enumerate(champ_list[:3], 1):
             lines.append(
-                f"  {i}. 英雄ID {champ['champ_id']}: "
-                f"{champ['games']}场, "
-                f"胜率{champ['winrate']:.1%}, "
+                f"  {i}. Champion ID {champ['champ_id']}: "
+                f"{champ['games']} games, "
+                f"Win rate {champ['winrate']:.1%}, "
                 f"KDA {champ['kda_adj']:.2f}, "
-                f"战力{champ['combat_power']:.0f}, "
-                f"控图{champ['obj_rate']:.2f}"
+                f"Combat power {champ['combat_power']:.0f}, "
+                f"Obj rate {champ['obj_rate']:.2f}"
             )
         return "\n".join(lines)
 
-    # 格式化位置分布
+    # Format role distribution
     def format_role_dist(role_list):
         lines = []
         for role in role_list[:3]:
             lines.append(
-                f"  - {role['role']}: {role['percentage']:.1%} ({role['games']}场), "
-                f"胜率{role['winrate']:.1%}"
+                f"  - {role['role']}: {role['percentage']:.1%} ({role['games']} games), "
+                f"Win rate {role['winrate']:.1%}"
             )
         return "\n".join(lines)
 
-    return f"""# 好友对比分析数据（量化指标）
+    return f"""# Friend Comparison Analysis Data (Quantitative Metrics)
 
-## {player1_name} 数据摘要
-### 基础统计
-- 总场次: {p1['total_games']}
-- 胜率: {p1['winrate']:.1%}
-- 数据质量: CONFIDENT {p1['data_quality']['confident']:.0%} | CAUTION {p1['data_quality']['caution']:.0%} | CONTEXT {p1['data_quality']['context']:.0%}
+## {player1_name} Data Summary
+### Basic Statistics
+- Total games: {p1['total_games']}
+- Win rate: {p1['winrate']:.1%}
+- Data quality: CONFIDENT {p1['data_quality']['confident']:.0%} | CAUTION {p1['data_quality']['caution']:.0%} | CONTEXT {p1['data_quality']['context']:.0%}
 
-### 核心量化指标
-- 平均KDA: {p1['avg_kda_adj']:.2f}
-- 25分钟战斗力: {p1['avg_combat_power']:.0f}
-- 资源控制率: {p1['avg_obj_rate']:.2f}
+### Core Quantitative Metrics
+- Average KDA: {p1['avg_kda_adj']:.2f}
+- 25-minute combat power: {p1['avg_combat_power']:.0f}
+- Objective control rate: {p1['avg_obj_rate']:.2f}
 
-### 英雄池（Top 3）
+### Champion Pool (Top 3)
 {format_champion_pool(p1['champion_pool'])}
-- 英雄池深度: {p1['champion_diversity']}个不同英雄
+- Champion pool depth: {p1['champion_diversity']} unique champions
 
-### 位置分布（Top 3）
+### Position Distribution (Top 3)
 {format_role_dist(p1['role_distribution'])}
-- 主要位置: {p1['primary_role']}
+- Primary position: {p1['primary_role']}
 
 ---
 
-## {player2_name} 数据摘要
-### 基础统计
-- 总场次: {p2['total_games']}
-- 胜率: {p2['winrate']:.1%}
-- 数据质量: CONFIDENT {p2['data_quality']['confident']:.0%} | CAUTION {p2['data_quality']['caution']:.0%} | CONTEXT {p2['data_quality']['context']:.0%}
+## {player2_name} Data Summary
+### Basic Statistics
+- Total games: {p2['total_games']}
+- Win rate: {p2['winrate']:.1%}
+- Data quality: CONFIDENT {p2['data_quality']['confident']:.0%} | CAUTION {p2['data_quality']['caution']:.0%} | CONTEXT {p2['data_quality']['context']:.0%}
 
-### 核心量化指标
-- 平均KDA: {p2['avg_kda_adj']:.2f}
-- 25分钟战斗力: {p2['avg_combat_power']:.0f}
-- 资源控制率: {p2['avg_obj_rate']:.2f}
+### Core Quantitative Metrics
+- Average KDA: {p2['avg_kda_adj']:.2f}
+- 25-minute combat power: {p2['avg_combat_power']:.0f}
+- Objective control rate: {p2['avg_obj_rate']:.2f}
 
-### 英雄池（Top 3）
+### Champion Pool (Top 3)
 {format_champion_pool(p2['champion_pool'])}
-- 英雄池深度: {p2['champion_diversity']}个不同英雄
+- Champion pool depth: {p2['champion_diversity']} unique champions
 
-### 位置分布（Top 3）
+### Position Distribution (Top 3)
 {format_role_dist(p2['role_distribution'])}
-- 主要位置: {p2['primary_role']}
+- Primary position: {p2['primary_role']}
 
 ---
 
-## 量化对比结果
-### 指标差异
-- 胜率差: {diff['winrate_diff']:+.1%}
-- KDA差: {diff['kda_diff']:+.2f}
-- 战斗力差: {diff['combat_power_diff']:+.0f}
-- 控图率差: {diff['obj_rate_diff']:+.2f}
-- 英雄池深度差: {diff['champion_diversity_diff']:+d}
+## Quantitative Comparison Results
+### Metric Differences
+- Win rate difference: {diff['winrate_diff']:+.1%}
+- KDA difference: {diff['kda_diff']:+.2f}
+- Combat power difference: {diff['combat_power_diff']:+.0f}
+- Objective rate difference: {diff['obj_rate_diff']:+.2f}
+- Champion pool depth difference: {diff['champion_diversity_diff']:+d}
 
-### 综合评估
-- 胜率: {assess['winrate']}
-- 击杀效率: {assess['kda']}
-- 战斗力: {assess['combat_power']}
-- 资源控制: {assess['objective_control']}
-- 英雄池: {assess['champion_pool']}
+### Overall Assessment
+- Win rate: {assess['winrate']}
+- Kill efficiency: {assess['kda']}
+- Combat power: {assess['combat_power']}
+- Objective control: {assess['objective_control']}
+- Champion pool: {assess['champion_pool']}
 """
