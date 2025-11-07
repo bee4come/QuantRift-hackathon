@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, MapPin, ChevronDown, X, Sun, Moon, Info, Github, Trophy } from 'lucide-react';
+import { Clock, MapPin, ChevronDown, X, Sun, Moon, Info, Github } from 'lucide-react';
 import { useTimeOfDay, type TimeOfDay } from '../hooks/useTimeOfDay';
 import { useServerStatus } from '../hooks/useServerStatus';
 import { useServerContext } from '../context/ServerContext';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { useSearch } from '../context/SearchContext';
 import AboutModal from './AboutModal';
-import LocationPermissionModal from './LocationPermissionModal';
 import EsportsAnnouncements from './EsportsAnnouncements';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
@@ -59,6 +58,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
   const [isGatewayOpen, setIsGatewayOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [showAllServers, setShowAllServers] = useState(false);
 
   const formatters = useMemo(() => ({
     time: new Intl.DateTimeFormat('en-US', {
@@ -102,6 +102,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
   const handleServerSelect = (serverCode: string) => {
     selectServer(serverCode);
     setIsGatewayOpen(false);
+    setShowAllServers(false);
   };
 
   const handleTitleClick = () => {
@@ -132,25 +133,6 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
           className="absolute top-6 right-6 flex items-center gap-3"
           style={{ zIndex: 100 }}
         >
-          <Link href="/champions">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-3 rounded-xl transition-all cursor-pointer"
-              style={{
-                background: 'linear-gradient(135deg, rgba(10, 132, 255, 0.2) 0%, rgba(191, 90, 242, 0.2) 100%)',
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                borderColor: 'rgba(255, 255, 255, 0.3)',
-                backdropFilter: 'blur(10px)'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(10, 132, 255, 0.3) 0%, rgba(191, 90, 242, 0.3) 100%)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(10, 132, 255, 0.2) 0%, rgba(191, 90, 242, 0.2) 100%)'}
-            >
-              <Trophy className="w-5 h-5" style={{ color: '#F5F5F7' }} />
-            </motion.div>
-          </Link>
-
           <motion.a
             href="https://github.com/uzerone"
             target="_blank"
@@ -202,13 +184,6 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
 
       {/* About Modal */}
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
-
-      {/* Location Permission Modal */}
-      <LocationPermissionModal 
-        isOpen={showLocationModal} 
-        onAllow={handleLocationAllow}
-        onDeny={handleLocationDeny}
-      />
 
       <div className={`transition-all duration-500 ${
         isSearched 
@@ -296,13 +271,13 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
             <ShinyText text="Season 2025" speed={3} className="text-base font-medium" />
             <div className="w-px h-4" style={{ backgroundColor: colors.borderColor }}></div>
             <a 
-              href="https://www.leagueoflegends.com/en-us/news/game-updates/patch-25-20-notes/" 
+              href="https://www.leagueoflegends.com/en-us/news/game-updates/patch-25-22-notes/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-base font-medium hover:opacity-70 transition-opacity"
               style={{ color: colors.textSecondary }}
             >
-              <ShinyText text="Patch 25.20" speed={3} className="text-base font-medium" />
+              <ShinyText text="Patch 25.22" speed={3} className="text-base font-medium" />
             </a>
           </motion.div>
         )}
@@ -411,39 +386,17 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
             >
               {/* Gateway Header */}
               <div 
-                className="px-8 py-5 border-b relative z-10 flex items-center justify-between"
+                className="px-8 py-5 border-b relative z-10 flex items-center justify-center"
                 style={{ 
                   background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.25) 100%)',
                   borderColor: 'rgba(255, 255, 255, 0.12)'
                 }}
               >
-                <div>
-                  <ShinyText 
-                    text="SERVER GATEWAY" 
-                    speed={4} 
-                    className="text-2xl font-bold tracking-tight mb-1"
-                  />
-                  <ShinyText 
-                    text="League of Legends • Regional Selection" 
-                    speed={3} 
-                    className="text-xs tracking-wider uppercase"
-                  />
-                </div>
-                <ClickSpark
-                  sparkColor="#8E8E93"
-                  sparkSize={6}
-                  sparkRadius={10}
-                  sparkCount={4}
-                  duration={250}
-                  inline={true}
-                >
-                  <button
-                    onClick={() => setIsGatewayOpen(false)}
-                    className="hover:opacity-70 transition-opacity"
-                  >
-                    <X className="w-6 h-6" style={{ color: '#8E8E93' }} />
-                  </button>
-                </ClickSpark>
+                <ShinyText 
+                  text="SERVER GATEWAY" 
+                  speed={4} 
+                  className="text-2xl font-bold tracking-tight"
+                />
               </div>
 
               {/* Gateway Grid Header */}
@@ -457,7 +410,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                 }}
               >
                 <div className="col-span-2">GATE</div>
-                <div className="col-span-5">DESTINATION</div>
+                <div className="col-span-5 text-center">DESTINATION</div>
                 <div className="col-span-2 text-center">TIME</div>
                 <div className="col-span-3 text-right">STATUS</div>
               </div>
@@ -471,7 +424,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                   scrollBehavior: 'smooth'
                 }}
               >
-                {servers.map((server) => {
+                {servers.slice(0, showAllServers ? servers.length : 3).map((server) => {
                   const localOffset = -new Date().getTimezoneOffset() / 60;
                   const serverTimeDiff = server.offset - localOffset;
                   const isSelected = selectedServer.code === server.code;
@@ -516,7 +469,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                       </div>
 
                       {/* Destination/Server Name */}
-                      <div className="col-span-5 flex items-center">
+                      <div className="col-span-5 flex items-center justify-center">
                         <span 
                           className="text-sm font-semibold tracking-wide"
                           style={{ color: '#F5F5F7' }}
@@ -569,18 +522,39 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                   );
                 })}
               </div>
+
+              {/* Show More/Less Button */}
+              {servers.length > 3 && (
+                <div className="px-8 py-4 border-t relative z-10" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+                  <ClickSpark
+                    sparkColor="#0A84FF"
+                    sparkSize={6}
+                    sparkRadius={10}
+                    sparkCount={4}
+                    duration={250}
+                  >
+                    <button
+                      onClick={() => setShowAllServers(!showAllServers)}
+                      className="w-full py-2 rounded-lg font-semibold text-sm transition-all"
+                      style={{
+                        backgroundColor: 'rgba(10, 132, 255, 0.2)',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        borderColor: 'rgba(10, 132, 255, 0.5)',
+                        color: '#0A84FF'
+                      }}
+                    >
+                      {showAllServers ? 'Show Less' : `Show More (${servers.length - 3} more servers)`}
+                    </button>
+                  </ClickSpark>
+                </div>
+              )}
             </motion.div>
             )}
             </AnimatePresence>
           </div>
         )}
 
-        {/* Esports Schedule - Small block below server selection */}
-        {!isSearched && !hideServerAndEsports && (
-          <div className="w-full max-w-2xl mx-auto px-4">
-            <EsportsAnnouncements />
-          </div>
-        )}
       </div>
     </motion.div>
   );

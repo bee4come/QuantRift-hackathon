@@ -35,6 +35,7 @@ from src.combatpower.services.multi_patch_data import multi_patch_data
 from src.combatpower.services.build_tracker import build_tracker
 from src.combatpower.custom_build_manager import custom_build_manager
 from services.player_data_manager import player_data_manager, DataStatus
+from services.opgg_mcp_service import opgg_mcp_service
 import requests
 import os
 import time as time_module
@@ -2452,6 +2453,19 @@ async def get_player_summary(
                 'best_champions': best_champions
             }
 
+        # Step 6: Fetch OPGG profile data (tier, division, LP, ladder rank)
+        step_start = time.time()
+        opgg_profile = None
+        try:
+            print(f"🔍 Fetching OP.GG profile data...")
+            opgg_profile = opgg_mcp_service.get_summoner_profile(game_name, tag_line, region='na')
+            if opgg_profile:
+                print(f"✅ Got OP.GG profile ({time.time()-step_start:.2f}s)")
+            else:
+                print(f"⚠️  OP.GG profile not available ({time.time()-step_start:.2f}s)")
+        except Exception as e:
+            print(f"⚠️  Failed to fetch OP.GG profile: {e}")
+
         response_data = {
             'success': True,
             'player': {
@@ -2467,6 +2481,7 @@ async def get_player_summary(
             },
             'analysis': analysis,  # Add analysis summary data
             'role_stats': role_stats,  # Add role statistics data
+            'opgg': opgg_profile if opgg_profile else None,  # Add OP.GG profile data (tier, ladder rank, etc.)
             'data_preparation': {
                 'status': job.status,
                 'progress': job.progress,

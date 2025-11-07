@@ -80,7 +80,7 @@ export default function AICoachAnalysis({
 
   // Initialize all 9 agents (3x3 grid)
   const [agents, setAgents] = useState<AgentState[]>([
-    // Row 1: Core Analysis
+    // Row 1
     {
       id: 'annual-summary',
       name: 'Annual Summary',
@@ -103,58 +103,6 @@ export default function AICoachAnalysis({
         }
       ],
       selectedTimeRange: '2024-01-01' // Default to 2024 full year
-    },
-    {
-      id: 'comparison-hub',
-      name: 'Comparison Hub',
-      description: 'Compare with friends or peers',
-      icon: Users,
-      endpoint: '/v1/agents/friend-comparison', // Will handle both friend and peer
-      status: 'idle'
-    },
-    {
-      id: 'build-simulator',
-      name: 'Build Simulator',
-      description: 'Optimize builds and itemization',
-      icon: Boxes,
-      endpoint: '/v1/agents/build-simulator',
-      status: 'idle'
-    },
-
-    // Row 2: Deep Dive
-    {
-      id: 'match-analysis',
-      name: 'Match Analysis',
-      description: 'Deep dive into match timeline',
-      icon: Clock,
-      endpoint: '/v1/agents/timeline-deep-dive', // Merges timeline + postgame
-      status: 'idle'
-    },
-    {
-      id: 'champion-mastery',
-      name: 'Champion Mastery',
-      description: 'Deep dive into champion performance',
-      icon: Trophy,
-      endpoint: '/v1/agents/champion-mastery',
-      status: 'idle'
-    },
-    {
-      id: 'role-specialization',
-      name: 'Role Specialization',
-      description: 'Role-specific performance insights',
-      icon: Target,
-      endpoint: '/v1/agents/role-specialization',
-      status: 'idle'
-    },
-
-    // Row 3: Trends & Tools
-    {
-      id: 'version-trends',
-      name: 'Version Trends',
-      description: 'Cross-patch performance analysis',
-      icon: Zap,
-      endpoint: '/v1/agents/multi-version', // Merges multi-version + version-comparison
-      status: 'idle'
     },
     {
       id: 'performance-insights',
@@ -180,11 +128,63 @@ export default function AICoachAnalysis({
       selectedTimeRange: '2024-01-01' // Default to 2024 full year
     },
     {
+      id: 'comparison-hub',
+      name: 'Comparison Hub',
+      description: 'Compare with friends or peers',
+      icon: Users,
+      endpoint: '/v1/agents/friend-comparison', // Will handle both friend and peer
+      status: 'idle'
+    },
+
+    // Row 2
+    {
+      id: 'match-analysis',
+      name: 'Match Analysis',
+      description: 'Deep dive into match timeline',
+      icon: Clock,
+      endpoint: '/v1/agents/timeline-deep-dive', // Merges timeline + postgame
+      status: 'idle'
+    },
+    {
+      id: 'version-trends',
+      name: 'Version Trends',
+      description: 'Cross-patch performance analysis',
+      icon: Zap,
+      endpoint: '/v1/agents/multi-version', // Merges multi-version + version-comparison
+      status: 'idle'
+    },
+    {
       id: 'champion-recommendation',
       name: 'Champion Recommendation',
       description: 'Best champions for your playstyle',
       icon: Lightbulb,
       endpoint: '/v1/agents/champion-recommendation',
+      status: 'idle'
+    },
+
+    // Row 3
+    {
+      id: 'role-specialization',
+      name: 'Role Specialization',
+      description: 'Role-specific performance insights',
+      icon: Target,
+      endpoint: '/v1/agents/role-specialization',
+      status: 'idle'
+    },
+    {
+      id: 'champion-mastery',
+      name: 'Champion Mastery',
+      description: 'Deep dive into champion performance',
+      icon: Trophy,
+      endpoint: '/v1/agents/champion-mastery',
+      status: 'idle'
+    },
+    {
+      id: 'build-simulator',
+      name: 'Build Simulator',
+      description: 'Optimize builds and itemization',
+      icon: Boxes,
+      endpoint: '/v1/agents/build-simulator',
       status: 'idle'
     }
   ]);
@@ -524,8 +524,8 @@ export default function AICoachAnalysis({
   return (
     <div className="mt-8">
       {/* Section Header */}
-      <div className="mb-6">
-        <ShinyText text="🤖 AI Coach Analysis" speed={4} className="text-3xl font-bold mb-2" />
+      <div className="mb-6 text-center">
+        <ShinyText text="HEXTECH AI COACH" speed={4} className="text-3xl font-bold mb-2" />
         <p className="text-sm" style={{ color: '#8E8E93' }}>
           Personalized insights powered by advanced AI analysis
         </p>
@@ -556,7 +556,7 @@ export default function AICoachAnalysis({
       {(dataReady || dataError) && (
         <>
 
-      {/* Row 1: Core Analysis */}
+      {/* Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         {agents.slice(0, 3).map((agent) => (
           <AgentCard
@@ -568,7 +568,7 @@ export default function AICoachAnalysis({
         ))}
       </div>
 
-      {/* Row 2: Deep Dive */}
+      {/* Row 2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         {agents.slice(3, 6).map((agent) => (
           <AgentCard
@@ -580,7 +580,7 @@ export default function AICoachAnalysis({
         ))}
       </div>
 
-      {/* Row 3: Trends & Tools */}
+      {/* Row 3 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {agents.slice(6, 9).map((agent) => (
           <AgentCard

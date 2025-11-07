@@ -134,66 +134,24 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
                   <div className="flex items-center gap-2 mb-4">
                     <Heart className="w-5 h-5" style={{ color: '#FF453A' }} />
                     <h3 className="text-xl font-bold" style={{ color: '#F5F5F7' }}>
-                      Developers
+                      Developed and maintained by
                     </h3>
                   </div>
-                  <div className="space-y-3">
-                    {/* Developer 1 */}
-                    <motion.a
-                      href="https://github.com/uzerone"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      whileHover={{ scale: 1.02 }}
-                      className="flex items-center gap-4 p-4 rounded-xl transition-all"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(88, 101, 242, 0.15) 0%, rgba(88, 101, 242, 0.05) 100%)',
-                        border: '1px solid rgba(88, 101, 242, 0.3)'
-                      }}
-                    >
-                      <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center"
-                        style={{
-                          background: 'linear-gradient(135deg, #5865F2 0%, #7289DA 100%)',
-                          boxShadow: '0 4px 12px rgba(88, 101, 242, 0.3)'
-                        }}
-                      >
-                        <Github className="w-6 h-6" style={{ color: '#FFFFFF' }} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-base" style={{ color: '#F5F5F7' }}>
-                            @uzerone
-                          </span>
-                          <span 
-                            className="text-xs px-2 py-0.5 rounded"
-                            style={{
-                              background: 'rgba(10, 132, 255, 0.2)',
-                              color: '#5AC8FA'
-                            }}
-                          >
-                            Full Stack Developer
-                          </span>
-                        </div>
-                        <p className="text-xs mt-1" style={{ color: '#8E8E93' }}>
-                          Product & UX/UI Design
-                        </p>
-                      </div>
-                    </motion.a>
-
-                    {/* Developer 2 */}
+                  <div className="flex gap-3">
+                    {/* Developer 1 - bee4come */}
                     <motion.a
                       href="https://github.com/bee4come"
                       target="_blank"
                       rel="noopener noreferrer"
                       whileHover={{ scale: 1.02 }}
-                      className="flex items-center gap-4 p-4 rounded-xl transition-all"
+                      className="flex-1 flex items-center gap-4 p-4 rounded-xl transition-all"
                       style={{
                         background: 'linear-gradient(135deg, rgba(255, 214, 10, 0.15) 0%, rgba(255, 214, 10, 0.05) 100%)',
                         border: '1px solid rgba(255, 214, 10, 0.3)'
                       }}
                     >
                       <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center"
+                        className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
                         style={{
                           background: 'linear-gradient(135deg, #FFD60A 0%, #FFA500 100%)',
                           boxShadow: '0 4px 12px rgba(255, 214, 10, 0.3)'
@@ -202,22 +160,42 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
                         <span className="text-2xl">🐝</span>
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-base" style={{ color: '#F5F5F7' }}>
-                            @bee4come
-                          </span>
-                          <span 
-                            className="text-xs px-2 py-0.5 rounded"
-                            style={{
-                              background: 'rgba(255, 214, 10, 0.2)',
-                              color: '#FFD60A'
-                            }}
-                          >
-                            Full Stack Developer
-                          </span>
-                        </div>
+                        <span className="font-bold text-base" style={{ color: '#F5F5F7' }}>
+                          @bee4come
+                        </span>
                         <p className="text-xs mt-1" style={{ color: '#8E8E93' }}>
                           Architect, Data and Integration
+                        </p>
+                      </div>
+                    </motion.a>
+
+                    {/* Developer 2 - uzerone */}
+                    <motion.a
+                      href="https://github.com/uzerone"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      whileHover={{ scale: 1.02 }}
+                      className="flex-1 flex items-center gap-4 p-4 rounded-xl transition-all"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(88, 101, 242, 0.15) 0%, rgba(88, 101, 242, 0.05) 100%)',
+                        border: '1px solid rgba(88, 101, 242, 0.3)'
+                      }}
+                    >
+                      <div 
+                        className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{
+                          background: 'linear-gradient(135deg, #5865F2 0%, #7289DA 100%)',
+                          boxShadow: '0 4px 12px rgba(88, 101, 242, 0.3)'
+                        }}
+                      >
+                        <span className="text-2xl">👻</span>
+                      </div>
+                      <div className="flex-1">
+                        <span className="font-bold text-base" style={{ color: '#F5F5F7' }}>
+                          @uzerone
+                        </span>
+                        <p className="text-xs mt-1" style={{ color: '#8E8E93' }}>
+                          Product & UX/UI Design
                         </p>
                       </div>
                     </motion.a>

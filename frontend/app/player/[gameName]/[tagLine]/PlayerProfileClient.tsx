@@ -337,10 +337,10 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
 
         <div className="flex-1 p-6">
           <div className="max-w-7xl mx-auto space-y-6">
-            {/* Player Header - Linear Layout */}
+            {/* Player Header - Compact Layout */}
             <GlareHover width="100%" height="auto" background="transparent" borderRadius="16px">
               <div className="fluid-glass p-8 rounded-2xl">
-                <div className="flex items-center justify-between gap-12">
+                <div className="flex items-center justify-between gap-8">
                   {/* 1. Summoner Name */}
                   <div className="flex items-center gap-4">
                     <div className="relative">
@@ -410,111 +410,96 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
                     </div>
                   )}
 
-                  {/* 3. Ladder Ranking */}
+                  {/* 3. Win Rate */}
+                  <div className="text-center">
+                    <p style={{ color: colors.textSecondary }} className="text-sm mb-2">Win Rate</p>
+                    <div className="text-3xl font-bold" style={{ color: colors.accentBlue }}>
+                      {analysis.win_rate.toFixed(1)}%
+                    </div>
+                    <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
+                      {analysis.total_wins}W {analysis.total_losses}L
+                    </p>
+                  </div>
+
+                  {/* 4. Avg KDA */}
+                  <div className="text-center">
+                    <p style={{ color: colors.textSecondary }} className="text-sm mb-2">Avg KDA</p>
+                    <div className="text-3xl font-bold" style={{ color: colors.accentGreen }}>
+                      {analysis.avg_kda.toFixed(2)}
+                    </div>
+                    <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
+                      {analysis.total_games} games
+                    </p>
+                  </div>
+
+                  {/* 5. Ladder Ranking */}
                   {playerData.opgg?.data?.summoner?.ladder_rank && (
-                    <div className="text-center">
-                      <p style={{ color: colors.textSecondary }} className="text-sm mb-2">Global Ladder</p>
-                      <div className="text-4xl font-bold" style={{ color: colors.accentBlue }}>
-                        #{playerData.opgg.data.summoner.ladder_rank.rank.toLocaleString()}
+                    <div className="flex items-center gap-3">
+                      <div className="text-center">
+                        <p style={{ color: colors.textSecondary }} className="text-sm mb-2">Global Ladder</p>
+                        <div className="text-3xl font-bold" style={{ color: colors.accentYellow }}>
+                          #{playerData.opgg.data.summoner.ladder_rank.rank.toLocaleString()}
+                        </div>
+                        <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
+                          Top {((playerData.opgg.data.summoner.ladder_rank.rank / playerData.opgg.data.summoner.ladder_rank.total) * 100).toFixed(2)}%
+                        </p>
                       </div>
-                      <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
-                        Top {((playerData.opgg.data.summoner.ladder_rank.rank / playerData.opgg.data.summoner.ladder_rank.total) * 100).toFixed(2)}%
-                      </p>
+                      <ClickSpark inline={true}>
+                        <a
+                          href={`https://www.op.gg/summoners/${player.region}/${encodeURIComponent(gameName)}-${encodeURIComponent(tagLine)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all hover:scale-105 font-semibold text-sm"
+                          style={{
+                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                            borderWidth: '1px',
+                            borderStyle: 'solid',
+                            borderColor: 'rgba(16, 185, 129, 0.5)',
+                            color: colors.accentGreen
+                          }}
+                          title="View on OP.GG"
+                        >
+                          OP.GG
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            style={{ color: colors.accentGreen }}
+                          >
+                            <path
+                              d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M15 3h6v6"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M10 14L21 3"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </a>
+                      </ClickSpark>
                     </div>
                   )}
                 </div>
               </div>
             </GlareHover>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <GlareHover width="100%" height="auto" background="transparent" borderRadius="16px">
-            <ClickSpark>
-              <div className="fluid-glass p-6 rounded-2xl">
-                <div className="flex items-center gap-3 mb-3">
-                  <Trophy size={24} style={{ color: colors.accentBlue }} />
-                  <ShinyText text="Win Rate" speed={3} className="text-lg font-semibold" />
-                </div>
-                <div className="text-4xl font-bold" style={{ color: colors.textPrimary }}>
-                  {analysis.win_rate.toFixed(1)}%
-                </div>
-                <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
-                  {analysis.total_wins}W {analysis.total_losses}L
-                </p>
-              </div>
-            </ClickSpark>
-          </GlareHover>
 
-          <GlareHover width="100%" height="auto" background="transparent" borderRadius="16px">
-            <ClickSpark>
-              <div className="fluid-glass p-6 rounded-2xl">
-                <div className="flex items-center gap-3 mb-3">
-                  <Target size={24} style={{ color: colors.accentGreen }} />
-                  <ShinyText text="Avg KDA" speed={3} className="text-lg font-semibold" />
-                </div>
-                <div className="text-4xl font-bold" style={{ color: colors.textPrimary }}>
-                  {analysis.avg_kda.toFixed(2)}
-                </div>
-                <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
-                  {analysis.total_games} games played
-                </p>
-              </div>
-            </ClickSpark>
-          </GlareHover>
-
-          <GlareHover width="100%" height="auto" background="transparent" borderRadius="16px">
-            <ClickSpark>
-              <div className="fluid-glass p-6 rounded-2xl">
-                <div className="flex items-center gap-3 mb-3">
-                  <Zap size={24} style={{ color: colors.accentYellow }} />
-                  <ShinyText text="Champion Pool" speed={3} className="text-lg font-semibold" />
-                </div>
-                <div className="text-4xl font-bold" style={{ color: colors.textPrimary }}>
-                  {analysis.best_champions?.length || 0}
-                </div>
-                <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
-                  Unique champions
-                </p>
-              </div>
-            </ClickSpark>
-          </GlareHover>
-        </div>
-
-        {/* Charts are now displayed in Agent Modals instead of directly on page */}
-
-        {/* Most Played Champions */}
-        <GlareHover width="100%" height="auto" background="transparent" borderRadius="16px">
-          <div className="fluid-glass p-6 rounded-2xl">
-            <ShinyText text="Best Champions" speed={3} className="text-2xl font-bold mb-6" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {analysis.best_champions?.slice(0, 6).map((champ, index) => (
-                <GlareHover key={index} width="100%" height="auto" background="transparent" borderRadius="12px">
-                  <ClickSpark>
-                    <div className="fluid-glass-dark p-4 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <ShinyText text={champ.name} speed={3} className="font-semibold" />
-                        <div
-                          className="flex items-center gap-1"
-                          style={{ color: champ.win_rate > 50 ? colors.accentGreen : colors.accentRed }}
-                        >
-                          {champ.win_rate > 50 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                          <span className="text-sm font-medium">
-                            {champ.win_rate.toFixed(0)}%
-                          </span>
-                        </div>
-                      </div>
-                      <p style={{ color: colors.textSecondary }} className="text-sm">
-                        {champ.games} games • {champ.wins}W {champ.games - champ.wins}L
-                      </p>
-                    </div>
-                  </ClickSpark>
-                </GlareHover>
-              ))}
-            </div>
-          </div>
-        </GlareHover>
-
-        {/* AI Coach Analysis - 16 Agent Cards */}
+        {/* HEXTECH AI COACH - 16 Agent Cards */}
         <AICoachAnalysis
           puuid={player.puuid}
           gameName={gameName}

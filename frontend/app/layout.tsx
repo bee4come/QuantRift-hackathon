@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
+import EsportsBanner from "./components/EsportsBanner";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -23,7 +24,12 @@ export default function RootLayout({
         className={`${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        {children}
+        <div className="fixed top-0 left-0 right-0 z-[9999]">
+          <EsportsBanner />
+        </div>
+        <div className="pt-[44px]">{/* Offset for top banner */}
+          {children}
+        </div>
       </body>
     </html>
   );

@@ -192,12 +192,6 @@ export default function AgentCard({
 
         {/* Action Buttons */}
         <div className="space-y-2 relative z-10">
-          {/* Status Text */}
-          <div className="text-center mb-2">
-            <p className="text-xs font-medium" style={{ color: getStatusColor() }}>
-              {getStatusText()}
-            </p>
-          </div>
 
           {/* Generate/View Analysis Button */}
           {canGenerate && (

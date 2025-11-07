@@ -7,7 +7,6 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import ProcessingStatus from './components/ProcessingStatus';
 import AnnualReport from './components/AnnualReport';
-import EsportsAnnouncements from './components/EsportsAnnouncements';
 import { SearchProvider, useSearch } from './context/SearchContext';
 import { ServerProvider } from './context/ServerContext';
 
@@ -20,7 +19,7 @@ function HomeContent() {
         <Header />
 
         {/* Main Content - Search Bar always centered */}
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center -mt-20">
           <SearchBar isSearched={false} />
         </div>
 
