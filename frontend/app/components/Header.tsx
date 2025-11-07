@@ -136,20 +136,26 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
           style={{ zIndex: 100 }}
         >
           <motion.a
-            href="https://github.com/uzerone"
+            href="https://github.com/bee4come/QuantRift-hackathon"
             target="_blank"
             rel="noopener noreferrer"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="p-3 rounded-xl transition-all"
+            className={`p-3 rounded-xl transition-all ${isModalOpen ? 'pointer-events-none' : ''}`}
             style={{
               background: 'rgba(255, 255, 255, 0.1)',
               borderWidth: '1px',
               borderStyle: 'solid',
               borderColor: 'rgba(255, 255, 255, 0.2)',
-              backdropFilter: 'blur(10px)'
+              backdropFilter: 'blur(10px)',
+              filter: isModalOpen ? 'blur(4px)' : 'none',
+              transition: 'filter 0.3s ease, background 0.2s ease'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
+            onMouseEnter={(e) => {
+              if (!isModalOpen) {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+              }
+            }}
             onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
           >
             <Github className="w-5 h-5" style={{ color: '#F5F5F7' }} />
@@ -167,15 +173,22 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
               onClick={() => setIsAboutOpen(true)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="p-3 rounded-xl transition-all"
+              disabled={isModalOpen}
+              className={`p-3 rounded-xl transition-all ${isModalOpen ? 'pointer-events-none' : ''}`}
               style={{
                 background: 'rgba(255, 255, 255, 0.1)',
                 borderWidth: '1px',
                 borderStyle: 'solid',
                 borderColor: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(10px)'
+                backdropFilter: 'blur(10px)',
+                filter: isModalOpen ? 'blur(4px)' : 'none',
+                transition: 'filter 0.3s ease, background 0.2s ease'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
+              onMouseEnter={(e) => {
+                if (!isModalOpen) {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                }
+              }}
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
             >
               <Info className="w-5 h-5" style={{ color: '#F5F5F7' }} />
@@ -214,7 +227,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
             >
               <button 
                 onClick={handleTitleClick}
-                className="hover:opacity-80 transition-opacity duration-300"
+                className={`hover:opacity-80 transition-opacity duration-300 ${isModalOpen ? 'pointer-events-none' : ''}`}
               >
                 <h1 style={{ 
                   fontFamily: '"Hunters K-Pop", sans-serif',
@@ -226,7 +239,9 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
                   color: 'transparent',
-                  filter: 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1))',
+                  filter: isModalOpen 
+                    ? 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1)) blur(4px)' 
+                    : 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1))',
                   textShadow: '0 1px 2px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.08)',
                   position: 'relative',
                   WebkitTextStroke: '0.5px rgba(255, 255, 255, 0.15)',
@@ -238,7 +253,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
               </button>
             </ClickSpark>
           ) : (
-            <Link href="/" className="hover:opacity-80 transition-opacity duration-300">
+            <Link href="/" className={`hover:opacity-80 transition-opacity duration-300 ${isModalOpen ? 'pointer-events-none' : ''}`}>
               <h1 style={{ 
                 fontFamily: '"Hunters K-Pop", sans-serif',
                 fontSize: '9rem',
@@ -249,7 +264,9 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
                 color: 'transparent',
-                filter: 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1))',
+                filter: isModalOpen 
+                  ? 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1)) blur(4px)' 
+                  : 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1))',
                 textShadow: '0 1px 2px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.08)',
                 position: 'relative',
                 WebkitTextStroke: '0.5px rgba(255, 255, 255, 0.15)',
