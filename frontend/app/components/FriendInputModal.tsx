@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, UserPlus, Search } from 'lucide-react';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import { useModal } from '../context/ModalContext';
 
 interface FriendInputModalProps {
   isOpen: boolean;
@@ -23,11 +24,16 @@ export default function FriendInputModal({
   currentPlayerTag
 }: FriendInputModalProps) {
   const colors = useAdaptiveColors();
+  const { setIsModalOpen } = useModal();
   const [mode, setMode] = useState<'friend' | 'rank'>('friend');
   const [friendGameName, setFriendGameName] = useState('');
   const [friendTagLine, setFriendTagLine] = useState('');
   const [selectedRank, setSelectedRank] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setIsModalOpen(isOpen);
+  }, [isOpen, setIsModalOpen]);
 
   const ranks = [
     { value: 'iron', label: 'Iron', color: '#6B4A3A' },

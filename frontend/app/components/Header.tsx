@@ -8,6 +8,7 @@ import { useServerStatus } from '../hooks/useServerStatus';
 import { useServerContext } from '../context/ServerContext';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { useSearch } from '../context/SearchContext';
+import { useModal } from '../context/ModalContext';
 import AboutModal from './AboutModal';
 import EsportsAnnouncements from './EsportsAnnouncements';
 import ShinyText from './ui/ShinyText';
@@ -51,6 +52,7 @@ interface HeaderProps {
 export default function Header({ hideServerAndEsports = false }: HeaderProps) {
   const { selectedServer, servers, selectServer, currentTimezone, timeDiff, showLocationModal, handleLocationAllow, handleLocationDeny } = useServerContext();
   const { isSearched, clearPlayers } = useSearch();
+  const { isModalOpen } = useModal();
   const timeOfDay = useTimeOfDay(currentTimezone);
   const serverStatus = useServerStatus(selectedServer.code.toLowerCase());
   const colors = useAdaptiveColors();
@@ -266,7 +268,9 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.25, duration: 0.6 }}
-            className="flex items-center justify-center gap-3 mb-4"
+            className={`flex items-center justify-center gap-3 mb-4 transition-all duration-300 ${
+              isModalOpen ? 'blur-sm pointer-events-none opacity-50' : ''
+            }`}
           >
             <ShinyText text="Season 2025" speed={3} className="text-base font-medium" />
             <div className="w-px h-4" style={{ backgroundColor: colors.borderColor }}></div>

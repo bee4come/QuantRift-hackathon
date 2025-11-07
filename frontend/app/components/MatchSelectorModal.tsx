@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy, TrendingUp, TrendingDown, Clock, Swords } from 'lucide-react';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
 import GlareHover from './ui/GlareHover';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import { useModal } from '../context/ModalContext';
 
 interface MatchData {
   match_id: string;
@@ -40,7 +41,12 @@ export default function MatchSelectorModal({
   tagLine
 }: MatchSelectorModalProps) {
   const colors = useAdaptiveColors();
+  const { setIsModalOpen } = useModal();
   const [selectedMatch, setSelectedMatch] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsModalOpen(isOpen);
+  }, [isOpen, setIsModalOpen]);
 
   const handleConfirm = () => {
     if (selectedMatch) {

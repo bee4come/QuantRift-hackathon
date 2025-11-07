@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
 import GlareHover from './ui/GlareHover';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import { useModal } from '../context/ModalContext';
 
 type Rank = 'IRON' | 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' |
             'EMERALD' | 'DIAMOND' | 'MASTER' | 'GRANDMASTER' | 'CHALLENGER';
@@ -50,7 +51,12 @@ export default function RankSelectorModal({
   tagLine
 }: RankSelectorModalProps) {
   const colors = useAdaptiveColors();
+  const { setIsModalOpen } = useModal();
   const [selectedRank, setSelectedRank] = useState<Rank>(currentRank || 'PLATINUM');
+
+  useEffect(() => {
+    setIsModalOpen(isOpen);
+  }, [isOpen, setIsModalOpen]);
 
   const handleConfirm = () => {
     onSelect(selectedRank);

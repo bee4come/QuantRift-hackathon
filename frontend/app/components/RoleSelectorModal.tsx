@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Shield, TreePine, Swords, Target, Heart } from 'lucide-react';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
 import GlareHover from './ui/GlareHover';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import { useModal } from '../context/ModalContext';
 
 type Role = 'TOP' | 'JUNGLE' | 'MID' | 'ADC' | 'SUPPORT';
 
@@ -88,7 +89,12 @@ export default function RoleSelectorModal({
   tagLine
 }: RoleSelectorModalProps) {
   const colors = useAdaptiveColors();
+  const { setIsModalOpen } = useModal();
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+
+  useEffect(() => {
+    setIsModalOpen(isOpen);
+  }, [isOpen, setIsModalOpen]);
 
   // Get stats for a role (with BOTTOM → ADC mapping)
   const getRoleStats = (role: Role) => {

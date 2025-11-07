@@ -2,6 +2,8 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Github, Sparkles, Code, Heart } from 'lucide-react';
+import { useEffect } from 'react';
+import { useModal } from '../context/ModalContext';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -9,6 +11,12 @@ interface AboutModalProps {
 }
 
 export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
+  const { setIsModalOpen } = useModal();
+
+  useEffect(() => {
+    setIsModalOpen(isOpen);
+  }, [isOpen, setIsModalOpen]);
+
   if (!isOpen) return null;
 
   return (

@@ -1,0 +1,32 @@
+{
+  "puuid": "8k_mjtr9n1o8ilzaCZy5kHdvgDfRtkpkf7Hbud_DLNld1NP_Mt2qfye8mEt4CNnInot4wuMu0Pn0GQ",
+  "patch": "13.24",
+  "generation_timestamp": "2025-11-07T01:22:55.246682",
+  "total_games": 1,
+  "by_cr": [
+    {
+      "champ_id": 202,
+      "role": "BOTTOM",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 2.4,
+      "obj_rate": 2.0,
+      "cp_25": 10742.3,
+      "build_core": [
+        1018,
+        3095,
+        6671
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8021,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    }
+  ]
+}

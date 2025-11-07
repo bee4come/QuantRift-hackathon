@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import { useModal } from '../context/ModalContext';
 
 // Annual Summary Widget Component
 function AnnualSummaryWidget({ data }: { data: any }) {
@@ -284,6 +285,11 @@ export default function DetailedAnalysisModal({
   analysisData
 }: DetailedAnalysisModalProps) {
   const colors = useAdaptiveColors();
+  const { setIsModalOpen } = useModal();
+
+  useEffect(() => {
+    setIsModalOpen(isOpen);
+  }, [isOpen, setIsModalOpen]);
 
   const handleDownload = () => {
     const blob = new Blob([detailedReport], { type: 'text/markdown' });

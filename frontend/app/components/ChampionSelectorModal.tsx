@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, TrendingUp, TrendingDown } from 'lucide-react';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
 import GlareHover from './ui/GlareHover';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import { useModal } from '../context/ModalContext';
 
 interface PlayerChampion {
   champion_id: number;
@@ -35,9 +36,14 @@ export default function ChampionSelectorModal({
   tagLine
 }: ChampionSelectorModalProps) {
   const colors = useAdaptiveColors();
+  const { setIsModalOpen } = useModal();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChampion, setSelectedChampion] = useState<PlayerChampion | null>(null);
+
+  useEffect(() => {
+    setIsModalOpen(isOpen);
+  }, [isOpen, setIsModalOpen]);
 
   // Filter and sort champions
   const filteredChampions = useMemo(() => {

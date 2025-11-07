@@ -82,7 +82,20 @@ export async function GET(
           { status: 504 }
         );
       }
-      throw fetchError;
+      
+      // Handle network/fetch errors
+      const errorMessage = fetchError instanceof Error ? fetchError.message : String(fetchError);
+      console.error('Fetch error details:', errorMessage, fetchError);
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Failed to connect to backend: ${errorMessage}`,
+          details: 'Please ensure the backend server is running on port 8000',
+          backendUrl: url
+        },
+        { status: 503 }
+      );
     }
   } catch (error) {
     console.error('Error fetching summoner data:', error);
