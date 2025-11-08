@@ -32,7 +32,7 @@ interface SubOption {
 export interface RankTypeOption {
   id: string;
   label: string;
-  value: number; // 420: Solo/Duo, 440: Flex, 400: Normal
+  value: number | null; // null for Total (all queue types), 420: Solo/Duo, 440: Flex, 400: Normal
   description?: string;
 }
 
@@ -49,8 +49,8 @@ interface AgentCardProps {
   selectedTimeRange?: string;
   onTimeRangeChange?: (timeRange: string) => void;
   rankTypeOptions?: RankTypeOption[];
-  selectedRankType?: number;
-  onRankTypeChange?: (rankType: number) => void;
+  selectedRankType?: number | null;
+  onRankTypeChange?: (rankType: number | null) => void;
   subOptions?: SubOption[];
   onSubOptionClick?: (subOptionId: string) => void;
 }
@@ -119,11 +119,11 @@ export default function AgentCard({
   const canView = status === 'ready';
 
   const getButtonText = () => {
-    if (isLoading) return 'Generating...';
+    if (isLoading) return 'Cancel';
     if (canView) return 'View Report';
     if (canGenerate) {
-      // Role Specialization, Champion Mastery, and Match Analysis need parameter selection first
-      if (id === 'role-specialization' || id === 'champion-mastery' || id === 'match-analysis') {
+      // Role Specialization and Champion Mastery need parameter selection first
+      if (id === 'role-specialization' || id === 'champion-mastery') {
         return 'Select';
       }
       return 'Generate Analysis';
@@ -173,22 +173,28 @@ export default function AgentCard({
             </motion.div>
           )}
 
-          {/* Rank Type Selector */}
-          {rankTypeOptions && rankTypeOptions.length > 0 && (
-            <div className="rank-type-wrapper">
-              <select
-                value={selectedRankType || rankTypeOptions[0].value}
-                onChange={(e) => onRankTypeChange?.(parseInt(e.target.value))}
-                disabled={status === 'generating'}
-                className="rank-type-select"
-              >
-                {rankTypeOptions.map((option) => (
-                  <option key={option.id} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Selectors Container - Rank Type and Time Range */}
+          {(rankTypeOptions && rankTypeOptions.length > 0) || (timeRangeOptions && timeRangeOptions.length > 0) ? (
+            <div className="selectors-container">
+              {/* Rank Type Selector */}
+              {rankTypeOptions && rankTypeOptions.length > 0 && (
+                <div className="rank-type-wrapper">
+                  <select
+                    value={selectedRankType !== null && selectedRankType !== undefined ? selectedRankType : ''}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? null : parseInt(e.target.value);
+                      onRankTypeChange?.(value);
+                    }}
+                    disabled={status === 'generating'}
+                    className="rank-type-select"
+                  >
+                    {rankTypeOptions.map((option) => (
+                      <option key={option.id} value={option.value === null ? '' : option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
           )}
 
           {/* Time Range Selector */}
@@ -208,6 +214,8 @@ export default function AgentCard({
               </select>
             </div>
           )}
+            </div>
+          ) : null}
 
           {/* Sub-Options */}
           {subOptions && subOptions.length > 0 && (
@@ -227,14 +235,14 @@ export default function AgentCard({
           )}
         </div>
 
-        {/* Main Action Button - appears only on hover, hidden when generating */}
-        {!subOptions && !isLoading && (
+        {/* Main Action Button - appears only on hover */}
+        {!subOptions && (
           <button
             className="card-button"
             onClick={onGenerate}
-            disabled={!canGenerate && !canView}
+            disabled={!canGenerate && !canView && !isLoading}
             style={{
-              backgroundColor: canView ? '#32D74B' : colors.accentBlue
+              background: canView ? '#32D74B' : isLoading ? '#FF453A' : 'linear-gradient(135deg, #FF9F0A 0%, #FFD60A 100%)'
             }}
           >
             {getButtonText()}
@@ -321,7 +329,7 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     color: #fff;
     font-size: 1rem;
     font-weight: 600;
-    padding: 0.5rem 1rem;
+    padding: 0.25rem 1rem;
     position: absolute;
     left: 50%;
     bottom: 0;
@@ -362,19 +370,32 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     border: 1px solid rgba(255, 69, 58, 0.3);
   }
 
-  .rank-type-wrapper {
+  .selectors-container {
     margin-top: auto;
     margin-bottom: 0.5rem;
     width: 100%;
     display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    transform: translateY(0.5rem);
+  }
+
+  .rank-type-wrapper {
+    margin-top: 0;
+    margin-bottom: 0;
+    width: auto;
+    display: flex;
     justify-content: center;
     align-items: center;
     flex-shrink: 0;
-    transform: translateY(-0.5rem);
+    transform: none;
   }
 
   .rank-type-select {
-    width: 200px;
+    width: 150px;
     padding: 0.5rem;
     border-radius: 0.5rem;
     background: ${props => props.$isLight 
@@ -388,7 +409,7 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     text-align: center;
     text-align-last: center;
     box-sizing: border-box;
-    margin: 0 auto;
+    margin: 0;
     display: block;
   }
 
@@ -403,17 +424,17 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
 
   .time-range-wrapper {
     margin-top: 0;
-    margin-bottom: 0.5rem;
-    width: 100%;
+    margin-bottom: 0;
+    width: auto;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-shrink: 0;
-    transform: translateY(-0.5rem);
+    transform: none;
   }
 
   .time-range-select {
-    width: 200px;
+    width: 150px;
     padding: 0.5rem;
     border-radius: 0.5rem;
     background: ${props => props.$isLight 
@@ -427,7 +448,7 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     text-align: center;
     text-align-last: center;
     box-sizing: border-box;
-    margin: 0 auto;
+    margin: 0;
     display: block;
   }
 
@@ -441,8 +462,10 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
   }
 
   .sub-options-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
     gap: 0.5rem;
     margin-top: auto;
     margin-bottom: 0.5rem;
@@ -450,7 +473,7 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     box-sizing: border-box;
     padding: 0;
     flex-shrink: 0;
-    transform: translateY(-0.5rem);
+    transform: translateY(0.5rem);
   }
 
   .sub-option-button {
@@ -459,6 +482,7 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    width: 150px;
     padding: 0.5rem;
     border-radius: 0.5rem;
     background: ${props => props.$isLight 
@@ -472,9 +496,6 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
     box-sizing: border-box;
     overflow: hidden;
     text-align: center;

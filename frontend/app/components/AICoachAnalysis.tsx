@@ -50,7 +50,7 @@ interface AgentState {
   timeRangeOptions?: TimeRangeOption[];
   selectedTimeRange?: string;
   rankTypeOptions?: RankTypeOption[];
-  selectedRankType?: number;
+  selectedRankType?: number | null;
   analysisData?: any; // For widgets (Annual Summary, Progress Tracker)
   subOptions?: SubOption[];
   reportsByTimeRange?: Record<string, { detailedReport?: string; analysisData?: any; status: AgentStatus }>; // Store reports by time range
@@ -594,11 +594,12 @@ export default function AICoachAnalysis({
       endpoint: '/v1/agents/annual-summary',
       status: 'idle',
       rankTypeOptions: [
+        { id: 'total', label: 'Total', value: null },
         { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
         { id: 'flex', label: 'Rank Flex', value: 440 },
         { id: 'normal', label: 'Normal', value: 400 }
       ],
-      selectedRankType: 420, // Default to Solo/Duo
+      selectedRankType: null, // Default to Total
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -621,11 +622,12 @@ export default function AICoachAnalysis({
       endpoint: '/v1/agents/weakness-analysis', // Merges weakness + detailed + progress
       status: 'idle',
       rankTypeOptions: [
+        { id: 'total', label: 'Total', value: null },
         { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
         { id: 'flex', label: 'Rank Flex', value: 440 },
         { id: 'normal', label: 'Normal', value: 400 }
       ],
-      selectedRankType: 420, // Default to Solo/Duo
+      selectedRankType: null, // Default to Total
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -647,12 +649,26 @@ export default function AICoachAnalysis({
       icon: Users,
       endpoint: '/v1/agents/friend-comparison', // Will handle both friend and peer
       status: 'idle',
+      timeRangeOptions: [
+        {
+          id: '2024-full-year',
+          label: 'Season 2024',
+          value: '2024-01-01'
+        },
+        {
+          id: 'past-365-days',
+          label: 'Past 365 Days',
+          value: 'past-365'
+        }
+      ],
+      selectedTimeRange: '2024-01-01', // Default to 2024 full year
       rankTypeOptions: [
+        { id: 'total', label: 'Total', value: null },
         { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
         { id: 'flex', label: 'Rank Flex', value: 440 },
         { id: 'normal', label: 'Normal', value: 400 }
       ],
-      selectedRankType: 420, // Default to Solo/Duo
+      selectedRankType: null, // Default to Total
       subOptions: [
         {
           id: 'friend-comparison',
@@ -683,14 +699,15 @@ export default function AICoachAnalysis({
       name: 'Version Trends',
       description: 'Cross-patch performance analysis',
       icon: Zap,
-      endpoint: '/v1/agents/multi-version', // Merges multi-version + version-comparison
+      endpoint: '/v1/agents/version-trends', // Merges multi-version + version-comparison
       status: 'idle',
       rankTypeOptions: [
+        { id: 'total', label: 'Total', value: null },
         { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
         { id: 'flex', label: 'Rank Flex', value: 440 },
         { id: 'normal', label: 'Normal', value: 400 }
       ],
-      selectedRankType: 420, // Default to Solo/Duo
+      selectedRankType: null, // Default to Total
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -713,11 +730,12 @@ export default function AICoachAnalysis({
       endpoint: '/v1/agents/champion-recommendation',
       status: 'idle',
       rankTypeOptions: [
+        { id: 'total', label: 'Total', value: null },
         { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
         { id: 'flex', label: 'Rank Flex', value: 440 },
         { id: 'normal', label: 'Normal', value: 400 }
       ],
-      selectedRankType: 420, // Default to Solo/Duo
+      selectedRankType: null, // Default to Total
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -742,11 +760,12 @@ export default function AICoachAnalysis({
       endpoint: '/v1/agents/role-specialization',
       status: 'idle',
       rankTypeOptions: [
+        { id: 'total', label: 'Total', value: null },
         { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
         { id: 'flex', label: 'Rank Flex', value: 440 },
         { id: 'normal', label: 'Normal', value: 400 }
       ],
-      selectedRankType: 420, // Default to Solo/Duo
+      selectedRankType: null, // Default to Total
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -780,7 +799,8 @@ export default function AICoachAnalysis({
           value: 'past-365'
         }
       ],
-      selectedTimeRange: '2024-01-01' // Default to 2024 full year
+      selectedTimeRange: '2024-01-01', // Default to 2024 full year
+      // No rankTypeOptions - uses all game modes by default
     },
     {
       id: 'build-simulator',
@@ -790,24 +810,13 @@ export default function AICoachAnalysis({
       endpoint: '/v1/agents/build-simulator',
       status: 'idle',
       rankTypeOptions: [
+        { id: 'total', label: 'Total', value: null },
         { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
         { id: 'flex', label: 'Rank Flex', value: 440 },
         { id: 'normal', label: 'Normal', value: 400 }
       ],
-      selectedRankType: 420, // Default to Solo/Duo
-      timeRangeOptions: [
-        {
-          id: '2024-full-year',
-          label: 'Season 2024',
-          value: '2024-01-01'
-        },
-        {
-          id: 'past-365-days',
-          label: 'Past 365 Days',
-          value: 'past-365'
-        }
-      ],
-      selectedTimeRange: '2024-01-01' // Default to 2024 full year
+      selectedRankType: null, // Default to Total
+      // No timeRangeOptions - uses recent games by default
     }
   ]);
 
@@ -817,10 +826,71 @@ export default function AICoachAnalysis({
     );
   };
 
-  const handleRankTypeChange = (agentId: string, rankType: number) => {
+  // Helper function to generate report key from time range and queue_id
+  const getReportKey = (agent: AgentState): string => {
+    const timeRange = (agent.timeRangeOptions && agent.timeRangeOptions.length > 0)
+      ? (agent.selectedTimeRange || 'default')
+      : 'default';
+    const queueId = agent.selectedRankType !== null && agent.selectedRankType !== undefined
+      ? agent.selectedRankType.toString()
+      : 'total';
+    return `${timeRange}_${queueId}`;
+  };
+
+  const handleRankTypeChange = (agentId: string, rankType: number | null) => {
     setAgents((prev) =>
       prev.map((agent) => {
         if (agent.id === agentId) {
+          const previousRankType = agent.selectedRankType;
+          
+          // If switching to a different rank type, check for existing report
+          if (previousRankType !== rankType) {
+            const reportsByTimeRange = agent.reportsByTimeRange || {};
+            const updatedAgent = { ...agent, selectedRankType: rankType };
+            const reportKey = getReportKey(updatedAgent);
+            const existingReport = reportsByTimeRange[reportKey];
+            
+            if (existingReport) {
+              // Load existing report for this filter combination
+              const updatedAgentWithReport = {
+                ...updatedAgent,
+                status: existingReport.status,
+                detailedReport: existingReport.detailedReport,
+                analysisData: existingReport.analysisData,
+                error: undefined
+              };
+              
+              // Update selectedAgent if modal is open for this agent
+              setSelectedAgent((currentSelected) => {
+                if (currentSelected && currentSelected.id === agentId) {
+                  return updatedAgentWithReport;
+                }
+                return currentSelected;
+              });
+              
+              return updatedAgentWithReport;
+            } else {
+              // Reset to idle if no report exists for this filter combination
+              const updatedAgentIdle = {
+                ...updatedAgent,
+                status: 'idle',
+                detailedReport: undefined,
+                analysisData: undefined,
+                error: undefined
+              };
+              
+              // Close modal if it's open for this agent
+              setSelectedAgent((currentSelected) => {
+                if (currentSelected && currentSelected.id === agentId) {
+                  return null;
+                }
+                return currentSelected;
+              });
+              
+              return updatedAgentIdle;
+            }
+          }
+          
           return { ...agent, selectedRankType: rankType };
         }
         return agent;
@@ -834,31 +904,51 @@ export default function AICoachAnalysis({
         if (agent.id === agentId) {
           const previousTimeRange = agent.selectedTimeRange;
           
-          // If switching to a different time range, reset status and load existing report if available
+          // If switching to a different time range, check for existing report
           if (previousTimeRange && previousTimeRange !== timeRange) {
             const reportsByTimeRange = agent.reportsByTimeRange || {};
-            const existingReport = reportsByTimeRange[timeRange];
+            const updatedAgent = { ...agent, selectedTimeRange: timeRange };
+            const reportKey = getReportKey(updatedAgent);
+            const existingReport = reportsByTimeRange[reportKey];
             
             if (existingReport) {
-              // Load existing report for this time range
-              return {
-                ...agent,
-                selectedTimeRange: timeRange,
+              // Load existing report for this filter combination
+              const updatedAgentWithReport = {
+                ...updatedAgent,
                 status: existingReport.status,
                 detailedReport: existingReport.detailedReport,
                 analysisData: existingReport.analysisData,
                 error: undefined
               };
+              
+              // Update selectedAgent if modal is open for this agent
+              setSelectedAgent((currentSelected) => {
+                if (currentSelected && currentSelected.id === agentId) {
+                  return updatedAgentWithReport;
+                }
+                return currentSelected;
+              });
+              
+              return updatedAgentWithReport;
             } else {
-              // Reset to idle if no report exists for this time range
-              return {
-                ...agent,
-                selectedTimeRange: timeRange,
+              // Reset to idle if no report exists for this filter combination
+              const updatedAgentIdle = {
+                ...updatedAgent,
                 status: 'idle',
                 detailedReport: undefined,
                 analysisData: undefined,
                 error: undefined
               };
+              
+              // Close modal if it's open for this agent
+              setSelectedAgent((currentSelected) => {
+                if (currentSelected && currentSelected.id === agentId) {
+                  return null;
+                }
+                return currentSelected;
+              });
+              
+              return updatedAgentIdle;
             }
           }
           
@@ -872,6 +962,19 @@ export default function AICoachAnalysis({
   const handleGenerate = async (agent: AgentState) => {
     console.log(`🔵 handleGenerate called for agent: ${agent.id}`);
 
+    // If already generating, cancel it
+    if (agent.status === 'generating') {
+      console.log(`🛑 Cancelling generation for agent: ${agent.id}`);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      updateAgentStatus(agent.id, {
+        status: 'idle',
+        error: undefined
+      });
+      return;
+    }
+
     // Check if puuid is available
     if (!puuid) {
       console.error('❌ PUUID is not available');
@@ -882,12 +985,17 @@ export default function AICoachAnalysis({
       return;
     }
 
-    // Check if report exists for current time range
+    // Check if report exists for current filter combination (time_range + queue_id)
+    // Champion Mastery uses all game modes, so only use time_range as key
+    // Role Specialization reports are stored with role in the key, so skip check here (will be checked in handleRoleSelect)
     const reportsByTimeRange = agent.reportsByTimeRange || {};
-    const currentTimeRange = agent.selectedTimeRange || 'default';
-    const existingReport = reportsByTimeRange[currentTimeRange];
     
-    // If already generated for current time range, just show the report
+    // Skip report check for Role Specialization since it requires role selection first
+    if (agent.id !== 'role-specialization' && agent.id !== 'champion-mastery') {
+      const reportKey = getReportKey(agent);
+      const existingReport = reportsByTimeRange[reportKey];
+    
+      // If already generated for current filter combination, just show the report
     if (existingReport && existingReport.status === 'ready' && existingReport.detailedReport) {
       setSelectedAgent({
         ...agent,
@@ -895,6 +1003,20 @@ export default function AICoachAnalysis({
         analysisData: existingReport.analysisData
       });
       return;
+      }
+    } else if (agent.id === 'champion-mastery') {
+      const reportKey = agent.selectedTimeRange || 'default';
+      const existingReport = reportsByTimeRange[reportKey];
+      
+      // If already generated for current filter combination, just show the report
+      if (existingReport && existingReport.status === 'ready' && existingReport.detailedReport) {
+        setSelectedAgent({
+          ...agent,
+          detailedReport: existingReport.detailedReport,
+          analysisData: existingReport.analysisData
+        });
+        return;
+      }
     }
 
     // Check for custom handling first (e.g., for charts integration)
@@ -960,32 +1082,54 @@ export default function AICoachAnalysis({
         return prev; // Don't modify, just read
       });
       
-      if (latestAgent?.selectedTimeRange) {
+      // Only add time_range if agent has timeRangeOptions (Build Simulator doesn't have it)
+      if (latestAgent?.timeRangeOptions && latestAgent.timeRangeOptions.length > 0 && latestAgent?.selectedTimeRange) {
         body.time_range = latestAgent.selectedTimeRange;
         console.log(`[${agent.id}] Using time_range: ${latestAgent.selectedTimeRange}`);
+      } else if (latestAgent?.timeRangeOptions && latestAgent.timeRangeOptions.length > 0) {
+        // If agent has timeRangeOptions but no selectedTimeRange, use the first option as default
+        body.time_range = latestAgent.timeRangeOptions[0].value;
+        console.log(`[${agent.id}] No time_range selected, using default: ${latestAgent.timeRangeOptions[0].value}`);
       } else {
-        console.log(`[${agent.id}] No time_range selected`);
+        console.log(`[${agent.id}] No time_range (agent uses recent games by default)`);
       }
 
-      // Add queue_id parameter if agent has rankTypeOptions
-      if (latestAgent?.selectedRankType !== undefined) {
+      // Champion Mastery uses all game modes, so don't add queue_id parameter
+      // For other agents, add queue_id if they have rankTypeOptions and selectedRankType is not null
+      if (agent.id !== 'champion-mastery' && latestAgent?.selectedRankType !== undefined && latestAgent.selectedRankType !== null) {
         body.queue_id = latestAgent.selectedRankType;
         const queueNames: Record<number, string> = { 420: 'Solo/Duo', 440: 'Flex', 400: 'Normal' };
         console.log(`[${agent.id}] Using queue_id: ${latestAgent.selectedRankType} (${queueNames[latestAgent.selectedRankType] || 'Unknown'})`);
+      } else if (agent.id !== 'champion-mastery' && latestAgent?.selectedRankType === null) {
+        console.log(`[${agent.id}] Using Total (all queue types)`);
+      } else if (agent.id === 'champion-mastery') {
+        console.log(`[${agent.id}] Using all game modes (Champion Mastery)`);
       }
 
       const result = await fetchAgentStream(url, body, abortControllerRef.current);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
-      const currentTimeRange = latestAgent?.selectedTimeRange || 'default';
       
-      console.log(`[${agent.id}] Storing report for time_range: ${currentTimeRange}`);
+      // Get the latest agent state to ensure we have the correct filters
+      let finalAgent: AgentState | undefined;
+      setAgents((prev) => {
+        finalAgent = prev.find((a) => a.id === agent.id);
+        return prev; // Don't modify, just read
+      });
+      
+      // Champion Mastery uses all game modes, so use time_range only as key
+      // Other agents use combined key (time_range + queue_id)
+      const reportKey = finalAgent && finalAgent.id === 'champion-mastery'
+        ? (finalAgent.selectedTimeRange || 'default')
+        : (finalAgent ? getReportKey(finalAgent) : getReportKey(agent));
+      
+      console.log(`[${agent.id}] Storing report for filter combination: ${reportKey}`);
 
-      // Store report by time range - use functional update to ensure we have the latest reportsByTimeRange
+      // Store report by filter combination (time_range + queue_id) - use functional update to ensure we have the latest reportsByTimeRange
       setAgents((prev) => {
         const currentAgent = prev.find((a) => a.id === agent.id);
         const currentReportsByTimeRange = currentAgent?.reportsByTimeRange || {};
-        currentReportsByTimeRange[currentTimeRange] = {
+        currentReportsByTimeRange[reportKey] = {
           detailedReport,
           analysisData,
           status: 'ready'
@@ -1062,18 +1206,42 @@ export default function AICoachAnalysis({
         console.log(`[${agentId}] No time_range selected`);
       }
 
+      // Champion Mastery uses all game modes, so don't add queue_id parameter
+      // For other agents, add queue_id if they have rankTypeOptions
+      if (agentId !== 'champion-mastery' && latestAgent?.selectedRankType !== undefined && latestAgent.selectedRankType !== null) {
+        body.queue_id = latestAgent.selectedRankType;
+        const queueNames: Record<number, string> = { 420: 'Solo/Duo', 440: 'Flex', 400: 'Normal' };
+        console.log(`[${agentId}] Using queue_id: ${latestAgent.selectedRankType} (${queueNames[latestAgent.selectedRankType] || 'Unknown'})`);
+      } else if (agentId !== 'champion-mastery' && latestAgent?.selectedRankType === null) {
+        console.log(`[${agentId}] Using Total (all queue types)`);
+      } else if (agentId === 'champion-mastery') {
+        console.log(`[${agentId}] Using all game modes (Champion Mastery)`);
+      }
+
       const result = await fetchAgentStream(url, body, abortControllerRef.current);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
-      const currentTimeRange = latestAgent?.selectedTimeRange || 'default';
       
-      console.log(`[${agentId}] Storing report for time_range: ${currentTimeRange}`);
+      // Get the latest agent state to ensure we have the correct filters
+      let finalAgent: AgentState | undefined;
+      setAgents((prev) => {
+        finalAgent = prev.find((a) => a.id === agentId);
+        return prev; // Don't modify, just read
+      });
+      
+      // Champion Mastery uses all game modes, so use time_range only as key
+      // Other agents use combined key (time_range + queue_id)
+      const reportKey = finalAgent && finalAgent.id === 'champion-mastery'
+        ? (finalAgent.selectedTimeRange || 'default')
+        : (finalAgent ? getReportKey(finalAgent) : 'default');
+      
+      console.log(`[${agentId}] Storing report for filter combination: ${reportKey}`);
 
-      // Store report by time range - use functional update to ensure we have the latest reportsByTimeRange
+      // Store report by filter combination (time_range + queue_id) - use functional update to ensure we have the latest reportsByTimeRange
       setAgents((prev) => {
         const currentAgent = prev.find((a) => a.id === agentId);
         const currentReportsByTimeRange = currentAgent?.reportsByTimeRange || {};
-        currentReportsByTimeRange[currentTimeRange] = {
+        currentReportsByTimeRange[reportKey] = {
           detailedReport,
           analysisData,
           status: 'ready'
@@ -1135,6 +1303,31 @@ export default function AICoachAnalysis({
         model: 'sonnet'
       };
 
+      // Add time range parameter if agent has time range options
+      // Get the latest agent state to ensure we have the correct selectedTimeRange
+      // Use functional update to get the most recent state
+      let latestAgent: AgentState | undefined;
+      setAgents((prev) => {
+        latestAgent = prev.find((a) => a.id === agentId);
+        return prev; // Don't modify, just read
+      });
+      
+      if (latestAgent?.selectedTimeRange) {
+        body.time_range = latestAgent.selectedTimeRange;
+        console.log(`[${agentId}] Using time_range: ${latestAgent.selectedTimeRange}`);
+      } else {
+        console.log(`[${agentId}] No time_range selected`);
+      }
+
+      // Add queue_id parameter if agent has rankTypeOptions and selectedRankType is not null
+      if (latestAgent?.selectedRankType !== undefined && latestAgent.selectedRankType !== null) {
+        body.queue_id = latestAgent.selectedRankType;
+        const queueNames: Record<number, string> = { 420: 'Solo/Duo', 440: 'Flex', 400: 'Normal' };
+        console.log(`[${agentId}] Using queue_id: ${latestAgent.selectedRankType} (${queueNames[latestAgent.selectedRankType] || 'Unknown'})`);
+      } else if (latestAgent?.selectedRankType === null) {
+        console.log(`[${agentId}] Using Total (all queue types)`);
+      }
+
       // Add either friend info or rank parameter
       if (rank) {
         body.rank = rank;
@@ -1180,6 +1373,35 @@ export default function AICoachAnalysis({
     }
 
     const agentId = 'role-specialization';
+    
+    // Get the latest agent state to check for existing report
+    let latestAgent: AgentState | undefined;
+    setAgents((prev) => {
+      latestAgent = prev.find((a) => a.id === agentId);
+      return prev; // Don't modify, just read
+    });
+    
+    // Check if report exists for current filter combination (role + time_range + queue_id)
+    if (latestAgent) {
+      const timeRange = latestAgent.selectedTimeRange || 'default';
+      const queueId = latestAgent.selectedRankType !== null && latestAgent.selectedRankType !== undefined
+        ? latestAgent.selectedRankType.toString()
+        : 'total';
+      const reportKey = `role_${role}_${timeRange}_${queueId}`;
+      const reportsByTimeRange = latestAgent.reportsByTimeRange || {};
+      const existingReport = reportsByTimeRange[reportKey];
+      
+      // If already generated for current filter combination, just show the report
+      if (existingReport && existingReport.status === 'ready' && existingReport.detailedReport) {
+        setSelectedAgent({
+          ...latestAgent,
+          detailedReport: existingReport.detailedReport,
+          analysisData: existingReport.analysisData
+        });
+        return;
+      }
+    }
+    
     updateAgentStatus(agentId, { status: 'generating', error: undefined });
 
     try {
@@ -1213,18 +1435,40 @@ export default function AICoachAnalysis({
         console.log(`[${agentId}] No time_range selected`);
       }
 
+      // Add queue_id parameter if selected
+      if (latestAgent?.selectedRankType !== undefined && latestAgent.selectedRankType !== null) {
+        body.queue_id = latestAgent.selectedRankType;
+        const queueNames: Record<number, string> = { 420: 'Solo/Duo', 440: 'Flex', 400: 'Normal' };
+        console.log(`[${agentId}] Using queue_id: ${latestAgent.selectedRankType} (${queueNames[latestAgent.selectedRankType] || 'Unknown'})`);
+      } else if (latestAgent?.selectedRankType === null) {
+        console.log(`[${agentId}] Using Total (all queue types)`);
+      }
+
       const result = await fetchAgentStream(url, body, abortControllerRef.current);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
-      const currentTimeRange = latestAgent?.selectedTimeRange || 'default';
       
-      console.log(`[${agentId}] Storing report for time_range: ${currentTimeRange}`);
+      // Get the latest agent state to ensure we have the correct filters
+      let finalAgent: AgentState | undefined;
+      setAgents((prev) => {
+        finalAgent = prev.find((a) => a.id === agentId);
+        return prev; // Don't modify, just read
+      });
+      
+      // Role Specialization report key includes role, time_range, and queue_id
+      const timeRange = finalAgent?.selectedTimeRange || 'default';
+      const queueId = finalAgent?.selectedRankType !== null && finalAgent?.selectedRankType !== undefined
+        ? finalAgent.selectedRankType.toString()
+        : 'total';
+      const reportKey = `role_${role}_${timeRange}_${queueId}`;
+      
+      console.log(`[${agentId}] Storing report for filter combination: ${reportKey}`);
 
-      // Store report by time range - use functional update to ensure we have the latest reportsByTimeRange
+      // Store report by filter combination (role + time_range + queue_id)
       setAgents((prev) => {
         const currentAgent = prev.find((a) => a.id === agentId);
         const currentReportsByTimeRange = currentAgent?.reportsByTimeRange || {};
-        currentReportsByTimeRange[currentTimeRange] = {
+        currentReportsByTimeRange[reportKey] = {
           detailedReport,
           analysisData,
           status: 'ready'
@@ -1496,73 +1740,73 @@ export default function AICoachAnalysis({
             const status = rankData.status;
             
             return (
-              <div
+          <div 
                 key={rankType}
                 ref={(el) => { rankIndicatorRefs.current[rankType] = el; }}
-                className="flex items-center gap-1 px-2 py-1 rounded cursor-help relative"
+            className="flex items-center gap-1 px-2 py-1 rounded cursor-help relative" 
                 style={{
                   backgroundColor: status === 'success' ? 'rgba(16, 185, 129, 0.2)' : status === 'failed' ? 'rgba(239, 68, 68, 0.2)' : status === 'pending' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(107, 114, 128, 0.2)'
                 }}
-                onMouseEnter={(e) => {
+            onMouseEnter={(e) => {
                   const ref = rankIndicatorRefs.current[rankType];
                   if (ref) {
                     const rect = ref.getBoundingClientRect();
                     setRankTooltipPositions({
                       ...rankTooltipPositions,
                       [rankType]: {
-                        top: rect.bottom + 8,
-                        left: rect.left + rect.width / 2
+                  top: rect.bottom + 8,
+                  left: rect.left + rect.width / 2
                       }
-                    });
-                  }
+                });
+              }
                   setShowRankTooltip({ ...showRankTooltip, [rankType]: true });
-                }}
+            }}
                 onMouseLeave={() => {
                   setShowRankTooltip({ ...showRankTooltip, [rankType]: false });
                 }}
-              >
+          >
                 {status === 'success' && (
-                  <CheckCircle2 className="w-4 h-4" style={{ color: '#10B981' }} />
-                )}
+              <CheckCircle2 className="w-4 h-4" style={{ color: '#10B981' }} />
+            )}
                 {status === 'failed' && (
-                  <XCircle className="w-4 h-4" style={{ color: '#EF4444' }} />
-                )}
+              <XCircle className="w-4 h-4" style={{ color: '#EF4444' }} />
+            )}
                 {status === 'pending' && (
-                  <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#FBBF24' }} />
-                )}
+              <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#FBBF24' }} />
+            )}
                 {status === 'unknown' && (
-                  <XCircle className="w-4 h-4" style={{ color: '#6B7280' }} />
-                )}
+              <XCircle className="w-4 h-4" style={{ color: '#6B7280' }} />
+            )}
                 <span className="text-xs" style={{ color: status === 'success' ? '#10B981' : status === 'failed' ? '#EF4444' : status === 'pending' ? '#FBBF24' : '#6B7280' }}>
                   {rankLabel}
-                </span>
-                
+            </span>
+            
                 {/* Rank Type Tooltip */}
-                <AnimatePresence>
+            <AnimatePresence>
                   {showRankTooltip[rankType] && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9, y: -5 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9, y: -5 }}
-                      transition={{ duration: 0.15 }}
-                      className="fixed z-50 pointer-events-none"
-                      style={{
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: -5 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -5 }}
+                  transition={{ duration: 0.15 }}
+                  className="fixed z-50 pointer-events-none"
+                  style={{
                         top: `${rankTooltipPositions[rankType]?.top || 0}px`,
                         left: `${rankTooltipPositions[rankType]?.left || 0}px`,
-                        transform: 'translate(-50%, 0)',
-                        marginTop: '0'
-                      }}
-                    >
-                      <div
+                    transform: 'translate(-50%, 0)',
+                    marginTop: '0'
+                  }}
+                >
+                  <div
                         className="px-3 py-2 rounded-lg shadow-lg border text-xs"
-                        style={{
-                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                          borderColor: 'rgba(255, 255, 255, 0.2)',
-                          color: '#F5F5F7'
-                        }}
-                      >
+                    style={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                      color: '#F5F5F7'
+                    }}
+                  >
                         {status === 'success' ? (
-                          <>
+                      <>
                             <div>{rankLabel} Data</div>
                             <div style={{ color: '#10B981', marginTop: '4px' }}>
                               <div>Past Season: {rankData.past_season} matches</div>
@@ -1577,12 +1821,12 @@ export default function AICoachAnalysis({
                               Past 365 Days: {rankData.past_365} matches
                             </div>
                           </>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
             );
           })}
         </div>
@@ -1736,6 +1980,8 @@ export default function AICoachAnalysis({
           agentDescription={selectedAgent.description}
           detailedReport={selectedAgent.detailedReport || ''}
           analysisData={selectedAgent.analysisData}
+          selectedRankType={selectedAgent.selectedRankType}
+          selectedTimeRange={selectedAgent.selectedTimeRange}
         />
       )}
 
@@ -1747,6 +1993,7 @@ export default function AICoachAnalysis({
         playerChampions={playerChampions}
         gameName={gameName}
         tagLine={tagLine}
+        selectedTimeRange={agents.find(a => a.id === 'champion-mastery')?.selectedTimeRange}
       />
 
       <FriendInputModal
@@ -1764,6 +2011,8 @@ export default function AICoachAnalysis({
         roleStats={roleStats}
         gameName={gameName}
         tagLine={tagLine}
+        selectedRankType={agents.find(a => a.id === 'role-specialization')?.selectedRankType}
+        selectedTimeRange={agents.find(a => a.id === 'role-specialization')?.selectedTimeRange}
       />
 
       <RankSelectorModal

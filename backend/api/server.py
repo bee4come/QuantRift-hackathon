@@ -811,7 +811,31 @@ async def weakness_analysis(request: AgentRequest):
             from src.agents.player_analysis.weakness_analysis.prompts import build_narrative_prompt
             from src.agents.shared.insight_detector import InsightDetector
 
-            recent_data = load_recent_data(packs_dir, request.recent_count or 5)
+            time_range = getattr(request, 'time_range', None)
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Weakness Analysis] Received time_range: {time_range}, queue_id: {queue_id}")
+            recent_data = load_recent_data(packs_dir, request.recent_count or 5, time_range=time_range, queue_id=queue_id)
+            
+            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+            print(f"📊 Loaded {len(recent_data)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
+            
+            # Check if no data found for the selected filters
+            if len(recent_data) == 0:
+                if queue_id == 400:
+                    error_msg = "No Normal game data found. Please play some Normal games first."
+                elif queue_id == 440:
+                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                elif queue_id == 420:
+                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                elif time_range == "2024-01-01":
+                    error_msg = "No data found for Season 2024"
+                elif time_range == "past-365":
+                    error_msg = "No data found for Past 365 Days"
+                else:
+                    error_msg = "No data found"
+                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                return
+            
             weaknesses = identify_weaknesses(recent_data)
 
             # Automated insight detection
@@ -999,6 +1023,11 @@ async def annual_summary(request: AgentRequest):
             analysis = generate_comprehensive_annual_analysis(all_packs_dict)
             formatted_analysis = format_analysis_for_prompt(analysis)
             prompts = build_narrative_prompt(analysis, formatted_analysis, time_range=time_range)
+            
+            # Log analysis summary for debugging
+            if analysis.get("summary"):
+                summary = analysis["summary"]
+                print(f"📊 [Annual Summary] Analysis summary: {summary.get('total_games', 0)} games, {summary.get('overall_winrate', 0):.1%} winrate, {summary.get('patches_covered', 0)} patches")
 
             # Step 1.5: Send analysis data first (for frontend widgets)
             yield f"data: {{\"type\": \"analysis\", \"data\": {json.dumps(analysis, ensure_ascii=False)}}}\n\n"
@@ -1147,9 +1176,12 @@ async def progress_tracker(request: AgentRequest):
 
             window_size = request.recent_count or 10
             time_range = getattr(request, 'time_range', None)
-            recent_packs = load_recent_packs(packs_dir, window_size=window_size, time_range=time_range)
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Progress Tracker] Received time_range: {time_range}, queue_id: {queue_id}")
+            recent_packs = load_recent_packs(packs_dir, window_size=window_size, time_range=time_range, queue_id=queue_id)
 
-            print(f"📊 Loaded {len(recent_packs)} patches" + (f" (time_range: {time_range})" if time_range else ""))
+            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+            print(f"📊 Loaded {len(recent_packs)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
 
             analysis = analyze_progress(recent_packs)
             formatted_data = format_analysis_for_prompt(analysis)
@@ -1358,8 +1390,32 @@ async def friend_comparison(request: AgentRequest):
             player1_name = f"{request.game_name}#{request.tag_line}"
             player2_name = f"{request.friend_game_name}#{request.friend_tag_line}"
 
-            player1_data = load_player_data(current_player_packs_dir)
-            player2_data = load_player_data(friend_packs_dir)
+            time_range = getattr(request, 'time_range', None)
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Friend Comparison] Received time_range: {time_range}, queue_id: {queue_id}")
+            player1_data = load_player_data(current_player_packs_dir, time_range=time_range, queue_id=queue_id)
+            player2_data = load_player_data(friend_packs_dir, time_range=time_range, queue_id=queue_id)
+            
+            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+            print(f"📊 Loaded player data" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
+            
+            # Check if no data found
+            if player1_data.get("total_games", 0) == 0 or player2_data.get("total_games", 0) == 0:
+                if queue_id == 400:
+                    error_msg = "No Normal game data found. Please play some Normal games first."
+                elif queue_id == 440:
+                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                elif queue_id == 420:
+                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                elif time_range == "2024-01-01":
+                    error_msg = "No data found for Season 2024"
+                elif time_range == "past-365":
+                    error_msg = "No data found for Past 365 Days"
+                else:
+                    error_msg = "No data found"
+                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                return
+            
             comparison = compare_two_players(player1_data, player2_data, player1_name, player2_name)
             formatted_data = format_comparison_for_prompt(comparison, player1_name, player2_name)
             prompts = build_narrative_prompt(comparison, formatted_data, player1_name, player2_name)
@@ -1696,7 +1752,11 @@ async def build_simulator(request: AgentRequest):
                 format_player_build_analysis_for_prompt
             )
 
-            analysis = generate_player_build_analysis(packs_dir)
+            time_range = getattr(request, 'time_range', None)
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Build Simulator] Received time_range: {time_range}, queue_id: {queue_id}")
+            
+            analysis = generate_player_build_analysis(packs_dir, time_range=time_range, queue_id=queue_id)
 
             if not analysis.get("analysis_ready"):
                 yield f"data: {{\"error\": \"{analysis.get('error', 'Analysis failed')}\"}}\n\n"
@@ -2052,8 +2112,31 @@ async def version_comparison(request: AgentRequest):
             )
             from src.agents.player_analysis.multi_version.prompts import build_multi_version_prompt
 
-            # Load all patch data
-            all_packs = load_all_packs(packs_dir)
+            # Load all patch data with optional time range and queue_id filter
+            time_range = getattr(request, 'time_range', None)
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Version Comparison] Received time_range: {time_range}, queue_id: {queue_id}")
+            all_packs = load_all_packs(packs_dir, time_range=time_range, queue_id=queue_id)
+            
+            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+            print(f"📊 Loaded {len(all_packs)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
+            
+            # Check if no data found for the selected filters
+            if len(all_packs) == 0:
+                if queue_id == 400:
+                    error_msg = "No Normal game data found. Please play some Normal games first."
+                elif queue_id == 440:
+                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                elif queue_id == 420:
+                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                elif time_range == "2024-01-01":
+                    error_msg = "No data found for Season 2024"
+                elif time_range == "past-365":
+                    error_msg = "No data found for Past 365 Days"
+                else:
+                    error_msg = "No data found"
+                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                return
 
             # Analyze trends
             trends = analyze_trends(all_packs)
@@ -2140,7 +2223,31 @@ async def comparison_hub(request: AgentRequest):
                 from src.agents.player_analysis.peer_comparison.prompts import build_narrative_prompt
 
                 rank = request.rank.upper()
-                player_data = load_player_data(packs_dir)
+                time_range = getattr(request, 'time_range', None)
+                queue_id = getattr(request, 'queue_id', None)
+                print(f"🔍 [Comparison Hub - Peer] Received time_range: {time_range}, queue_id: {queue_id}")
+                player_data = load_player_data(packs_dir, time_range=time_range, queue_id=queue_id)
+                
+                queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+                print(f"📊 Loaded player data" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
+                
+                # Check if no data found
+                if player_data.get("total_games", 0) == 0:
+                    if queue_id == 400:
+                        error_msg = "No Normal game data found. Please play some Normal games first."
+                    elif queue_id == 440:
+                        error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                    elif queue_id == 420:
+                        error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                    elif time_range == "2024-01-01":
+                        error_msg = "No data found for Season 2024"
+                    elif time_range == "past-365":
+                        error_msg = "No data found for Past 365 Days"
+                    else:
+                        error_msg = "No data found"
+                    yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                    return
+                
                 baseline = load_rank_baseline(rank)
 
                 if baseline is None:
@@ -2204,8 +2311,31 @@ async def comparison_hub(request: AgentRequest):
                 )
                 from src.agents.player_analysis.friend_comparison.prompts import build_narrative_prompt as build_friend_prompt
 
-                player_data = load_player_data(player_packs_dir)
-                friend_data = load_player_data(friend_packs_dir)
+                time_range = getattr(request, 'time_range', None)
+                queue_id = getattr(request, 'queue_id', None)
+                print(f"🔍 [Comparison Hub - Friend] Received time_range: {time_range}, queue_id: {queue_id}")
+                player_data = load_player_data(player_packs_dir, time_range=time_range, queue_id=queue_id)
+                friend_data = load_player_data(friend_packs_dir, time_range=time_range, queue_id=queue_id)
+                
+                queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+                print(f"📊 Loaded player data" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
+                
+                # Check if no data found
+                if player_data.get("total_games", 0) == 0 or friend_data.get("total_games", 0) == 0:
+                    if queue_id == 400:
+                        error_msg = "No Normal game data found. Please play some Normal games first."
+                    elif queue_id == 440:
+                        error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                    elif queue_id == 420:
+                        error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                    elif time_range == "2024-01-01":
+                        error_msg = "No data found for Season 2024"
+                    elif time_range == "past-365":
+                        error_msg = "No data found for Past 365 Days"
+                    else:
+                        error_msg = "No data found"
+                    yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                    return
 
                 # Compare
                 player_name = f"{request.game_name}#{request.tag_line}"
@@ -2340,7 +2470,7 @@ async def version_trends(request: AgentRequest):
             # Load packs with optional time range and queue_id filter
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
-            print(f"🔍 [Version Comparison] Received time_range: {time_range}, queue_id: {queue_id}")
+            print(f"🔍 [Version Trends] Received time_range: {time_range}, queue_id: {queue_id}")
             all_packs = load_all_packs(packs_dir, time_range=time_range, queue_id=queue_id)
             queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
             print(f"📊 Loaded {len(all_packs)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
@@ -2414,7 +2544,31 @@ async def performance_insights(request: AgentRequest):
             )
             from src.agents.player_analysis.weakness_analysis.prompts import build_narrative_prompt as build_weakness_prompt
 
-            recent_data = load_recent_data(packs_dir, request.recent_count or 20)
+            time_range = getattr(request, 'time_range', None)
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Performance Insights] Received time_range: {time_range}, queue_id: {queue_id}")
+            recent_data = load_recent_data(packs_dir, request.recent_count or 20, time_range=time_range, queue_id=queue_id)
+            
+            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+            print(f"📊 Loaded {len(recent_data)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
+            
+            # Check if no data found for the selected filters
+            if len(recent_data) == 0:
+                if queue_id == 400:
+                    error_msg = "No Normal game data found. Please play some Normal games first."
+                elif queue_id == 440:
+                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                elif queue_id == 420:
+                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                elif time_range == "2024-01-01":
+                    error_msg = "No data found for Season 2024"
+                elif time_range == "past-365":
+                    error_msg = "No data found for Past 365 Days"
+                else:
+                    error_msg = "No data found"
+                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                return
+            
             weaknesses = identify_weaknesses(recent_data)
             formatted = format_analysis_for_prompt(weaknesses)
             prompts = build_weakness_prompt(weaknesses, formatted)
@@ -2617,7 +2771,7 @@ async def get_player_summary(
         summoner_error = None
         
         try:
-            summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=platform)
+        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=platform)
         except Exception as e:
             error_msg = str(e)
             # Check if it's a decrypt error (API key issue)
@@ -2638,11 +2792,11 @@ async def get_player_summary(
                 if plat != platform:
                     print(f"🔍 Trying platform: {plat}")
                     try:
-                        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=plat)
-                        if summoner:
-                            print(f"✅ Found summoner on {plat}")
-                            platform = plat  # Update platform to the one that worked
-                            break
+                    summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=plat)
+                    if summoner:
+                        print(f"✅ Found summoner on {plat}")
+                        platform = plat  # Update platform to the one that worked
+                        break
                     except Exception as e:
                         error_msg = str(e)
                         if "decrypting" in error_msg.lower():
@@ -2758,8 +2912,8 @@ async def get_player_summary(
             best_champions = best_champions[:5]
         else:
             # Use existing pack files (for time_range or days-based requests)
-            role_stats = player_data_manager.get_role_stats(puuid)
-            best_champions = player_data_manager.get_best_champions(puuid, limit=5)
+        role_stats = player_data_manager.get_role_stats(puuid)
+        best_champions = player_data_manager.get_best_champions(puuid, limit=5)
 
         # Step 5: Calculate analysis summary from role_stats
         analysis = {
@@ -3055,6 +3209,95 @@ async def list_agents():
 # ============================================================================
 # Player Data Status API
 # ============================================================================
+
+@app.get("/api/player/{game_name}/{tag_line}/champions")
+async def get_player_champions(
+    game_name: str,
+    tag_line: str,
+    time_range: str = None,
+    queue_id: int = None,
+    limit: int = 50
+):
+    """
+    Get player's champion statistics filtered by time_range and queue_id
+    
+    Query params:
+    - time_range: Time range filter ("2024-01-01" or "past-365")
+    - queue_id: Queue ID filter (420 for Ranked Solo/Duo, 440 for Ranked Flex, 400 for Normal, None for all)
+    - limit: Maximum number of champions to return (default: 50)
+    """
+    # Strip whitespace from URL parameters
+    game_name = game_name.strip()
+    tag_line = tag_line.strip()
+    
+    try:
+        # Get PUUID
+        platform, _ = infer_platform_and_region(tag_line)
+        account = await riot_client.get_account_by_riot_id(game_name, tag_line, "americas")
+        if not account or 'puuid' not in account:
+            raise HTTPException(status_code=404, detail="Player not found")
+        
+        puuid = account['puuid']
+        
+        # Get champion stats with filters
+        # Note: Champion Mastery uses all game modes, so queue_id should be None
+        champions = player_data_manager.get_best_champions(puuid, limit=limit, time_range=time_range, queue_id=queue_id)
+        
+        return {
+            'success': True,
+            'champions': champions
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"❌ Error: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/player/{game_name}/{tag_line}/role-stats")
+async def get_player_role_stats(
+    game_name: str,
+    tag_line: str,
+    time_range: str = None,
+    queue_id: int = None
+):
+    """
+    Get player's role statistics filtered by time_range and queue_id
+    
+    Query params:
+    - time_range: Time range filter ("2024-01-01" or "past-365")
+    - queue_id: Queue ID filter (420 for Ranked Solo/Duo, 440 for Ranked Flex, 400 for Normal)
+    """
+    # Strip whitespace from URL parameters
+    game_name = game_name.strip()
+    tag_line = tag_line.strip()
+    
+    try:
+        # Get PUUID
+        platform, _ = infer_platform_and_region(tag_line)
+        account = await riot_client.get_account_by_riot_id(game_name, tag_line, "americas")
+        if not account or 'puuid' not in account:
+            raise HTTPException(status_code=404, detail="Player not found")
+        
+        puuid = account['puuid']
+        
+        # Get role stats with filters
+        role_stats = player_data_manager.get_role_stats(puuid, time_range=time_range, queue_id=queue_id)
+        
+        return {
+            'success': True,
+            'role_stats': role_stats
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"❌ Error: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/player/{game_name}/{tag_line}/data-status")
 async def get_player_data_status(game_name: str, tag_line: str):

@@ -9,23 +9,92 @@ import os
 import json
 
 
-def extract_player_top_champions(packs_dir: str, top_n: int = 3) -> List[Dict[str, Any]]:
+def extract_player_top_champions(packs_dir: str, top_n: int = 3, time_range: str = None, queue_id: int = None) -> List[Dict[str, Any]]:
     """
     从player-pack中提取玩家最常用的champion+role组合
 
+    Args:
+        packs_dir: Pack文件目录
+        top_n: 返回前N个最常用的champion
+        time_range: Time range filter (optional)
+        queue_id: Queue ID filter (optional)
+    
     Returns:
         List of {champ_id, role, games, wins, build_core, p_hat}
     """
+    from datetime import datetime, timedelta
+    from pathlib import Path
+    
     all_champions = []
+    
+    # Calculate time filter if needed
+    cutoff_timestamp = None
+    cutoff_end_timestamp = None
+    
+    if time_range == "2024-01-01":
+        cutoff_timestamp = datetime(2024, 1, 9).timestamp()
+        cutoff_end_timestamp = datetime(2025, 1, 6, 23, 59, 59, 999000).timestamp()
+    elif time_range == "past-365":
+        cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
+    
+    # Build file pattern based on queue_id
+    packs_path = Path(packs_dir)
+    if queue_id is not None:
+        pack_pattern = f"pack_*_{queue_id}.json"
+    else:
+        pack_pattern = "pack_*.json"
+    
+    pack_files = sorted(packs_path.glob(pack_pattern))
 
     # 读取所有patch的pack文件
-    for filename in os.listdir(packs_dir):
-        if not filename.startswith("pack_") or not filename.endswith(".json"):
+    for pack_file in pack_files:
+        if not pack_file.name.startswith("pack_") or not pack_file.name.endswith(".json"):
             continue
 
-        pack_path = os.path.join(packs_dir, filename)
-        with open(pack_path, 'r') as f:
+        with open(pack_file, 'r') as f:
             pack_data = json.load(f)
+        
+        # Verify queue_id matches if specified
+        if queue_id is not None:
+            pack_queue_id = pack_data.get('queue_id', 420)
+            if pack_queue_id != queue_id:
+                continue
+        
+        # Apply time range filter
+        if cutoff_timestamp:
+            has_match_in_range = False
+            pack_earliest = pack_data.get("earliest_match_date")
+            pack_latest = pack_data.get("latest_match_date")
+            
+            if pack_earliest or pack_latest:
+                if pack_earliest:
+                    earliest_dt = datetime.fromisoformat(pack_earliest.replace('Z', '+00:00'))
+                    earliest_ts = earliest_dt.timestamp()
+                if pack_latest:
+                    latest_dt = datetime.fromisoformat(pack_latest.replace('Z', '+00:00'))
+                    latest_ts = latest_dt.timestamp()
+                
+                if cutoff_end_timestamp:
+                    if earliest_ts <= cutoff_end_timestamp and latest_ts >= cutoff_timestamp:
+                        has_match_in_range = True
+                else:
+                    if latest_ts >= cutoff_timestamp:
+                        has_match_in_range = True
+            else:
+                # Fallback to generation_timestamp
+                if "generation_timestamp" in pack_data:
+                    pack_timestamp = pack_data["generation_timestamp"]
+                    if isinstance(pack_timestamp, str):
+                        pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
+                    if cutoff_end_timestamp:
+                        if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
+                            has_match_in_range = True
+                    else:
+                        if pack_timestamp >= cutoff_timestamp:
+                            has_match_in_range = True
+            
+            if not has_match_in_range:
+                continue
 
         # 提取by_cr数据
         for cr in pack_data.get("by_cr", []):
@@ -165,9 +234,14 @@ def get_meta_optimal_builds(
         return []
 
 
-def generate_player_build_analysis(packs_dir: str) -> Dict[str, Any]:
+def generate_player_build_analysis(packs_dir: str, time_range: str = None, queue_id: int = None) -> Dict[str, Any]:
     """
     生成玩家出装分析数据
+
+    Args:
+        packs_dir: Pack文件目录
+        time_range: Time range filter (optional)
+        queue_id: Queue ID filter (optional)
 
     Returns:
         {
@@ -178,7 +252,7 @@ def generate_player_build_analysis(packs_dir: str) -> Dict[str, Any]:
         }
     """
     # 1. 提取玩家最常用的champion
-    top_champions = extract_player_top_champions(packs_dir, top_n=1)
+    top_champions = extract_player_top_champions(packs_dir, top_n=1, time_range=time_range, queue_id=queue_id)
 
     if not top_champions:
         return {

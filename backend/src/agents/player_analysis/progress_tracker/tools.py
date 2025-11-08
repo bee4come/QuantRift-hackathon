@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from src.core.statistical_utils import wilson_ci_tuple as wilson_confidence_interval
 
 
-def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = None) -> Dict[str, Any]:
+def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = None, queue_id: int = None) -> Dict[str, Any]:
     """
     Load recent N patch versions of Player-Packs
 
@@ -18,6 +18,11 @@ def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = N
             - "2024-01-01": Load data from Past Season 2024 (2024-01-09 to 2025-01-06, patches 14.1 to 14.25)
             - "past-365": Load data from past 365 days
             - None: Load recent window_size patches
+        queue_id: Queue ID filter
+            - 420: Ranked Solo/Duo
+            - 440: Ranked Flex
+            - 400: Normal
+            - None: Load all queue types
 
     Returns:
         Dict of packs keyed by patch version
@@ -35,8 +40,14 @@ def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = N
     elif time_range == "past-365":
         cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
 
+    # Build file pattern based on queue_id
+    if queue_id is not None:
+        pack_pattern = f"pack_*_{queue_id}.json"
+    else:
+        pack_pattern = "pack_*.json"
+
     # Get all pack files
-    all_pack_files = sorted(packs_dir.glob("pack_*.json"))
+    all_pack_files = sorted(packs_dir.glob(pack_pattern))
 
     # Apply time filter if specified
     if cutoff_timestamp:
@@ -44,6 +55,12 @@ def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = N
         for pack_file in all_pack_files:
             with open(pack_file, 'r') as f:
                 pack_data = json.load(f)
+            
+            # Verify queue_id matches if specified
+            if queue_id is not None:
+                pack_queue_id = pack_data.get('queue_id', 420)
+                if pack_queue_id != queue_id:
+                    continue
                 
                 # Check match dates first (more accurate)
                 pack_earliest = pack_data.get("earliest_match_date")
@@ -115,15 +132,15 @@ def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = N
                                 has_match_in_range = True
                 else:
                     # Fallback to generation_timestamp if match dates not available
-                    if "generation_timestamp" in pack_data:
-                        pack_timestamp = pack_data["generation_timestamp"]
+                if "generation_timestamp" in pack_data:
+                    pack_timestamp = pack_data["generation_timestamp"]
                     if isinstance(pack_timestamp, str):
                         pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
                         if cutoff_end_timestamp:
                             if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
                                 has_match_in_range = True
                         else:
-                            if pack_timestamp >= cutoff_timestamp:
+                    if pack_timestamp >= cutoff_timestamp:
                                 has_match_in_range = True
                 
                 if has_match_in_range:
@@ -138,7 +155,16 @@ def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = N
     for pack_file in pack_files:
         with open(pack_file, 'r') as f:
             pack = json.load(f)
-            packs[pack["patch"]] = pack
+            # Extract patch version from filename if queue_id is in filename
+            if queue_id is not None:
+                filename = pack_file.stem
+                if "_" in filename:
+                    patch = filename.rsplit("_", 1)[0].replace("pack_", "")
+                else:
+                    patch = pack.get("patch", "unknown")
+            else:
+                patch = pack.get("patch", "unknown")
+            packs[patch] = pack
     return packs
 
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import Image from 'next/image';
@@ -67,23 +67,92 @@ interface RoleSelectorModalProps {
   roleStats: RoleStats[];
   gameName: string;
   tagLine: string;
+  selectedRankType?: number | null;
+  selectedTimeRange?: string;
 }
 
 export default function RoleSelectorModal({
   isOpen,
   onClose,
   onSelect,
-  roleStats,
+  roleStats: initialRoleStats,
   gameName,
-  tagLine
+  tagLine,
+  selectedRankType,
+  selectedTimeRange
 }: RoleSelectorModalProps) {
   const colors = useAdaptiveColors();
   const { setIsModalOpen } = useModal();
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [roleStats, setRoleStats] = useState<RoleStats[]>(initialRoleStats || []);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setIsModalOpen(isOpen);
   }, [isOpen, setIsModalOpen]);
+
+  // Fetch filtered role stats when modal opens or filters change
+  useEffect(() => {
+    if (isOpen) {
+      // Always fetch filtered stats when modal opens, even if filters are not set
+      // This ensures we get the correct data based on current filters
+      const fetchFilteredRoleStats = async () => {
+        try {
+          setLoading(true);
+          // Clear role stats immediately when filters change to avoid showing stale data
+          setRoleStats([]);
+          
+          const params = new URLSearchParams();
+          if (selectedTimeRange) {
+            params.append('time_range', selectedTimeRange);
+          }
+          if (selectedRankType !== null && selectedRankType !== undefined) {
+            params.append('queue_id', selectedRankType.toString());
+          }
+          
+          const response = await fetch(`/api/player/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/role-stats?${params.toString()}`);
+          if (response.ok) {
+            const data = await response.json();
+            console.log(`[RoleSelectorModal] Fetched role stats:`, data);
+            if (data.success && data.role_stats && data.role_stats.length > 0) {
+              const filteredStats = data.role_stats.map((stat: any) => ({
+                role: stat.role as 'TOP' | 'JUNGLE' | 'MID' | 'ADC' | 'SUPPORT',
+                games: stat.games || 0,
+                wins: stat.wins || 0,
+                win_rate: stat.win_rate || 0,
+                avg_kda: stat.avg_kda || 0
+              }));
+              console.log(`[RoleSelectorModal] Setting role stats:`, filteredStats);
+              setRoleStats(filteredStats);
+            } else {
+              // If no data returned, set empty array
+              console.log(`[RoleSelectorModal] No role stats in response, setting empty array`);
+              setRoleStats([]);
+            }
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Failed to fetch filtered role stats:', response.status, errorData);
+            // If 404 or no data, set empty array
+            if (response.status === 404) {
+              console.log(`[RoleSelectorModal] 404 - No data found, setting empty array`);
+              setRoleStats([]);
+            } else {
+              // For other errors, set empty array
+              setRoleStats([]);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch filtered role stats:', error);
+          // Set empty array on error
+          setRoleStats([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchFilteredRoleStats();
+    }
+  }, [isOpen, selectedRankType, selectedTimeRange, gameName, tagLine]);
 
   // Get stats for a role (with BOTTOM → ADC mapping)
   const getRoleStats = (role: Role) => {
@@ -98,8 +167,11 @@ export default function RoleSelectorModal({
   };
 
   // Get most played role (with BOTTOM → ADC mapping)
-  const mostPlayedRole = roleStats.length > 0
-    ? (() => {
+  // Use useMemo to ensure it recalculates when roleStats changes
+  const mostPlayedRole = useMemo(() => {
+    if (roleStats.length === 0) {
+      return null;
+    }
         const mostPlayed = roleStats.reduce((prev, current) =>
           (current.games > prev.games) ? current : prev
         );
@@ -108,8 +180,7 @@ export default function RoleSelectorModal({
           return { ...mostPlayed, role: 'ADC' as Role };
         }
         return mostPlayed;
-      })()
-    : null;
+  }, [roleStats]);
 
   const handleConfirm = () => {
     if (selectedRole) {
@@ -160,11 +231,65 @@ export default function RoleSelectorModal({
                   <p className="text-sm mt-2" style={{ color: '#8E8E93' }}>
                     Analyze your performance in a specific role
                   </p>
-                  {mostPlayedRole && (
-                    <p className="text-xs mt-1" style={{ color: colors.accentBlue }}>
+                  {loading ? (
+                    <p className="text-xs mt-1" style={{ color: '#8E8E93' }}>
+                      Loading role statistics...
+                    </p>
+                  ) : mostPlayedRole ? (
+                    <div className="mt-1">
+                      <p className="text-xs" style={{ color: colors.accentBlue }}>
                       Most played: {mostPlayedRole.role} ({mostPlayedRole.games} games)
+                      </p>
+                      {(selectedRankType !== undefined || selectedTimeRange) && (
+                        <p className="text-xs mt-0.5" style={{ color: '#8E8E93' }}>
+                          Filter: {
+                            selectedRankType === null || selectedRankType === undefined
+                              ? 'Total'
+                              : selectedRankType === 420
+                              ? 'Rank Solo/Duo'
+                              : selectedRankType === 440
+                              ? 'Rank Flex'
+                              : selectedRankType === 400
+                              ? 'Normal'
+                              : 'Total'
+                          } • {
+                            selectedTimeRange === '2024-01-01'
+                              ? 'Season 2024'
+                              : selectedTimeRange === 'past-365'
+                              ? 'Past 365 Days'
+                              : 'All Time'
+                          }
+                        </p>
+                      )}
+                    </div>
+                  ) : roleStats.length === 0 && !loading ? (
+                    <div className="mt-1">
+                      <p className="text-xs" style={{ color: '#FF453A' }}>
+                        No data found for the selected filter
+                      </p>
+                      {(selectedRankType !== undefined || selectedTimeRange) && (
+                        <p className="text-xs mt-0.5" style={{ color: '#8E8E93' }}>
+                          Filter: {
+                            selectedRankType === null || selectedRankType === undefined
+                              ? 'Total'
+                              : selectedRankType === 420
+                              ? 'Rank Solo/Duo'
+                              : selectedRankType === 440
+                              ? 'Rank Flex'
+                              : selectedRankType === 400
+                              ? 'Normal'
+                              : 'Total'
+                          } • {
+                            selectedTimeRange === '2024-01-01'
+                              ? 'Season 2024'
+                              : selectedTimeRange === 'past-365'
+                              ? 'Past 365 Days'
+                              : 'All Time'
+                          }
                     </p>
                   )}
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Close Button */}
@@ -184,7 +309,21 @@ export default function RoleSelectorModal({
 
               {/* Role Cards */}
               <div className="flex-1 overflow-y-auto p-6 space-y-3">
-                {ROLE_OPTIONS.map((role) => {
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <p className="text-sm" style={{ color: '#8E8E93' }}>Loading role statistics...</p>
+                  </div>
+                ) : roleStats.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <p className="text-sm mb-2" style={{ color: '#FF453A' }}>
+                      No data found for the selected filter
+                    </p>
+                    <p className="text-xs" style={{ color: '#8E8E93' }}>
+                      Please select a different filter or play some games in this mode
+                    </p>
+                  </div>
+                ) : (
+                  ROLE_OPTIONS.map((role) => {
                   const stats = getRoleStats(role.value);
                   const isMostPlayed = mostPlayedRole?.role === role.value;
 
@@ -278,7 +417,8 @@ export default function RoleSelectorModal({
                       </ClickSpark>
                     </GlareHover>
                   );
-                })}
+                  })
+                )}
               </div>
 
               {/* Footer */}

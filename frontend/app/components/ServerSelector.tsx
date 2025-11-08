@@ -128,30 +128,30 @@ export default function ServerSelector() {
               >
                 <div className="flex items-center justify-between relative">
                   <div className="flex-1 flex justify-center">
-                    <div>
-                      <ShinyText 
-                        text="SERVER GATEWAY" 
-                        speed={4} 
-                        className="text-2xl font-bold tracking-tight mb-1"
-                      />
-                      <ShinyText 
-                        text="League of Legends • Regional Selection" 
-                        speed={3} 
-                        className="text-xs tracking-wider uppercase"
-                      />
-                    </div>
+                  <div>
+                    <ShinyText 
+                      text="SERVER GATEWAY" 
+                      speed={4} 
+                      className="text-2xl font-bold tracking-tight mb-1"
+                    />
+                    <ShinyText 
+                      text="League of Legends • Regional Selection" 
+                      speed={3} 
+                      className="text-xs tracking-wider uppercase"
+                    />
+                  </div>
                   </div>
                   <div className="flex items-center gap-4 absolute right-0">
-                    <div 
-                      className="text-right font-mono text-xs"
-                      style={{ color: '#0A84FF' }}
-                    >
-                      <ShinyText text="LIVE" speed={2} className="text-sm font-semibold" />
-                      <ShinyText 
-                        text={new Date().toLocaleTimeString('en-US', { hour12: false })} 
-                        speed={2} 
-                        className="text-xs"
-                      />
+                  <div 
+                    className="text-right font-mono text-xs"
+                    style={{ color: '#0A84FF' }}
+                  >
+                    <ShinyText text="LIVE" speed={2} className="text-sm font-semibold" />
+                    <ShinyText 
+                      text={new Date().toLocaleTimeString('en-US', { hour12: false })} 
+                      speed={2} 
+                      className="text-xs"
+                    />
                     </div>
                     <ClickSpark
                       sparkColor="#FF453A"

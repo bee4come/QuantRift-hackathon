@@ -171,8 +171,8 @@ def load_all_packs(packs_dir: str, time_range: str = None, queue_id: int = None)
                             if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
                                 has_match_in_range = True
                         else:
-                            if pack_timestamp >= cutoff_timestamp:
-                                has_match_in_range = True
+                        if pack_timestamp >= cutoff_timestamp:
+                            has_match_in_range = True
                 
                 # Skip if no matches in the time range
                 if not has_match_in_range:

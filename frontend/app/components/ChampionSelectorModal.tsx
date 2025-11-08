@@ -25,25 +25,73 @@ interface ChampionSelectorModalProps {
   playerChampions: PlayerChampion[];
   gameName: string;
   tagLine: string;
+  selectedTimeRange?: string;
 }
 
 export default function ChampionSelectorModal({
   isOpen,
   onClose,
   onSelect,
-  playerChampions,
+  playerChampions: initialPlayerChampions,
   gameName,
-  tagLine
+  tagLine,
+  selectedTimeRange
 }: ChampionSelectorModalProps) {
   const colors = useAdaptiveColors();
   const { setIsModalOpen } = useModal();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChampion, setSelectedChampion] = useState<PlayerChampion | null>(null);
+  const [playerChampions, setPlayerChampions] = useState<PlayerChampion[]>(initialPlayerChampions || []);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setIsModalOpen(isOpen);
   }, [isOpen, setIsModalOpen]);
+
+  // Fetch filtered champion stats when modal opens or filter changes
+  useEffect(() => {
+    if (isOpen && selectedTimeRange) {
+      const fetchFilteredChampions = async () => {
+        try {
+          setLoading(true);
+          const params = new URLSearchParams();
+          if (selectedTimeRange) {
+            params.append('time_range', selectedTimeRange);
+          }
+          // Champion Mastery uses all game modes, so don't add queue_id
+          params.append('limit', '50');
+          
+          const response = await fetch(`/api/player/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}/champions?${params.toString()}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.champions) {
+              const filteredChampions = data.champions.map((champ: any) => ({
+                champion_id: champ.champ_id,
+                champion_name: champ.name,
+                games_played: champ.games,
+                wins: champ.wins,
+                win_rate: champ.win_rate,
+                avg_kda: champ.avg_kda || 0
+              }));
+              setPlayerChampions(filteredChampions);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch filtered champions:', error);
+          // Fallback to initial champions on error
+          setPlayerChampions(initialPlayerChampions || []);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchFilteredChampions();
+    } else if (isOpen) {
+      // Use initial champion list if no filter
+      setPlayerChampions(initialPlayerChampions || []);
+    }
+  }, [isOpen, selectedTimeRange, gameName, tagLine, initialPlayerChampions]);
 
   // Filter and sort champions
   const filteredChampions = useMemo(() => {
@@ -117,9 +165,22 @@ export default function ChampionSelectorModal({
                   <p className="text-sm mt-2" style={{ color: '#8E8E93' }}>
                     Select a champion to analyze your mastery and performance patterns
                   </p>
-                  <p className="text-xs mt-1" style={{ color: colors.accentBlue }}>
+                  <div className="mt-1">
+                    <p className="text-xs" style={{ color: colors.accentBlue }}>
                     {gameName}#{tagLine} • {playerChampions.length} champions
                   </p>
+                    {selectedTimeRange && (
+                      <p className="text-xs mt-0.5" style={{ color: '#8E8E93' }}>
+                        Filter: {
+                          selectedTimeRange === '2024-01-01'
+                            ? 'Season 2024'
+                            : selectedTimeRange === 'past-365'
+                            ? 'Past 365 Days'
+                            : 'All Time'
+                        } • All Game Modes
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Close Button */}
@@ -160,7 +221,11 @@ export default function ChampionSelectorModal({
 
               {/* Champion List */}
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {filteredChampions.length === 0 ? (
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <p className="text-sm" style={{ color: '#8E8E93' }}>Loading champions...</p>
+                  </div>
+                ) : filteredChampions.length === 0 ? (
                   <div className="text-center py-12">
                     <p style={{ color: '#8E8E93' }}>No champions found</p>
                   </div>

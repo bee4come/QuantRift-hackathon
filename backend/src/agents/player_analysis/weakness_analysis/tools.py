@@ -6,16 +6,128 @@ from typing import Dict, Any, List
 from src.core.statistical_utils import wilson_confidence_interval
 
 
-def load_recent_data(packs_dir: str, recent_count: int = 5) -> Dict[str, Any]:
-    """加载最近N个版本数据"""
+def load_recent_data(packs_dir: str, recent_count: int = 5, time_range: str = None, queue_id: int = None) -> Dict[str, Any]:
+    """
+    加载最近N个版本数据
+    
+    Args:
+        packs_dir: Pack文件目录
+        recent_count: 最近N个版本
+        time_range: Time range filter (optional)
+        queue_id: Queue ID filter (optional)
+    """
+    from datetime import datetime, timedelta
+    from pathlib import Path
+    
     packs_dir = Path(packs_dir)
-    pack_files = sorted(packs_dir.glob("pack_*.json"))[-recent_count:]
+    
+    # Calculate time filter if needed
+    cutoff_timestamp = None
+    cutoff_end_timestamp = None
+    
+    if time_range == "2024-01-01":
+        cutoff_timestamp = datetime(2024, 1, 9).timestamp()
+        cutoff_end_timestamp = datetime(2025, 1, 6, 23, 59, 59, 999000).timestamp()
+    elif time_range == "past-365":
+        cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
+    
+    # Build file pattern based on queue_id
+    if queue_id is not None:
+        pack_pattern = f"pack_*_{queue_id}.json"
+    else:
+        pack_pattern = "pack_*.json"
+    
+    all_pack_files = sorted(packs_dir.glob(pack_pattern))
+    
+    # Apply time filter if specified
+    if cutoff_timestamp:
+        filtered_pack_files = []
+        for pack_file in all_pack_files:
+            with open(pack_file, 'r') as f:
+                pack_data = json.load(f)
+            
+            # Verify queue_id matches if specified
+            if queue_id is not None:
+                pack_queue_id = pack_data.get('queue_id', 420)
+                if pack_queue_id != queue_id:
+                    continue
+            
+            # Check match dates
+            pack_earliest = pack_data.get("earliest_match_date")
+            pack_latest = pack_data.get("latest_match_date")
+            has_match_in_range = False
+            
+            if pack_earliest or pack_latest:
+                if pack_earliest:
+                    try:
+                        earliest_dt = datetime.fromisoformat(pack_earliest.replace('Z', '+00:00'))
+                        if earliest_dt.tzinfo:
+                            earliest_dt = earliest_dt.replace(tzinfo=None)
+                        earliest_ts = earliest_dt.timestamp()
+                    except:
+                        earliest_ts = None
+                else:
+                    earliest_ts = None
+                    
+                if pack_latest:
+                    try:
+                        latest_dt = datetime.fromisoformat(pack_latest.replace('Z', '+00:00'))
+                        if latest_dt.tzinfo:
+                            latest_dt = latest_dt.replace(tzinfo=None)
+                        latest_ts = latest_dt.timestamp()
+                    except:
+                        latest_ts = None
+                else:
+                    latest_ts = None
+                
+                if earliest_ts and latest_ts:
+                    if cutoff_end_timestamp:
+                        if earliest_ts <= cutoff_end_timestamp and latest_ts >= cutoff_timestamp:
+                            has_match_in_range = True
+                    else:
+                        if latest_ts >= cutoff_timestamp:
+                            has_match_in_range = True
+                elif latest_ts:
+                    if cutoff_end_timestamp:
+                        if latest_ts <= cutoff_end_timestamp and latest_ts >= cutoff_timestamp:
+                            has_match_in_range = True
+                    else:
+                        if latest_ts >= cutoff_timestamp:
+                            has_match_in_range = True
+            else:
+                # Fallback to generation_timestamp
+                if "generation_timestamp" in pack_data:
+                    pack_timestamp = pack_data["generation_timestamp"]
+                    if isinstance(pack_timestamp, str):
+                        pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
+                    if cutoff_end_timestamp:
+                        if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
+                            has_match_in_range = True
+                    else:
+                        if pack_timestamp >= cutoff_timestamp:
+                            has_match_in_range = True
+            
+            if has_match_in_range:
+                filtered_pack_files.append(pack_file)
+        
+        pack_files = filtered_pack_files[-recent_count:] if len(filtered_pack_files) >= recent_count else filtered_pack_files
+    else:
+        pack_files = all_pack_files[-recent_count:]
 
     packs = {}
     for pack_file in pack_files:
         with open(pack_file, 'r') as f:
             pack = json.load(f)
-            packs[pack["patch"]] = pack
+            # Extract patch version from filename if queue_id is in filename
+            if queue_id is not None:
+                filename = pack_file.stem
+                if "_" in filename:
+                    patch = filename.rsplit("_", 1)[0].replace("pack_", "")
+                else:
+                    patch = pack.get("patch", "unknown")
+            else:
+                patch = pack.get("patch", "unknown")
+            packs[patch] = pack
     return packs
 
 

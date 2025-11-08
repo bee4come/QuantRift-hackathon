@@ -507,7 +507,7 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
                     {playerData.opgg?.data?.summoner?.ladder_rank ? (
                       <>
                         <div className="text-center">
-                          <p style={{ color: colors.textSecondary }} className="text-sm mb-2 whitespace-nowrap">Recently Global Ladder</p>
+                          <p style={{ color: colors.textSecondary }} className="text-sm mb-2 whitespace-nowrap -ml-1">Current Ranking</p>
                           <div className="text-3xl font-bold" style={{ color: colors.accentYellow }}>
                             #{playerData.opgg.data.summoner.ladder_rank.rank.toLocaleString()}
                           </div>
@@ -567,7 +567,7 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
                     ) : (
                       <>
                         <div className="text-center">
-                          <p style={{ color: colors.textSecondary }} className="text-sm mb-2 whitespace-nowrap">Recently Global Ladder</p>
+                          <p style={{ color: colors.textSecondary }} className="text-sm mb-2 whitespace-nowrap -ml-1">Current Ranking</p>
                           <div className="text-3xl font-bold" style={{ color: colors.textSecondary }}>
                             N/A
                           </div>

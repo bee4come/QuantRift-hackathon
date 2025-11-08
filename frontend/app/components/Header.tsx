@@ -359,11 +359,11 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
               >
                 <div className="flex items-center justify-between relative">
                   <div className="flex-1 flex justify-center">
-                    <ShinyText 
-                      text="SERVER GATEWAY" 
-                      speed={4} 
-                      className="text-2xl font-bold tracking-tight"
-                    />
+                <ShinyText 
+                  text="SERVER GATEWAY" 
+                  speed={4} 
+                  className="text-2xl font-bold tracking-tight"
+                />
                   </div>
                   <div className="absolute right-0">
                     <ClickSpark

@@ -273,6 +273,8 @@ interface DetailedAnalysisModalProps {
   agentDescription: string;
   detailedReport: string;
   analysisData?: any;
+  selectedRankType?: number | null;
+  selectedTimeRange?: string;
 }
 
 export default function DetailedAnalysisModal({
@@ -282,7 +284,9 @@ export default function DetailedAnalysisModal({
   agentName,
   agentDescription,
   detailedReport,
-  analysisData
+  analysisData,
+  selectedRankType,
+  selectedTimeRange
 }: DetailedAnalysisModalProps) {
   const colors = useAdaptiveColors();
   const { setIsModalOpen } = useModal();
@@ -354,6 +358,27 @@ export default function DetailedAnalysisModal({
                   <p className="text-sm mt-1" style={{ color: '#8E8E93' }}>
                     {agentDescription}
                   </p>
+                  {(selectedRankType !== undefined || selectedTimeRange) && (
+                    <p className="text-xs mt-1" style={{ color: '#8E8E93' }}>
+                      Filter: {
+                        selectedRankType === null || selectedRankType === undefined
+                          ? 'Total'
+                          : selectedRankType === 420
+                          ? 'Rank Solo/Duo'
+                          : selectedRankType === 440
+                          ? 'Rank Flex'
+                          : selectedRankType === 400
+                          ? 'Normal'
+                          : 'Total'
+                      } • {
+                        selectedTimeRange === '2024-01-01'
+                          ? 'Season 2024'
+                          : selectedTimeRange === 'past-365'
+                          ? 'Past 365 Days'
+                          : 'All Time'
+                      }
+                    </p>
+                  )}
                 </div>
 
                 {/* Close Button */}

@@ -58,8 +58,12 @@ def load_all_annual_packs(packs_dir: str, time_range: str = None, queue_id: int 
         # Past Season 2024: patch 14.1 (2024-01-09) to patch 14.25 (2025-01-06)
         cutoff_timestamp = datetime(2024, 1, 9).timestamp()
         cutoff_end_timestamp = datetime(2025, 1, 6, 23, 59, 59, 999000).timestamp()
+        print(f"📅 [Annual Summary] Filtering for Season 2024: {datetime(2024, 1, 9)} to {datetime(2025, 1, 6)}")
     elif time_range == "past-365":
         cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
+        print(f"📅 [Annual Summary] Filtering for Past 365 Days: from {datetime.fromtimestamp(cutoff_timestamp)} to now")
+    elif time_range is None:
+        print(f"📅 [Annual Summary] No time filter - loading all available data")
 
     # Build file pattern based on queue_id
     if queue_id is not None:
@@ -166,8 +170,8 @@ def load_all_annual_packs(packs_dir: str, time_range: str = None, queue_id: int 
                             if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
                                 has_match_in_range = True
                         else:
-                            if pack_timestamp >= cutoff_timestamp:
-                                has_match_in_range = True
+                        if pack_timestamp >= cutoff_timestamp:
+                            has_match_in_range = True
                 
                 # Skip if no matches in the time range
                 if not has_match_in_range:
@@ -175,6 +179,7 @@ def load_all_annual_packs(packs_dir: str, time_range: str = None, queue_id: int 
 
             all_packs[patch_version] = pack_data
 
+    print(f"✅ [Annual Summary] Loaded {len(all_packs)} patches after filtering (time_range: {time_range}, queue_id: {queue_id})")
     return all_packs
 
 

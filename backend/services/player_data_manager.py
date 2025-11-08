@@ -240,7 +240,7 @@ class PlayerDataManager:
                 patch = pack['patch']
                 queue_id = pack.get('queue_id', 420)  # Default to Solo/Duo if not specified
                 queue_name = queue_id_names.get(queue_id, str(queue_id))
-                
+
                 cache_file = player_dir / f"pack_{patch}_{queue_id}.json"
 
                 # ✅ Only overwrite if new data >= existing data (prevent smaller requests from overwriting larger datasets)
@@ -373,38 +373,38 @@ class PlayerDataManager:
 
         for queue_id, queue_name in queue_types:
             print(f"   📥 Fetching {queue_name} matches...")
-            start_index = 0
-            batch_size = 100  # Riot API单次最多返回100场
+        start_index = 0
+        batch_size = 100  # Riot API单次最多返回100场
             queue_match_ids = []
 
             while True:
                 print(f"      Fetching {queue_name} matches {start_index}-{start_index + batch_size}...")
 
                 # Fetch with time filter: from patch 14.1 to today
-                batch = await riot_client.get_match_history(
-                    puuid=puuid,
-                    platform=platform,
+            batch = await riot_client.get_match_history(
+                puuid=puuid,
+                platform=platform,
                     count=batch_size,
-                    start=start_index,
+                start=start_index,
                     start_time=start_timestamp,
                     end_time=end_timestamp,
                     queue_id=queue_id
-                )
+            )
 
-                if not batch or len(batch) == 0:
+            if not batch or len(batch) == 0:
                     # No more matches available for this queue type
                     print(f"      ✅ All {queue_name} matches fetched: {len(queue_match_ids)} matches")
-                    break
+                break
 
                 queue_match_ids.extend(batch)
                 print(f"      ✅ Batch retrieved {len(batch)} {queue_name} matches, total {len(queue_match_ids)} matches")
 
-                # If returned less than requested, we've reached the end
+            # If returned less than requested, we've reached the end
                 if len(batch) < batch_size:
                     print(f"      ℹ️  Reached end of {queue_name} match history")
-                    break
+                break
 
-                start_index += len(batch)
+            start_index += len(batch)
 
             all_match_ids.extend(queue_match_ids)
             print(f"   ✅ Total {queue_name} matches: {len(queue_match_ids)}")
@@ -656,107 +656,107 @@ class PlayerDataManager:
                 cr_data = patch_queue_data[queue_id]
                 
                 # Calculate aggregated metrics for each (champ_id, role)
-                by_cr = []
+            by_cr = []
 
-                for (champ_id, role), games_stats in cr_data.items():
-                    if not games_stats:
-                        continue
+            for (champ_id, role), games_stats in cr_data.items():
+                if not games_stats:
+                    continue
 
-                    games = len(games_stats)
-                    wins = sum(1 for g in games_stats if g['win'])
-                    losses = games - wins
+                games = len(games_stats)
+                wins = sum(1 for g in games_stats if g['win'])
+                losses = games - wins
 
-                    # Win rate with Wilson CI
-                    p_hat = wins / games if games > 0 else 0.0
-                    _, ci_lower, ci_upper = wilson_confidence_interval(wins, games)
+                # Win rate with Wilson CI
+                p_hat = wins / games if games > 0 else 0.0
+                _, ci_lower, ci_upper = wilson_confidence_interval(wins, games)
 
-                    # KDA adjusted (winsorized)
-                    kda_values = [g['kda_adj'] for g in games_stats]
-                    kda_winsorized = winsorize(kda_values)
-                    kda_adj = np.mean(kda_winsorized) if kda_winsorized else 0.0
+                # KDA adjusted (winsorized)
+                kda_values = [g['kda_adj'] for g in games_stats]
+                kda_winsorized = winsorize(kda_values)
+                kda_adj = np.mean(kda_winsorized) if kda_winsorized else 0.0
 
-                    # Objective rate
-                    obj_rate = np.mean([g['obj_rate'] for g in games_stats])
+                # Objective rate
+                obj_rate = np.mean([g['obj_rate'] for g in games_stats])
 
-                    # Combat power at 25min
-                    cp_25 = np.mean([g['cp_25'] for g in games_stats])
+                # Combat power at 25min
+                cp_25 = np.mean([g['cp_25'] for g in games_stats])
 
-                    # Build core: most common items
-                    item_counts = defaultdict(int)
-                    for g in games_stats:
-                        for item_id in g['items_at_25']:
-                            item_counts[item_id] += 1
-                    build_core = sorted(item_counts.keys(), key=lambda x: item_counts[x], reverse=True)[:3]
+                # Build core: most common items
+                item_counts = defaultdict(int)
+                for g in games_stats:
+                    for item_id in g['items_at_25']:
+                        item_counts[item_id] += 1
+                build_core = sorted(item_counts.keys(), key=lambda x: item_counts[x], reverse=True)[:3]
 
-                    # Average time to core
-                    avg_time_to_core = np.mean([g['time_to_core'] for g in games_stats])
+                # Average time to core
+                avg_time_to_core = np.mean([g['time_to_core'] for g in games_stats])
 
-                    # Most common rune keystone
-                    rune_counts = defaultdict(int)
-                    for g in games_stats:
-                        rune_counts[g['rune_keystone']] += 1
-                    rune_keystone = max(rune_counts.keys(), key=lambda x: rune_counts[x]) if rune_counts else 0
+                # Most common rune keystone
+                rune_counts = defaultdict(int)
+                for g in games_stats:
+                    rune_counts[g['rune_keystone']] += 1
+                rune_keystone = max(rune_counts.keys(), key=lambda x: rune_counts[x]) if rune_counts else 0
 
-                    # Governance tag
-                    if games >= 100:
-                        governance_tag = "CONFIDENT"
-                    elif games >= 30:
-                        governance_tag = "CAUTION"
-                    else:
-                        governance_tag = "CONTEXT"
+                # Governance tag
+                if games >= 100:
+                    governance_tag = "CONFIDENT"
+                elif games >= 30:
+                    governance_tag = "CAUTION"
+                else:
+                    governance_tag = "CONTEXT"
 
-                    by_cr.append({
-                        "champ_id": champ_id,
-                        "role": role,
-                        "games": games,
-                        "wins": wins,
-                        "losses": losses,
-                        "p_hat": round(p_hat, 4),
-                        "p_hat_ci": [round(ci_lower, 4), round(ci_upper, 4)],
-                        "kda_adj": round(kda_adj, 2),
-                        "obj_rate": round(obj_rate, 3),
-                        "cp_25": round(cp_25, 1),
-                        "build_core": build_core,
-                        "avg_time_to_core": round(avg_time_to_core, 2),
-                        "rune_keystone": rune_keystone,
-                        "effective_n": games,
-                        "governance_tag": governance_tag
-                    })
+                by_cr.append({
+                    "champ_id": champ_id,
+                    "role": role,
+                    "games": games,
+                    "wins": wins,
+                    "losses": losses,
+                    "p_hat": round(p_hat, 4),
+                    "p_hat_ci": [round(ci_lower, 4), round(ci_upper, 4)],
+                    "kda_adj": round(kda_adj, 2),
+                    "obj_rate": round(obj_rate, 3),
+                    "cp_25": round(cp_25, 1),
+                    "build_core": build_core,
+                    "avg_time_to_core": round(avg_time_to_core, 2),
+                    "rune_keystone": rune_keystone,
+                    "effective_n": games,
+                    "governance_tag": governance_tag
+                })
 
                 # ✅ Create pack for this patch and queue_id
-                pack = {
-                    "puuid": puuid,
+            pack = {
+                "puuid": puuid,
                     "patch": patch,
                     "queue_id": queue_id,  # Store queue_id in pack
-                    "generation_timestamp": datetime.utcnow().isoformat(),
-                    "total_games": sum(entry['games'] for entry in by_cr),
-                    "by_cr": by_cr
-                }
-                
-                # Add match date range for this patch (filtered by queue_id)
-                # Calculate date range for this specific queue_id
-                queue_earliest = None
-                queue_latest = None
-                for match in matches_data:
-                    match_queue_id = match['info'].get('queueId', 420)
-                    if match_queue_id == queue_id:
-                        game_version = match['info'].get('gameVersion', '0.0.0.0')
-                        match_patch = '.'.join(game_version.split('.')[:2])
-                        if match_patch == patch:
-                            game_creation = match['info'].get('gameCreation', 0)
-                            if game_creation:
-                                match_date = datetime.fromtimestamp(game_creation / 1000, tz=timezone.utc)
-                                if queue_earliest is None or match_date < queue_earliest:
-                                    queue_earliest = match_date
-                                if queue_latest is None or match_date > queue_latest:
-                                    queue_latest = match_date
-                
-                if queue_earliest:
-                    pack["earliest_match_date"] = queue_earliest.isoformat()
-                if queue_latest:
-                    pack["latest_match_date"] = queue_latest.isoformat()
-                
-                # Add games count for Past Season and Past 365 Days (for this queue_id)
+                "generation_timestamp": datetime.utcnow().isoformat(),
+                "total_games": sum(entry['games'] for entry in by_cr),
+                "by_cr": by_cr
+            }
+            
+            # Add match date range for this patch (filtered by queue_id)
+            # Calculate date range for this specific queue_id
+            queue_earliest = None
+            queue_latest = None
+            for match in matches_data:
+                match_queue_id = match['info'].get('queueId', 420)
+                if match_queue_id == queue_id:
+                    game_version = match['info'].get('gameVersion', '0.0.0.0')
+                    match_patch = '.'.join(game_version.split('.')[:2])
+                    if match_patch == patch:
+                        game_creation = match['info'].get('gameCreation', 0)
+                        if game_creation:
+                            match_date = datetime.fromtimestamp(game_creation / 1000, tz=timezone.utc)
+                            if queue_earliest is None or match_date < queue_earliest:
+                                queue_earliest = match_date
+                            if queue_latest is None or match_date > queue_latest:
+                                queue_latest = match_date
+            
+            if queue_earliest:
+                pack["earliest_match_date"] = queue_earliest.isoformat()
+            if queue_latest:
+                pack["latest_match_date"] = queue_latest.isoformat()
+            
+            # Add games count for Past Season and Past 365 Days (for this queue_id)
                 queue_past_season_games = 0
                 queue_past_365_games = 0
                 for match in matches_data:
@@ -777,8 +777,8 @@ class PlayerDataManager:
                 
                 pack["past_season_games"] = queue_past_season_games
                 pack["past_365_days_games"] = queue_past_365_games
-                
-                packs.append(pack)
+            
+            packs.append(pack)
 
         print(f"     ⏱️  Aggregation calculation + Pack generation: {time.time()-t2:.3f}s")
 
@@ -938,9 +938,14 @@ class PlayerDataManager:
             return str(player_dir)
         return None
 
-    def get_role_stats(self, puuid: str) -> List[Dict[str, Any]]:
+    def get_role_stats(self, puuid: str, time_range: str = None, queue_id: int = None) -> List[Dict[str, Any]]:
         """
         从Player-Pack中提取role统计数据（优先从summary.json，否则聚合所有pack文件）
+        
+        Args:
+            puuid: Player PUUID
+            time_range: Time range filter (optional)
+            queue_id: Queue ID filter (optional)
 
         Returns:
             [
@@ -954,22 +959,127 @@ class PlayerDataManager:
             return []
 
         try:
-            # 先尝试从summary.json读取
-            summary_file = player_dir / "summary.json"
-            if summary_file.exists():
-                with open(summary_file, 'r', encoding='utf-8') as f:
-                    summary = json.load(f)
-                by_cr_data = summary.get("by_cr", [])
+            # Calculate time filter if needed
+            cutoff_timestamp = None
+            cutoff_end_timestamp = None
+            
+            if time_range == "2024-01-01":
+                cutoff_timestamp = datetime(2024, 1, 9, tzinfo=timezone.utc).timestamp()
+                cutoff_end_timestamp = datetime(2025, 1, 6, 23, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
+            elif time_range == "past-365":
+                cutoff_timestamp = (datetime.now(timezone.utc) - timedelta(days=365)).timestamp()
+            
+            # Build file pattern based on queue_id
+            if queue_id is not None:
+                pack_pattern = f"pack_*_{queue_id}.json"
             else:
-                # 如果summary不存在，从所有pack_*.json文件聚合
+                pack_pattern = "pack_*.json"
+            
+            pack_files = sorted(player_dir.glob(pack_pattern))
+            print(f"🔍 [get_role_stats] Looking for packs with pattern: {pack_pattern}, found {len(pack_files)} files")
+            print(f"🔍 [get_role_stats] Filter params: queue_id={queue_id}, time_range={time_range}")
+            
                 by_cr_data = []
-                pack_files = sorted(player_dir.glob("pack_*.json"))
                 for pack_file in pack_files:
                     with open(pack_file, 'r', encoding='utf-8') as f:
                         pack = json.load(f)
+                
+                # Verify queue_id matches if specified
+                if queue_id is not None:
+                    pack_queue_id = pack.get('queue_id', 420)
+                    if pack_queue_id != queue_id:
+                        continue
+                
+                # Apply time range filter
+                if cutoff_timestamp:
+                    has_match_in_range = False
+                    pack_earliest = pack.get("earliest_match_date")
+                    pack_latest = pack.get("latest_match_date")
+                    
+                    print(f"🔍 [get_role_stats] Pack {pack_file.name}: earliest={pack_earliest}, latest={pack_latest}, cutoff={cutoff_timestamp}, cutoff_end={cutoff_end_timestamp}")
+                    
+                    if pack_earliest or pack_latest:
+                        if pack_earliest:
+                            try:
+                                earliest_dt = datetime.fromisoformat(pack_earliest.replace('Z', '+00:00'))
+                                if earliest_dt.tzinfo:
+                                    earliest_dt = earliest_dt.replace(tzinfo=None)
+                                earliest_ts = earliest_dt.timestamp()
+                            except Exception as e:
+                                print(f"⚠️  [get_role_stats] Failed to parse earliest_match_date: {e}")
+                                earliest_ts = None
+                        else:
+                            earliest_ts = None
+                            
+                        if pack_latest:
+                            try:
+                                latest_dt = datetime.fromisoformat(pack_latest.replace('Z', '+00:00'))
+                                if latest_dt.tzinfo:
+                                    latest_dt = latest_dt.replace(tzinfo=None)
+                                latest_ts = latest_dt.timestamp()
+                            except Exception as e:
+                                print(f"⚠️  [get_role_stats] Failed to parse latest_match_date: {e}")
+                                latest_ts = None
+                        else:
+                            latest_ts = None
+                        
+                        if earliest_ts and latest_ts:
+                            if cutoff_end_timestamp:
+                                if earliest_ts <= cutoff_end_timestamp and latest_ts >= cutoff_timestamp:
+                                    has_match_in_range = True
+                                    print(f"✅ [get_role_stats] Pack {pack_file.name} matches time range (earliest={earliest_ts}, latest={latest_ts})")
+                            else:
+                                if latest_ts >= cutoff_timestamp:
+                                    has_match_in_range = True
+                                    print(f"✅ [get_role_stats] Pack {pack_file.name} matches time range (latest={latest_ts} >= cutoff={cutoff_timestamp})")
+                        elif latest_ts:
+                            if cutoff_end_timestamp:
+                                if latest_ts <= cutoff_end_timestamp and latest_ts >= cutoff_timestamp:
+                                    has_match_in_range = True
+                                    print(f"✅ [get_role_stats] Pack {pack_file.name} matches time range (latest={latest_ts})")
+                            else:
+                                if latest_ts >= cutoff_timestamp:
+                                    has_match_in_range = True
+                                    print(f"✅ [get_role_stats] Pack {pack_file.name} matches time range (latest={latest_ts} >= cutoff={cutoff_timestamp})")
+                    else:
+                        # Fallback: if pack has no match date info, include it if it has past_365_days_games count
+                        # This handles old packs that don't have earliest_match_date/latest_match_date
+                        if "past_365_days_games" in pack and pack["past_365_days_games"] > 0:
+                            has_match_in_range = True
+                            print(f"✅ [get_role_stats] Pack {pack_file.name} matches time range (has {pack['past_365_days_games']} past_365_days_games)")
+                        elif "generation_timestamp" in pack:
+                            # Last resort: use generation_timestamp, but only if it's recent (within 400 days to be safe)
+                            pack_timestamp = pack["generation_timestamp"]
+                            if isinstance(pack_timestamp, str):
+                                pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
+                            # For past-365, if pack was generated recently (within 400 days), include it
+                            # This is a heuristic: if pack is old, it likely doesn't have recent data
+                            if cutoff_end_timestamp:
+                                if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
+                                    has_match_in_range = True
+                                    print(f"✅ [get_role_stats] Pack {pack_file.name} matches time range (generation_timestamp={pack_timestamp})")
+                            else:
+                                # For past-365, check if generation_timestamp is within 400 days (to account for pack generation delay)
+                                generation_cutoff = (datetime.now(timezone.utc) - timedelta(days=400)).timestamp()
+                                if pack_timestamp >= generation_cutoff:
+                                    has_match_in_range = True
+                                    print(f"✅ [get_role_stats] Pack {pack_file.name} matches time range (generation_timestamp={pack_timestamp} >= generation_cutoff={generation_cutoff})")
+                                else:
+                                    print(f"⚠️  [get_role_stats] Pack {pack_file.name} generation_timestamp too old ({pack_timestamp}), excluding")
+                        else:
+                            # No time info at all - exclude to be safe
+                            print(f"⚠️  [get_role_stats] Pack {pack_file.name} has no time information, excluding")
+                    
+                    if not has_match_in_range:
+                        print(f"❌ [get_role_stats] Pack {pack_file.name} does NOT match time range, skipping")
+                        continue
+                
                         by_cr_data.extend(pack.get("by_cr", []))
 
+            print(f"🔍 [get_role_stats] After filtering, found {len(by_cr_data)} by_cr entries")
+
             if not by_cr_data:
+                print(f"⚠️  [get_role_stats] No data found for queue_id={queue_id}, time_range={time_range}")
                 return []
 
             # 从 by_cr 聚合 role 统计
@@ -1006,6 +1116,7 @@ class PlayerDataManager:
 
             # 按游戏数排序
             role_stats.sort(key=lambda x: x["games"], reverse=True)
+            print(f"✅ [get_role_stats] Returning {len(role_stats)} role stats")
             return role_stats
 
         except Exception as e:
@@ -1014,9 +1125,15 @@ class PlayerDataManager:
             traceback.print_exc()
             return []
 
-    def get_best_champions(self, puuid: str, limit: int = 5) -> List[Dict[str, Any]]:
+    def get_best_champions(self, puuid: str, limit: int = 5, time_range: str = None, queue_id: int = None) -> List[Dict[str, Any]]:
         """
         从Player-Pack中提取最佳英雄数据（按游戏数排序）
+        
+        Args:
+            puuid: Player PUUID
+            limit: Maximum number of champions to return
+            time_range: Time range filter (optional)
+            queue_id: Queue ID filter (optional, but Champion Mastery uses all game modes so typically None)
 
         Returns:
             [
@@ -1029,6 +1146,25 @@ class PlayerDataManager:
             return []
 
         try:
+            # Calculate time filter if needed
+            cutoff_timestamp = None
+            cutoff_end_timestamp = None
+            
+            if time_range == "2024-01-01":
+                cutoff_timestamp = datetime(2024, 1, 9, tzinfo=timezone.utc).timestamp()
+                cutoff_end_timestamp = datetime(2025, 1, 6, 23, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
+            elif time_range == "past-365":
+                cutoff_timestamp = (datetime.now(timezone.utc) - timedelta(days=365)).timestamp()
+            
+            # Build file pattern based on queue_id
+            # Note: Champion Mastery uses all game modes, so queue_id is typically None
+            if queue_id is not None:
+                pack_pattern = f"pack_*_{queue_id}.json"
+            else:
+                pack_pattern = "pack_*.json"
+            
+            pack_files = sorted(player_dir.glob(pack_pattern))
+            
             # 聚合所有pack文件中的champion数据
             champion_stats = defaultdict(lambda: {
                 "games": 0,
@@ -1036,10 +1172,75 @@ class PlayerDataManager:
                 "total_kda": 0.0
             })
 
-            pack_files = sorted(player_dir.glob("pack_*.json"))
             for pack_file in pack_files:
                 with open(pack_file, 'r', encoding='utf-8') as f:
                     pack = json.load(f)
+                
+                # Verify queue_id matches if specified
+                if queue_id is not None:
+                    pack_queue_id = pack.get('queue_id', 420)
+                    if pack_queue_id != queue_id:
+                        continue
+                
+                # Apply time range filter
+                if cutoff_timestamp:
+                    has_match_in_range = False
+                    pack_earliest = pack.get("earliest_match_date")
+                    pack_latest = pack.get("latest_match_date")
+                    
+                    if pack_earliest or pack_latest:
+                        if pack_earliest:
+                            try:
+                                earliest_dt = datetime.fromisoformat(pack_earliest.replace('Z', '+00:00'))
+                                if earliest_dt.tzinfo:
+                                    earliest_dt = earliest_dt.replace(tzinfo=None)
+                                earliest_ts = earliest_dt.timestamp()
+                            except:
+                                earliest_ts = None
+                        else:
+                            earliest_ts = None
+                            
+                        if pack_latest:
+                            try:
+                                latest_dt = datetime.fromisoformat(pack_latest.replace('Z', '+00:00'))
+                                if latest_dt.tzinfo:
+                                    latest_dt = latest_dt.replace(tzinfo=None)
+                                latest_ts = latest_dt.timestamp()
+                            except:
+                                latest_ts = None
+                        else:
+                            latest_ts = None
+                        
+                        if earliest_ts and latest_ts:
+                            if cutoff_end_timestamp:
+                                if earliest_ts <= cutoff_end_timestamp and latest_ts >= cutoff_timestamp:
+                                    has_match_in_range = True
+                            else:
+                                if latest_ts >= cutoff_timestamp:
+                                    has_match_in_range = True
+                        elif latest_ts:
+                            if cutoff_end_timestamp:
+                                if latest_ts <= cutoff_end_timestamp and latest_ts >= cutoff_timestamp:
+                                    has_match_in_range = True
+                            else:
+                                if latest_ts >= cutoff_timestamp:
+                                    has_match_in_range = True
+                    else:
+                        # Fallback to generation_timestamp
+                        if "generation_timestamp" in pack:
+                            pack_timestamp = pack["generation_timestamp"]
+                            if isinstance(pack_timestamp, str):
+                                pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
+                            if cutoff_end_timestamp:
+                                if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
+                                    has_match_in_range = True
+                            else:
+                                if pack_timestamp >= cutoff_timestamp:
+                                    has_match_in_range = True
+                    
+                    if not has_match_in_range:
+                        continue
+                
                     by_cr_data = pack.get("by_cr", [])
 
                     for cr in by_cr_data:
