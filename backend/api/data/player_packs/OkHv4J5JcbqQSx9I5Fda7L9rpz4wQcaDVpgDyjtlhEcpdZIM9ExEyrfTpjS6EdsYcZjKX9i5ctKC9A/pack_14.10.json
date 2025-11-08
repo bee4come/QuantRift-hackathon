@@ -1,31 +1,31 @@
 {
   "puuid": "OkHv4J5JcbqQSx9I5Fda7L9rpz4wQcaDVpgDyjtlhEcpdZIM9ExEyrfTpjS6EdsYcZjKX9i5ctKC9A",
   "patch": "14.10",
-  "generation_timestamp": "2025-11-08T03:03:28.259591",
-  "total_games": 7,
+  "generation_timestamp": "2025-11-08T07:52:42.604097",
+  "total_games": 26,
   "by_cr": [
     {
       "champ_id": 42,
       "role": "BOTTOM",
-      "games": 4,
-      "wins": 2,
-      "losses": 2,
+      "games": 8,
+      "wins": 4,
+      "losses": 4,
       "p_hat": 0.5,
       "p_hat_ci": [
-        0.15,
-        0.85
+        0.2152,
+        0.7848
       ],
-      "kda_adj": 3.1,
-      "obj_rate": 2.0,
-      "cp_25": 12233.4,
+      "kda_adj": 2.19,
+      "obj_rate": 1.375,
+      "cp_25": 11002.9,
       "build_core": [
-        6701,
+        3031,
         3006,
         6676
       ],
       "avg_time_to_core": 30.0,
       "rune_keystone": 9923,
-      "effective_n": 4,
+      "effective_n": 8,
       "governance_tag": "CONTEXT"
     },
     {
@@ -75,6 +75,226 @@
       "rune_keystone": 8005,
       "effective_n": 1,
       "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 901,
+      "role": "BOTTOM",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 3.22,
+      "obj_rate": 2.0,
+      "cp_25": 11462.9,
+      "build_core": [
+        1055,
+        3508,
+        3158
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8021,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 67,
+      "role": "BOTTOM",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 0.33,
+      "obj_rate": 2.0,
+      "cp_25": 8146.8,
+      "build_core": [
+        1055,
+        3006,
+        3153
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8005,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 10,
+      "role": "TOP",
+      "games": 2,
+      "wins": 2,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.3424,
+        1.0
+      ],
+      "kda_adj": 1.24,
+      "obj_rate": 2.0,
+      "cp_25": 10387.5,
+      "build_core": [
+        1055,
+        3124,
+        3006
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8021,
+      "effective_n": 2,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 67,
+      "role": "TOP",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 1.4,
+      "obj_rate": 1.5,
+      "cp_25": 12264.8,
+      "build_core": [
+        3006,
+        3153,
+        3139
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8005,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 17,
+      "role": "BOTTOM",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 2.31,
+      "obj_rate": 1.0,
+      "cp_25": 11432.2,
+      "build_core": [
+        1018,
+        3006,
+        6653
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8005,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 234,
+      "role": "JUNGLE",
+      "games": 4,
+      "wins": 2,
+      "losses": 2,
+      "p_hat": 0.5,
+      "p_hat_ci": [
+        0.15,
+        0.85
+      ],
+      "kda_adj": 2.19,
+      "obj_rate": 2.25,
+      "cp_25": 9654.1,
+      "build_core": [
+        6672,
+        3053,
+        6610
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8010,
+      "effective_n": 4,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 145,
+      "role": "BOTTOM",
+      "games": 3,
+      "wins": 0,
+      "losses": 3,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.5615
+      ],
+      "kda_adj": 1.43,
+      "obj_rate": 2.0,
+      "cp_25": 9980.5,
+      "build_core": [
+        6672,
+        3006,
+        3302
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8005,
+      "effective_n": 3,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 202,
+      "role": "BOTTOM",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 1.27,
+      "obj_rate": 0.0,
+      "cp_25": 9130.1,
+      "build_core": [
+        3009,
+        6676,
+        3094
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8021,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 19,
+      "role": "JUNGLE",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 2.13,
+      "obj_rate": 4.0,
+      "cp_25": 8418.1,
+      "build_core": [
+        3153,
+        3047,
+        3748
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8005,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
     }
-  ]
+  ],
+  "earliest_match_date": "2024-05-19T00:56:27.316000+00:00",
+  "latest_match_date": "2024-05-30T03:47:41.210000+00:00",
+  "past_season_games": 26,
+  "past_365_days_games": 0
 }

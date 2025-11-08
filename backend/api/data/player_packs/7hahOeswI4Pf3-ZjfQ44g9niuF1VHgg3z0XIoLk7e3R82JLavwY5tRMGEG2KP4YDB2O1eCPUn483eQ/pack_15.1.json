@@ -1,0 +1,60 @@
+{
+  "puuid": "7hahOeswI4Pf3-ZjfQ44g9niuF1VHgg3z0XIoLk7e3R82JLavwY5tRMGEG2KP4YDB2O1eCPUn483eQ",
+  "patch": "15.1",
+  "generation_timestamp": "2025-11-08T06:45:47.768684",
+  "total_games": 4,
+  "by_cr": [
+    {
+      "champ_id": 67,
+      "role": "TOP",
+      "games": 3,
+      "wins": 2,
+      "losses": 1,
+      "p_hat": 0.6667,
+      "p_hat_ci": [
+        0.2077,
+        0.9385
+      ],
+      "kda_adj": 1.66,
+      "obj_rate": 1.0,
+      "cp_25": 9801.4,
+      "build_core": [
+        3078,
+        1042,
+        1055
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8008,
+      "effective_n": 3,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 92,
+      "role": "TOP",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 2.22,
+      "obj_rate": 2.0,
+      "cp_25": 12957.8,
+      "build_core": [
+        3171,
+        6692,
+        3035
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8010,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    }
+  ],
+  "earliest_match_date": "2025-01-21T05:29:59.393000+00:00",
+  "latest_match_date": "2025-01-21T07:24:22.279000+00:00",
+  "past_season_games": 0,
+  "past_365_days_games": 4
+}

@@ -9,7 +9,7 @@ import asyncio
 import json
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 import numpy as np
 from enum import Enum
@@ -503,9 +503,33 @@ class PlayerDataManager:
         filtered_matches_debug = []
 
         t1 = time.time()
+        earliest_match_date = None
+        latest_match_date = None
+        
+        # Past Season date range: patch 14.1 (2024-01-09) to patch 14.25 (2025-01-06)
+        past_season_start = datetime(2024, 1, 9, tzinfo=timezone.utc)
+        past_season_end = datetime(2025, 1, 6, 23, 59, 59, 999000, tzinfo=timezone.utc)
+        
+        # Past 365 Days: from today - 365 days to today
+        today = datetime.now(timezone.utc)
+        past_365_days_start = today - timedelta(days=365)
+        
+        # Track games count for each patch in time ranges
+        patch_past_season_games = defaultdict(int)
+        patch_past_365_games = defaultdict(int)
+        
         for match in matches_data:
             match_id = match['metadata']['matchId']
             timeline = timelines_map.get(match_id)
+
+            # Extract match date from gameCreation timestamp
+            game_creation = match['info'].get('gameCreation', 0)
+            if game_creation:
+                match_date = datetime.fromtimestamp(game_creation / 1000, tz=timezone.utc)
+                if earliest_match_date is None or match_date < earliest_match_date:
+                    earliest_match_date = match_date
+                if latest_match_date is None or match_date > latest_match_date:
+                    latest_match_date = match_date
 
             # ✅ 提取patch版本
             game_version = match['info'].get('gameVersion', '0.0.0.0')
@@ -545,6 +569,16 @@ class PlayerDataManager:
                 filter_stats['invalid_role'] += 1
                 continue
 
+            # Check if this match is in Past Season or Past 365 Days (only count if player is in match)
+            if game_creation:
+                match_date = datetime.fromtimestamp(game_creation / 1000, tz=timezone.utc)
+                # Check Past Season (2024-01-09 to 2025-01-06)
+                if past_season_start <= match_date <= past_season_end:
+                    patch_past_season_games[patch] += 1
+                # Check Past 365 Days
+                if match_date >= past_365_days_start:
+                    patch_past_365_games[patch] += 1
+
             # 提取单场统计
             game_stats = self._extract_game_stats(
                 player_data=player_data,
@@ -575,6 +609,19 @@ class PlayerDataManager:
         # ✅ 为每个patch生成一个pack
         t2 = time.time()
         packs = []
+        
+        # Create a mapping of patch to match dates for efficient lookup
+        patch_match_dates = defaultdict(lambda: {'earliest': None, 'latest': None})
+        for match in matches_data:
+            game_version = match['info'].get('gameVersion', '0.0.0.0')
+            patch = '.'.join(game_version.split('.')[:2])
+            game_creation = match['info'].get('gameCreation', 0)
+            if game_creation:
+                match_date = datetime.fromtimestamp(game_creation / 1000, tz=timezone.utc)
+                if patch_match_dates[patch]['earliest'] is None or match_date < patch_match_dates[patch]['earliest']:
+                    patch_match_dates[patch]['earliest'] = match_date
+                if patch_match_dates[patch]['latest'] is None or match_date > patch_match_dates[patch]['latest']:
+                    patch_match_dates[patch]['latest'] = match_date
 
         for patch, cr_data in sorted(patch_cr_data.items()):
             # 计算每个(champ_id, role)的聚合metrics
@@ -653,6 +700,20 @@ class PlayerDataManager:
                 "total_games": sum(entry['games'] for entry in by_cr),
                 "by_cr": by_cr
             }
+            
+            # Add match date range for this patch
+            if patch in patch_match_dates:
+                earliest = patch_match_dates[patch]['earliest']
+                latest = patch_match_dates[patch]['latest']
+                if earliest:
+                    pack["earliest_match_date"] = earliest.isoformat()
+                if latest:
+                    pack["latest_match_date"] = latest.isoformat()
+            
+            # Add games count for Past Season and Past 365 Days
+            pack["past_season_games"] = patch_past_season_games.get(patch, 0)
+            pack["past_365_days_games"] = patch_past_365_games.get(patch, 0)
+            
             packs.append(pack)
 
         print(f"     ⏱️  Aggregation calculation + Pack generation: {time.time()-t2:.3f}s")

@@ -1,0 +1,106 @@
+{
+  "puuid": "wEgQnqx00hbQ4QnlPnOSWAzoRbcJXfzxjlcSkzI-jOWqc7Z6ud9tYs1489RQpVpRGXSICk-flKGHjg",
+  "patch": "15.18",
+  "generation_timestamp": "2025-11-08T06:15:00.990472",
+  "total_games": 6,
+  "by_cr": [
+    {
+      "champ_id": 876,
+      "role": "JUNGLE",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 7.6,
+      "obj_rate": 2.0,
+      "cp_25": 12320.6,
+      "build_core": [
+        4633,
+        2420,
+        3041
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8112,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 246,
+      "role": "MIDDLE",
+      "games": 3,
+      "wins": 0,
+      "losses": 3,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.5615
+      ],
+      "kda_adj": 0.9,
+      "obj_rate": 0.333,
+      "cp_25": 10113.0,
+      "build_core": [
+        6698,
+        6701,
+        3158
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8112,
+      "effective_n": 3,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 8,
+      "role": "MIDDLE",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 1.83,
+      "obj_rate": 0.0,
+      "cp_25": 11321.6,
+      "build_core": [
+        4629,
+        2420,
+        3135
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8214,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 38,
+      "role": "MIDDLE",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 0.95,
+      "obj_rate": 0.0,
+      "cp_25": 11711.2,
+      "build_core": [
+        2031,
+        2420,
+        3040
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8229,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    }
+  ],
+  "earliest_match_date": "2025-09-10T16:42:44.568000+00:00",
+  "latest_match_date": "2025-09-11T15:02:05.288000+00:00"
+}

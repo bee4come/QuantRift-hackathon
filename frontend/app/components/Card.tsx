@@ -99,7 +99,7 @@ const StyledWrapper = styled.div<{ $isSearched: boolean; $isModalOpen: boolean }
   }
 
   .box .content h1 {
-   font-family: "Hunters K-Pop", sans-serif;
+   font-family: "PaybAck", sans-serif;
    font-size: ${props => props.$isSearched ? '3rem' : '9rem'};
    font-weight: 400;
    letter-spacing: 0.02em;

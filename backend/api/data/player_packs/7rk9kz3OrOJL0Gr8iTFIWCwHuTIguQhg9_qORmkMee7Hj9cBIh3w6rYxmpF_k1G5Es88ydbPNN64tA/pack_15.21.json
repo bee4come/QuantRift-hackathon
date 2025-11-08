@@ -1,7 +1,7 @@
 {
   "puuid": "7rk9kz3OrOJL0Gr8iTFIWCwHuTIguQhg9_qORmkMee7Hj9cBIh3w6rYxmpF_k1G5Es88ydbPNN64tA",
   "patch": "15.21",
-  "generation_timestamp": "2025-11-08T03:01:29.859435",
+  "generation_timestamp": "2025-11-08T05:48:44.898263",
   "total_games": 20,
   "by_cr": [
     {
@@ -292,5 +292,7 @@
       "effective_n": 2,
       "governance_tag": "CONTEXT"
     }
-  ]
+  ],
+  "earliest_match_date": "2025-10-29T03:54:16.531000+00:00",
+  "latest_match_date": "2025-11-03T04:24:48.376000+00:00"
 }

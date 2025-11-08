@@ -88,6 +88,18 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
       }
 
       // Trigger background year data fetch (non-blocking)
+      // Calculate days needed to cover both Past Season and Past 365 Days
+      const today = new Date();
+      const pastSeasonStart = new Date('2024-01-09'); // patch 14.1 start date
+      const past365DaysStart = new Date(today);
+      past365DaysStart.setDate(past365DaysStart.getDate() - 365);
+      
+      // Get the earlier date between Past Season start and Past 365 Days start
+      const startDate = pastSeasonStart < past365DaysStart ? pastSeasonStart : past365DaysStart;
+      
+      // Calculate days from start date to today
+      const daysDiff = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      
       fetch('/api/player/fetch-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,12 +107,15 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
           gameName: gameName,
           tagLine: tagLine,
           region: data.player?.region || 'na1',
-          days: 365,
+          days: daysDiff,
           includeTimeline: true,
         }),
       }).then(res => res.json())
         .then(result => {
-          console.log(`Background data fetch started for ${display}:`, result.task_id);
+          console.log(`Background data fetch started for ${display} (${daysDiff} days to cover Past Season 2024 and Past 365 Days):`, result.task_id);
+          // Store task_id in localStorage for status checking
+          const storageKey = `fetch_task_${gameName}_${tagLine}`;
+          localStorage.setItem(storageKey, result.task_id);
         })
         .catch(err => {
           console.warn(`Failed to start background fetch for ${display}:`, err);

@@ -1,7 +1,22 @@
 {
-  "name": "front",
-  "version": "0.1.0",
+  "name": "quantrift-frontend",
+  "version": "1.0.0",
+  "description": "QuantRift Frontend - AI-Powered League of Legends Analytics Platform",
   "private": true,
+  "author": {
+    "name": "uzerone",
+    "url": "https://github.com/uzerone"
+  },
+  "contributors": [
+    {
+      "name": "bee4come",
+      "url": "https://github.com/bee4come"
+    },
+    {
+      "name": "uzerone",
+      "url": "https://github.com/uzerone"
+    }
+  ],
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",

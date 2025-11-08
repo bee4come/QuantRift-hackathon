@@ -1,7 +1,7 @@
 {
   "puuid": "OkHv4J5JcbqQSx9I5Fda7L9rpz4wQcaDVpgDyjtlhEcpdZIM9ExEyrfTpjS6EdsYcZjKX9i5ctKC9A",
   "patch": "14.12",
-  "generation_timestamp": "2025-11-08T03:03:28.267058",
+  "generation_timestamp": "2025-11-08T07:52:42.611666",
   "total_games": 69,
   "by_cr": [
     {
@@ -483,5 +483,9 @@
       "effective_n": 1,
       "governance_tag": "CONTEXT"
     }
-  ]
+  ],
+  "earliest_match_date": "2024-06-12T21:51:37.266000+00:00",
+  "latest_match_date": "2024-06-26T01:23:53.605000+00:00",
+  "past_season_games": 69,
+  "past_365_days_games": 0
 }

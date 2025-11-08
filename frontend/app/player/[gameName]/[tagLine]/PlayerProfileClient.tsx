@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAdaptiveColors } from '@/app/hooks/useAdaptiveColors';
-import { ArrowLeft, TrendingUp, TrendingDown, Trophy, Target, Zap } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Trophy, Target, Zap, CheckCircle2, XCircle } from 'lucide-react';
 import ShinyText from '@/app/components/ui/ShinyText';
 import GlareHover from '@/app/components/ui/GlareHover';
 import ClickSpark from '@/app/components/ui/ClickSpark';
@@ -119,6 +119,10 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
   const [annualSummaryData, setAnnualSummaryData] = useState<any>(null);
   const [annualSummaryLoading, setAnnualSummaryLoading] = useState(false);
 
+  // Data fetch status indicator
+  const [fetchStatus, setFetchStatus] = useState<'success' | 'failed' | 'pending' | 'unknown'>('unknown');
+  const [fetchTaskId, setFetchTaskId] = useState<string | null>(null);
+
   // Agent Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
@@ -132,8 +136,80 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
     fetchPlayerData();
     fetchProgressData();
     fetchSkillsData();
+    checkFetchStatus();
     // Don't auto-fetch annual summary anymore - load on demand
   }, [gameName, tagLine]);
+
+  // Champion selector is now handled by AICoachAnalysis component
+
+  const checkFetchStatus = useCallback(async () => {
+    try {
+      // Check if there's a task_id stored in localStorage for this player
+      const storageKey = `fetch_task_${gameName}_${tagLine}`;
+      const storedTaskId = localStorage.getItem(storageKey);
+      
+      if (storedTaskId) {
+        setFetchTaskId(storedTaskId);
+        
+        // Check task status
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+        const response = await fetch(`${BACKEND_URL}/v1/player/fetch-status/${storedTaskId}`);
+        
+        if (response.ok) {
+          const taskStatus = await response.json();
+          
+          if (taskStatus.status === 'completed') {
+            setFetchStatus('success');
+            // Remove from localStorage after successful completion
+            localStorage.removeItem(storageKey);
+          } else if (taskStatus.status === 'failed') {
+            setFetchStatus('failed');
+            // Keep in localStorage so user can see the error
+          } else {
+            setFetchStatus('pending');
+          }
+        } else {
+          // Task not found or expired, check if data exists
+          const dataStatusResponse = await fetch(`/api/player/${gameName}/${tagLine}/data-status`);
+          if (dataStatusResponse.ok) {
+            const dataStatus = await dataStatusResponse.json();
+            if (dataStatus.has_data && dataStatus.total_games > 0) {
+              setFetchStatus('success');
+              localStorage.removeItem(storageKey);
+            } else {
+              setFetchStatus('unknown');
+            }
+          } else {
+            setFetchStatus('unknown');
+          }
+        }
+      } else {
+        // No task_id stored, check if data exists
+        const dataStatusResponse = await fetch(`/api/player/${gameName}/${tagLine}/data-status`);
+        if (dataStatusResponse.ok) {
+          const dataStatus = await dataStatusResponse.json();
+          if (dataStatus.has_data && dataStatus.total_games > 0) {
+            setFetchStatus('success');
+          } else {
+            setFetchStatus('unknown');
+          }
+        } else {
+          setFetchStatus('unknown');
+        }
+      }
+    } catch (err) {
+      console.error('Error checking fetch status:', err);
+      setFetchStatus('unknown');
+    }
+  }, [gameName, tagLine]);
+
+  useEffect(() => {
+    fetchPlayerData();
+    fetchProgressData();
+    fetchSkillsData();
+    checkFetchStatus();
+    // Don't auto-fetch annual summary anymore - load on demand
+  }, [gameName, tagLine, checkFetchStatus]);
 
   const fetchPlayerData = async () => {
     try {
@@ -304,10 +380,10 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
                       borderWidth: '1px',
                       borderStyle: 'solid',
                       borderColor: 'rgba(10, 132, 255, 0.5)',
-                      color: colors.accentBlue
+                      color: '#FFFFFF'
                     }}
                   >
-                    <ShinyText text="Back to Home" speed={3} />
+                    <ShinyText text="Back to Home" speed={3} style={{ color: '#FFFFFF' }} />
                   </button>
                 </ClickSpark>
               </div>

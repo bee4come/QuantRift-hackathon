@@ -967,13 +967,25 @@ async def annual_summary(request: AgentRequest):
 
             # Load packs with optional time range filter
             time_range = getattr(request, 'time_range', None)
+            print(f"🔍 [Annual Summary] Received time_range parameter: {time_range}")
             all_packs_dict = load_all_annual_packs(packs_dir, time_range=time_range)
 
             print(f"📊 Loaded {len(all_packs_dict)} patches" + (f" (time_range: {time_range})" if time_range else ""))
 
+            # Check if no data found for the selected time range
+            if len(all_packs_dict) == 0:
+                if time_range == "2024-01-01":
+                    error_msg = "No data found for Season 2024"
+                elif time_range == "past-365":
+                    error_msg = "No data found for Past 365 Days"
+                else:
+                    error_msg = "No data found"
+                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                return
+
             analysis = generate_comprehensive_annual_analysis(all_packs_dict)
             formatted_analysis = format_analysis_for_prompt(analysis)
-            prompts = build_narrative_prompt(analysis, formatted_analysis)
+            prompts = build_narrative_prompt(analysis, formatted_analysis, time_range=time_range)
 
             # Step 1.5: Send analysis data first (for frontend widgets)
             yield f"data: {{\"type\": \"analysis\", \"data\": {json.dumps(analysis, ensure_ascii=False)}}}\n\n"
@@ -1035,14 +1047,29 @@ async def champion_mastery(request: AgentRequest):
             # Load data and build prompt
             from src.agents.player_analysis.champion_mastery.tools import (
                 generate_comprehensive_mastery_analysis,
-                format_analysis_for_prompt
+                format_analysis_for_prompt,
+                load_champion_data
             )
             from src.agents.player_analysis.champion_mastery.prompts import build_narrative_prompt
 
+            time_range = getattr(request, 'time_range', None)
+            
+            # Check if data exists for the selected time range before generating analysis
+            champion_data = load_champion_data(packs_dir, request.champion_id, time_range=time_range)
+            if not champion_data:
+                if time_range == "2024-01-01":
+                    error_msg = "No data found for Season 2024"
+                elif time_range == "past-365":
+                    error_msg = "No data found for Past 365 Days"
+                else:
+                    error_msg = f"No data found for champion_id {request.champion_id}"
+                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                return
+            
             analysis = generate_comprehensive_mastery_analysis(
                 champion_id=request.champion_id,
                 packs_dir=packs_dir,
-                time_range=getattr(request, 'time_range', None)
+                time_range=time_range
             )
             formatted_data = format_analysis_for_prompt(analysis)
             prompts = build_narrative_prompt(analysis, formatted_data)
@@ -1382,7 +1409,8 @@ async def role_specialization(request: AgentRequest):
             # Step 1: Load player pack data and build prompt
             from src.agents.player_analysis.role_specialization.tools import (
                 generate_comprehensive_role_analysis,
-                format_analysis_for_prompt
+                format_analysis_for_prompt,
+                load_role_data
             )
             from src.agents.player_analysis.role_specialization.prompts import build_narrative_prompt
 
@@ -1390,10 +1418,24 @@ async def role_specialization(request: AgentRequest):
             # Map ADC → BOTTOM for backend compatibility
             if role == 'ADC':
                 role = 'BOTTOM'
+            time_range = getattr(request, 'time_range', None)
+            
+            # Check if data exists for the selected time range before generating analysis
+            role_data = load_role_data(packs_dir, role, time_range=time_range)
+            if not role_data:
+                if time_range == "2024-01-01":
+                    error_msg = "No data found for Season 2024"
+                elif time_range == "past-365":
+                    error_msg = "No data found for Past 365 Days"
+                else:
+                    error_msg = f"No data found for role {role}"
+                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                return
+            
             analysis = generate_comprehensive_role_analysis(
                 role=role,
                 packs_dir=packs_dir,
-                time_range=getattr(request, 'time_range', None)
+                time_range=time_range
             )
             formatted_data = format_analysis_for_prompt(analysis)
             prompts = build_narrative_prompt(analysis, formatted_data)
@@ -1456,7 +1498,20 @@ async def champion_recommendation(request: AgentRequest):
             )
             from src.agents.player_analysis.champion_recommendation.prompts import build_narrative_prompt
 
-            champion_pool = analyze_champion_pool(packs_dir, time_range=getattr(request, 'time_range', None))
+            time_range = getattr(request, 'time_range', None)
+            champion_pool = analyze_champion_pool(packs_dir, time_range=time_range)
+            
+            # Check if no data found for the selected time range
+            if champion_pool.get("total_champions", 0) == 0 or len(champion_pool.get("core_champions", [])) == 0:
+                if time_range == "2024-01-01":
+                    error_msg = "No data found for Season 2024"
+                elif time_range == "past-365":
+                    error_msg = "No data found for Past 365 Days"
+                else:
+                    error_msg = "No data found"
+                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                return
+            
             recommendations = generate_recommendations(champion_pool)
             formatted_data = format_analysis_for_prompt(champion_pool, recommendations)
             prompts = build_narrative_prompt(champion_pool, recommendations, formatted_data)
@@ -2234,6 +2289,17 @@ async def version_trends(request: AgentRequest):
             all_packs = load_all_packs(packs_dir, time_range=time_range)
             print(f"📊 Loaded {len(all_packs)} patches" + (f" (time_range: {time_range})" if time_range else ""))
             
+            # Check if no data found for the selected time range
+            if len(all_packs) == 0:
+                if time_range == "2024-01-01":
+                    error_msg = "No data found for Season 2024"
+                elif time_range == "past-365":
+                    error_msg = "No data found for Past 365 Days"
+                else:
+                    error_msg = "No data found"
+                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                return
+            
             trends = analyze_trends(all_packs)
             transitions = identify_key_transitions(trends)
             analysis = generate_comprehensive_analysis(trends, transitions)
@@ -2453,7 +2519,19 @@ async def get_player_summary(
 
         # Step 2: Get account info - try inferred region first, then try other regions if needed
         step_start = time.time()
-        account = await riot_client.get_account_by_riot_id(game_name=game_name, tag_line=tag_line, region=routing_region)
+        try:
+            account = await riot_client.get_account_by_riot_id(game_name=game_name, tag_line=tag_line, region=routing_region)
+        except Exception as e:
+            # Handle Riot API errors more gracefully
+            error_msg = str(e)
+            if "decrypting" in error_msg.lower() or "400" in error_msg:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Riot API authentication error. This may indicate an invalid or expired API key. Please check your RIOT_API_KEY_PRIMARY environment variable. Error: {error_msg}"
+                )
+            # If it's not a decrypt error, continue with fallback regions
+            print(f"⚠️  Error fetching account from {routing_region}: {error_msg}, trying fallback regions...")
+            account = None
         
         # If not found in inferred region, try other regions
         if not account:
@@ -2462,10 +2540,20 @@ async def get_player_summary(
             for region in fallback_regions:
                 if region != routing_region:
                     print(f"🔍 Trying region: {region}")
-                    account = await riot_client.get_account_by_riot_id(game_name=game_name, tag_line=tag_line, region=region)
-                    if account:
-                        print(f"✅ Found account in {region}")
-                        break
+                    try:
+                        account = await riot_client.get_account_by_riot_id(game_name=game_name, tag_line=tag_line, region=region)
+                        if account:
+                            print(f"✅ Found account in {region}")
+                            break
+                    except Exception as e:
+                        error_msg = str(e)
+                        if "decrypting" in error_msg.lower() or "400" in error_msg:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Riot API authentication error. This may indicate an invalid or expired API key. Please check your RIOT_API_KEY_PRIMARY environment variable. Error: {error_msg}"
+                            )
+                        print(f"⚠️  Error fetching account from {region}: {error_msg}")
+                        continue
         
         if not account:
             raise HTTPException(status_code=404, detail=f"Account not found for {game_name}#{tag_line}")
@@ -2475,22 +2563,51 @@ async def get_player_summary(
 
         # Step 3: Get summoner info - try inferred platform first, then try other platforms if needed
         step_start = time.time()
-        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=platform)
+        summoner = None
+        summoner_error = None
         
-        # If not found on inferred platform, try other platforms
+        try:
+        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=platform)
+        except Exception as e:
+            error_msg = str(e)
+            # Check if it's a decrypt error (API key issue)
+            if "decrypting" in error_msg.lower() or "400" in error_msg:
+                summoner_error = error_msg
+                print(f"⚠️  Decrypt error on {platform}: {error_msg}")
+                print(f"⚠️  This usually means the API key used to get the PUUID cannot decrypt it.")
+                print(f"⚠️  Trying other platforms with different API keys...")
+            else:
+                # Re-raise if it's not a decrypt error
+                raise
+        
+        # If not found or decrypt error, try other platforms
         if not summoner:
             print(f"⚠️  Summoner not found on {platform}, trying other platforms...")
             fallback_platforms = ['kr', 'na1', 'euw1', 'eun1', 'br1', 'jp1']
             for plat in fallback_platforms:
                 if plat != platform:
                     print(f"🔍 Trying platform: {plat}")
+                    try:
                     summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=plat)
                     if summoner:
                         print(f"✅ Found summoner on {plat}")
                         platform = plat  # Update platform to the one that worked
                         break
+                    except Exception as e:
+                        error_msg = str(e)
+                        if "decrypting" in error_msg.lower():
+                            print(f"⚠️  Decrypt error on {plat} as well: {error_msg}")
+                            continue
+                        else:
+                            # Re-raise if it's not a decrypt error
+                            raise
         
         if not summoner:
+            if summoner_error and "decrypting" in summoner_error.lower():
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Riot API authentication error: The API key cannot decrypt the PUUID. This usually happens when the PUUID was obtained with a different API key. Please ensure RIOT_API_KEY_PRIMARY is the same key used to get the account. Error: {summoner_error}"
+                )
             raise HTTPException(status_code=404, detail="Summoner not found on any platform")
         print(f"✅ [2/2] Got summoner info ({time.time()-step_start:.2f}s)")
 
@@ -2504,7 +2621,93 @@ async def get_player_summary(
             days=days
         )
 
-        # Step 4: Try to get role stats and champion stats if Player-Pack exists
+        # Step 4: Try to get role stats and champion stats
+        # If count parameter is provided and job has matches_data, calculate stats from current job
+        # Otherwise, use existing pack files
+        role_stats = []
+        best_champions = []
+        
+        # Wait a bit for matches_data to be populated (if count-based request)
+        if count:
+            import asyncio
+            # Wait up to 5 seconds for matches_data to be populated
+            for _ in range(10):
+                if job.matches_data and len(job.matches_data) > 0:
+                    break
+                await asyncio.sleep(0.5)
+        
+        if count and job.matches_data and len(job.matches_data) > 0:
+            # Calculate stats from current job's matches_data (for count-based requests)
+            from collections import defaultdict
+            role_stats_dict = defaultdict(lambda: {"games": 0, "wins": 0, "total_kda": 0.0})
+            champion_stats_dict = defaultdict(lambda: {"games": 0, "wins": 0, "total_kda": 0.0})
+            
+            for match in job.matches_data:
+                player_data = None
+                for p in match['info']['participants']:
+                    if p.get('puuid') == puuid or (p.get('riotIdGameName', '').lower() == game_name.lower() and
+                                                   p.get('riotIdTagline', '').lower() == tag_line.lower()):
+                        player_data = p
+                        break
+                
+                if not player_data:
+                    continue
+                
+                role = player_data.get('teamPosition', 'UNKNOWN')
+                if role == 'Invalid' or not role:
+                    continue
+                
+                champ_id = player_data.get('championId')
+                win = player_data.get('win', False)
+                kills = player_data.get('kills', 0)
+                deaths = player_data.get('deaths', 0)
+                assists = player_data.get('assists', 0)
+                kda_adj = (kills + 0.7 * assists) / (deaths + 1) if deaths > 0 else (kills + 0.7 * assists)
+                
+                role_stats_dict[role]["games"] += 1
+                if win:
+                    role_stats_dict[role]["wins"] += 1
+                role_stats_dict[role]["total_kda"] += kda_adj
+                
+                if champ_id:
+                    champion_stats_dict[champ_id]["games"] += 1
+                    if win:
+                        champion_stats_dict[champ_id]["wins"] += 1
+                    champion_stats_dict[champ_id]["total_kda"] += kda_adj
+            
+            # Convert role_stats_dict to list format
+            for role, stats in role_stats_dict.items():
+                games = stats["games"]
+                wins = stats["wins"]
+                win_rate = (wins / games * 100) if games > 0 else 0
+                avg_kda = (stats["total_kda"] / games) if games > 0 else 0
+                role_stats.append({
+                    "role": role,
+                    "games": games,
+                    "wins": wins,
+                    "win_rate": round(win_rate, 1),
+                    "avg_kda": round(avg_kda, 2)
+                })
+            
+            # Convert champion_stats_dict to list format
+            from src.utils.id_mappings import get_champion_name
+            for champ_id, stats in champion_stats_dict.items():
+                games = stats["games"]
+                wins = stats["wins"]
+                win_rate = (wins / games * 100) if games > 0 else 0
+                avg_kda = (stats["total_kda"] / games) if games > 0 else 0
+                best_champions.append({
+                    "champ_id": champ_id,
+                    "name": get_champion_name(champ_id),
+                    "games": games,
+                    "wins": wins,
+                    "win_rate": round(win_rate, 1),
+                    "avg_kda": round(avg_kda, 2)
+                })
+            best_champions.sort(key=lambda x: x["games"], reverse=True)
+            best_champions = best_champions[:5]
+        else:
+            # Use existing pack files (for time_range or days-based requests)
         role_stats = player_data_manager.get_role_stats(puuid)
         best_champions = player_data_manager.get_best_champions(puuid, limit=5)
 
@@ -2820,7 +3023,18 @@ async def get_player_data_status(game_name: str, tag_line: str):
 
     try:
         # Get account info (same as summary endpoint)
-        account = await riot_client.get_account_by_riot_id(game_name, tag_line, region='americas')
+        try:
+            account = await riot_client.get_account_by_riot_id(game_name, tag_line, region='americas')
+        except Exception as e:
+            # Handle Riot API errors more gracefully
+            error_msg = str(e)
+            if "decrypting" in error_msg.lower() or "400" in error_msg:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Riot API authentication error. This may indicate an invalid or expired API key. Please check your RIOT_API_KEY_PRIMARY environment variable. Error: {error_msg}"
+                )
+            raise HTTPException(status_code=500, detail=f"Failed to fetch account info: {error_msg}")
+        
         if not account:
             raise HTTPException(status_code=404, detail="Account not found")
 
@@ -2859,6 +3073,33 @@ async def get_player_data_status(game_name: str, tag_line: str):
         # Collect patch information
         patches = []
         total_games = 0
+        earliest_match_date = None
+        latest_match_date = None
+        
+        # Patch release date mapping for Season 2024 (14.1 - 14.24)
+        # Also include patch 15.x (2025 season) for fallback date inference
+        patch_release_dates = {
+            # Season 2024 patches
+            '14.1': datetime(2024, 1, 10), '14.2': datetime(2024, 1, 24), '14.3': datetime(2024, 2, 7),
+            '14.4': datetime(2024, 2, 21), '14.5': datetime(2024, 3, 6), '14.6': datetime(2024, 3, 20),
+            '14.7': datetime(2024, 4, 3), '14.8': datetime(2024, 4, 17), '14.9': datetime(2024, 5, 1),
+            '14.10': datetime(2024, 5, 15), '14.11': datetime(2024, 5, 29), '14.12': datetime(2024, 6, 12),
+            '14.13': datetime(2024, 6, 26), '14.14': datetime(2024, 7, 17), '14.15': datetime(2024, 7, 31),
+            '14.16': datetime(2024, 8, 14), '14.17': datetime(2024, 8, 28), '14.18': datetime(2024, 9, 11),
+            '14.19': datetime(2024, 9, 24), '14.20': datetime(2024, 10, 8), '14.21': datetime(2024, 10, 22),
+            '14.22': datetime(2024, 11, 5), '14.23': datetime(2024, 11, 19), '14.24': datetime(2024, 12, 10),
+            # Season 2025 patches (for date inference)
+            '15.17': datetime(2025, 8, 26), '15.18': datetime(2025, 9, 10),
+            '15.21': datetime(2025, 10, 28), '15.22': datetime(2025, 11, 5),
+        }
+
+        # Past Season date range: patch 14.1 (2024-01-09) to patch 14.25 (2025-01-06)
+        past_season_start = datetime(2024, 1, 9)
+        past_season_end = datetime(2025, 1, 6, 23, 59, 59, 999000)
+        
+        # Past 365 Days: from today - 365 days to today
+        today = datetime.now()
+        past_365_days_start = today - timedelta(days=365)
 
         for pack_file in pack_files:
             with open(pack_file, 'r') as f:
@@ -2866,15 +3107,183 @@ async def get_player_data_status(game_name: str, tag_line: str):
 
             patch = pack.get("patch", "unknown")
             games = pack.get("total_games", 0)
+            
+            # Extract match dates from pack
+            pack_earliest = pack.get("earliest_match_date")
+            pack_latest = pack.get("latest_match_date")
+            
+            # If pack doesn't have match dates, try to infer from patch version first
+            if not pack_earliest or not pack_latest:
+                # Try to get patch release date
+                patch_base = '.'.join(patch.split('.')[:2])  # "14.1.1" -> "14.1"
+                if patch_base in patch_release_dates:
+                    patch_release_date = patch_release_dates[patch_base]
+                    # Use patch release date as fallback
+                    if not pack_earliest:
+                        pack_earliest = patch_release_date.isoformat()
+                    if not pack_latest:
+                        # Assume matches can be up to 2 weeks after patch release
+                        pack_latest = (patch_release_date + timedelta(days=14)).isoformat()
+            
+            # Calculate past_season_games and past_365_days_games if not present
+            past_season_games = pack.get("past_season_games")
+            past_365_days_games = pack.get("past_365_days_games")
+            
+            # If these fields don't exist, calculate them from match dates (or inferred dates)
+            if past_season_games is None or past_365_days_games is None:
+                # If we have match dates (or inferred dates), estimate based on date range overlap
+                if pack_earliest and pack_latest:
+                    try:
+                        # Parse dates
+                        if isinstance(pack_earliest, str):
+                            date_str = pack_earliest.replace('Z', '+00:00')
+                            if '+' not in date_str and 'T' in date_str:
+                                date_str = date_str + '+00:00'
+                            earliest_dt = datetime.fromisoformat(date_str)
+                        else:
+                            earliest_dt = pack_earliest
+                        
+                        if isinstance(pack_latest, str):
+                            date_str = pack_latest.replace('Z', '+00:00')
+                            if '+' not in date_str and 'T' in date_str:
+                                date_str = date_str + '+00:00'
+                            latest_dt = datetime.fromisoformat(date_str)
+                        else:
+                            latest_dt = pack_latest
+                        
+                        # Remove timezone for comparison
+                        if earliest_dt.tzinfo:
+                            earliest_dt = earliest_dt.replace(tzinfo=None)
+                        if latest_dt.tzinfo:
+                            latest_dt = latest_dt.replace(tzinfo=None)
+                        
+                        # Check if date range overlaps with Past Season
+                        if past_season_games is None:
+                            # If date range overlaps with Past Season, estimate games proportionally
+                            if earliest_dt <= past_season_end and latest_dt >= past_season_start:
+                                # Calculate overlap proportion
+                                overlap_start = max(earliest_dt, past_season_start)
+                                overlap_end = min(latest_dt, past_season_end)
+                                total_range = (latest_dt - earliest_dt).total_seconds()
+                                overlap_range = (overlap_end - overlap_start).total_seconds()
+                                if total_range > 0:
+                                    past_season_games = int(games * (overlap_range / total_range))
+                                else:
+                                    past_season_games = games if past_season_start <= earliest_dt <= past_season_end else 0
+                            else:
+                                past_season_games = 0
+                        
+                        # Check if date range overlaps with Past 365 Days
+                        if past_365_days_games is None:
+                            # If latest date is within past 365 days, all games count
+                            if latest_dt >= past_365_days_start:
+                                past_365_days_games = games
+                            elif earliest_dt >= past_365_days_start:
+                                # Partial overlap - estimate proportionally
+                                total_range = (latest_dt - earliest_dt).total_seconds()
+                                overlap_range = (latest_dt - past_365_days_start).total_seconds()
+                                if total_range > 0:
+                                    past_365_days_games = int(games * (overlap_range / total_range))
+                                else:
+                                    past_365_days_games = games
+                            else:
+                                past_365_days_games = 0
+                    except Exception as e:
+                        print(f"Warning: Error calculating time range games for patch {patch}: {e}")
+                        if past_season_games is None:
+                            past_season_games = 0
+                        if past_365_days_games is None:
+                            past_365_days_games = 0
+                else:
+                    # No match dates available (even after inference), set to 0
+                    if past_season_games is None:
+                        past_season_games = 0
+                    if past_365_days_games is None:
+                        past_365_days_games = 0
+            
+            # Parse and track earliest/latest match dates
+            if pack_earliest:
+                try:
+                    # Handle both ISO format strings and datetime objects
+                    if isinstance(pack_earliest, str):
+                        # Handle different ISO formats
+                        date_str = pack_earliest.replace('Z', '+00:00')
+                        if '+' not in date_str and 'T' in date_str:
+                            # Add UTC timezone if missing
+                            date_str = date_str + '+00:00'
+                        pack_earliest_dt = datetime.fromisoformat(date_str)
+                    else:
+                        pack_earliest_dt = pack_earliest
+                    
+                    # Convert to naive datetime for comparison if needed
+                    if pack_earliest_dt.tzinfo is not None:
+                        pack_earliest_dt = pack_earliest_dt.replace(tzinfo=None)
+                    
+                    if earliest_match_date is None or pack_earliest_dt < earliest_match_date:
+                        earliest_match_date = pack_earliest_dt
+                except Exception as e:
+                    print(f"Warning: Error parsing earliest_match_date for patch {patch}: {pack_earliest}, error: {e}")
+                    pass
+            
+            if pack_latest:
+                try:
+                    # Handle both ISO format strings and datetime objects
+                    if isinstance(pack_latest, str):
+                        # Handle different ISO formats
+                        date_str = pack_latest.replace('Z', '+00:00')
+                        if '+' not in date_str and 'T' in date_str:
+                            # Add UTC timezone if missing
+                            date_str = date_str + '+00:00'
+                        pack_latest_dt = datetime.fromisoformat(date_str)
+                    else:
+                        pack_latest_dt = pack_latest
+                    
+                    # Convert to naive datetime for comparison if needed
+                    if pack_latest_dt.tzinfo is not None:
+                        pack_latest_dt = pack_latest_dt.replace(tzinfo=None)
+                    
+                    if latest_match_date is None or pack_latest_dt > latest_match_date:
+                        latest_match_date = pack_latest_dt
+                except Exception as e:
+                    print(f"Warning: Error parsing latest_match_date for patch {patch}: {pack_latest}, error: {e}")
+                    pass
+            
+            # Ensure pack_earliest and pack_latest are strings for JSON serialization
+            if pack_earliest and not isinstance(pack_earliest, str):
+                pack_earliest = pack_earliest.isoformat() if hasattr(pack_earliest, 'isoformat') else str(pack_earliest)
+            if pack_latest and not isinstance(pack_latest, str):
+                pack_latest = pack_latest.isoformat() if hasattr(pack_latest, 'isoformat') else str(pack_latest)
 
             patches.append({
                 "patch": patch,
-                "games": games
+                "games": games,
+                "earliest_match_date": pack_earliest,
+                "latest_match_date": pack_latest,
+                "past_season_games": past_season_games if past_season_games is not None else 0,
+                "past_365_days_games": past_365_days_games if past_365_days_games is not None else 0
             })
             total_games += games
 
         # Sort by patch version
         patches_sorted = sorted(patches, key=lambda x: x["patch"])
+
+        # Format earliest/latest match dates for JSON serialization
+        earliest_match_date_str = None
+        latest_match_date_str = None
+        if earliest_match_date:
+            try:
+                earliest_match_date_str = earliest_match_date.isoformat()
+            except:
+                pass
+        if latest_match_date:
+            try:
+                latest_match_date_str = latest_match_date.isoformat()
+            except:
+                pass
+
+        # Calculate total games in Past Season and Past 365 Days
+        total_past_season_games = sum(p.get("past_season_games", 0) for p in patches_sorted)
+        total_past_365_days_games = sum(p.get("past_365_days_games", 0) for p in patches_sorted)
 
         return {
             "success": True,
@@ -2884,8 +3293,12 @@ async def get_player_data_status(game_name: str, tag_line: str):
             "has_data": True,
             "total_patches": len(patches_sorted),
             "total_games": total_games,
+            "total_past_season_games": total_past_season_games,
+            "total_past_365_days_games": total_past_365_days_games,
             "earliest_patch": patches_sorted[0]["patch"] if patches_sorted else None,
             "latest_patch": patches_sorted[-1]["patch"] if patches_sorted else None,
+            "earliest_match_date": earliest_match_date_str,
+            "latest_match_date": latest_match_date_str,
             "patches": patches_sorted
         }
 

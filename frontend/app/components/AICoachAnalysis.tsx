@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy,
   Users,
@@ -14,11 +14,13 @@ import {
   FileText,
   UserPlus,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Loader2
 } from 'lucide-react';
 import AgentCard, { AgentStatus } from './AgentCard';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
-import PlayerComparisonInput from './PlayerComparisonInput';
 import DataStatusChecker from './DataStatusChecker';
 import ChampionSelectorModal from './ChampionSelectorModal';
 import FriendInputModal from './FriendInputModal';
@@ -82,6 +84,25 @@ export default function AICoachAnalysis({
   const [dataError, setDataError] = useState<string | null>(null);
   const [insufficientData, setInsufficientData] = useState(false);
   const [dataStatus, setDataStatus] = useState<any>(null);
+  const [fetchTaskId, setFetchTaskId] = useState<string | null>(null);
+  const [pastSeasonStatus, setPastSeasonStatus] = useState<'success' | 'failed' | 'pending' | 'unknown'>('unknown');
+  const [past365Status, setPast365Status] = useState<'success' | 'failed' | 'pending' | 'unknown'>('unknown');
+  const [pastSeasonMatchCount, setPastSeasonMatchCount] = useState<number>(0);
+  const [past365MatchCount, setPast365MatchCount] = useState<number>(0);
+  const [showPastSeasonTooltip, setShowPastSeasonTooltip] = useState(false);
+  const [showPast365Tooltip, setShowPast365Tooltip] = useState(false);
+  const pastSeasonRef = useRef<HTMLDivElement>(null);
+  const past365Ref = useRef<HTMLDivElement>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+
+  // Helper function to get Past Season date range based on patch versions
+  // Past Season 2024: patch 14.1 (2024-01-09) to patch 14.25 (2025-01-06)
+  const getPastSeasonDateRange = (): { start: Date; end: Date } => {
+    return {
+      start: new Date('2024-01-09'), // patch 14.1 start date
+      end: new Date('2025-01-06T23:59:59.999') // patch 14.25 end date
+    };
+  };
 
   // Helper function to get patch release date
   const getPatchDate = (patch: string): Date | null => {
@@ -89,8 +110,8 @@ export default function AICoachAnalysis({
     
     // Patch date mapping (from patch_manager.py)
     const patchDates: Record<string, string> = {
-      // 2024 Season patches (14.1 - 14.24)
-      '14.1': '2024-01-10',
+      // 2024 Season patches (14.1 - 14.25)
+      '14.1': '2024-01-09', // Updated: patch 14.1 starts from 2024-01-09
       '14.2': '2024-01-24',
       '14.3': '2024-02-07',
       '14.4': '2024-02-21',
@@ -114,6 +135,7 @@ export default function AICoachAnalysis({
       '14.22': '2024-11-05',
       '14.23': '2024-11-19',
       '14.24': '2024-12-10',
+      '14.25': '2024-12-24', // patch 14.25 (ends 2025-01-06)
       // 2025 Season patches
       '25.S1.1': '2025-01-07',
       '25.S1.2': '2025-01-22',
@@ -171,8 +193,8 @@ export default function AICoachAnalysis({
     return minor1 - minor2;
   };
 
-  // Check if patch is in Season 2024 range (14.1 - 14.24)
-  const isSeason2024Patch = (patch: string): boolean => {
+  // Helper function to check if a patch is in Past Season (14.1 to 14.25)
+  const isPastSeasonPatch = (patch: string): boolean => {
     if (!patch) return false;
     
     // Check if patch starts with 14.
@@ -183,21 +205,73 @@ export default function AICoachAnalysis({
     if (parts.length < 2) return false;
     
     const minor = parseInt(parts[1]) || 0;
-    // Season 2024 is patches 14.1 to 14.24
-    return minor >= 1 && minor <= 24;
+    // Past Season 2024 is patches 14.1 to 14.25
+    return minor >= 1 && minor <= 25;
   };
 
-  // Check if patch is within past 365 days from today
-  const isPatchWithinPast365Days = (patch: string): boolean => {
-    if (!patch) return false;
+  // Check if match date is within past 365 days from today
+  const isMatchDateWithinPast365Days = (matchDate: string): boolean => {
+    if (!matchDate) return false;
     
-    const patchDate = getPatchDate(patch);
-    if (!patchDate) return false;
+    try {
+      const matchDateTime = new Date(matchDate);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // End of today
+      const daysDiff = Math.floor((today.getTime() - matchDateTime.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Include matches from today (0 days) to 365 days ago
+      return daysDiff >= 0 && daysDiff <= 365;
+    } catch {
+      return false;
+    }
+  };
+  
+  // Check if match date is in Past Season (2024-01-09 to 2025-01-06, patch 14.1 to 14.25)
+  const isMatchDateInPastSeason = (matchDate: string): boolean => {
+    if (!matchDate) return false;
     
-    const today = new Date();
-    const daysDiff = Math.floor((today.getTime() - patchDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    return daysDiff >= 0 && daysDiff <= 365;
+    try {
+      const { start, end } = getPastSeasonDateRange();
+      
+      // Handle ISO format with timezone (e.g., "2024-01-15T10:30:00+00:00" or "2024-01-15T10:30:00Z")
+      let dateStr = matchDate;
+      if (dateStr.includes('T')) {
+        dateStr = dateStr.split('T')[0]; // Extract date part only
+      }
+      
+      // Parse date string (YYYY-MM-DD format)
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) {
+        // Try parsing as Date object
+        const matchDateTime = new Date(matchDate);
+        if (isNaN(matchDateTime.getTime())) {
+          console.warn(`[isMatchDateInPastSeason] Invalid date format: ${matchDate}`);
+          return false;
+        }
+        const isInPastSeason = matchDateTime >= start && matchDateTime <= end;
+        console.log(`[isMatchDateInPastSeason] Parsed ${matchDate} -> isInPastSeason=${isInPastSeason}`);
+        return isInPastSeason;
+      }
+      
+      const matchDateTime = new Date(matchDate);
+      if (isNaN(matchDateTime.getTime())) {
+        console.warn(`[isMatchDateInPastSeason] Invalid date format: ${matchDate}`);
+        return false;
+      }
+      
+      // Check if date is in Past Season range (2024-01-09 to 2025-01-06)
+      const isInPastSeason = matchDateTime >= start && matchDateTime <= end;
+      if (isInPastSeason) {
+        console.log(`[isMatchDateInPastSeason] Date ${matchDate} is in Past Season (2024-01-09 to 2025-01-06)`);
+        return true;
+      }
+      
+      console.log(`[isMatchDateInPastSeason] Date ${matchDate} is NOT in Past Season`);
+      return false;
+    } catch (err) {
+      console.warn(`[isMatchDateInPastSeason] Error parsing date: ${matchDate}`, err);
+      return false;
+    }
   };
 
   // Initial data check on mount
@@ -212,18 +286,45 @@ export default function AICoachAnalysis({
           // Check if data is sufficient
           const hasEnoughGames = status.has_data && status.total_games >= 10;
           
-          // Check if there's data from Season 2024 (patch 14.1 - 14.24)
-          const hasSeason2024Data = status.patches?.some((p: any) => {
-            return isSeason2024Patch(p.patch);
-          }) || false;
+          // Use backend-calculated games counts for Past Season and Past 365 Days
+          // Backend now provides accurate counts based on actual match dates
+          const pastSeasonGames = status.total_past_season_games || 0;
+          const past365Games = status.total_past_365_days_games || 0;
+          const hasPastSeasonData = pastSeasonGames > 0;
+          const hasPast365DaysData = past365Games > 0;
           
-          // Check if latest patch is within past 365 days from today
-          const hasPast365DaysData = status.latest_patch && isPatchWithinPast365Days(status.latest_patch);
-          
+          console.log(`[Past Season] Backend calculated: ${pastSeasonGames} games (hasData: ${hasPastSeasonData})`);
+          console.log(`[Past 365] Backend calculated: ${past365Games} games (hasData: ${hasPast365DaysData})`);
+
+          // Set indicator status and match counts
+          // If data is insufficient (not enough games or no valid time range data), show failed (red)
+          if (status.has_data && status.total_games > 0) {
+            // Check if data is sufficient for analysis
+            const isDataSufficient = hasEnoughGames && (hasPastSeasonData || hasPast365DaysData);
+            
+            if (isDataSufficient) {
+              // Data is sufficient - show success/unknown based on actual data availability
+              setPastSeasonStatus(hasPastSeasonData ? 'success' : 'unknown');
+              setPast365Status(hasPast365DaysData ? 'success' : 'unknown');
+            } else {
+              // Data exists but is insufficient - show failed (red)
+              setPastSeasonStatus('failed');
+              setPast365Status('failed');
+            }
+            setPastSeasonMatchCount(pastSeasonGames);
+            setPast365MatchCount(past365Games);
+          } else {
+            // No data at all - show failed (red)
+            setPastSeasonStatus('failed');
+            setPast365Status('failed');
+            setPastSeasonMatchCount(0);
+            setPast365MatchCount(0);
+          }
+
           // Data is sufficient only if:
           // 1. Has enough games (>=10)
-          // 2. Has Season 2024 data (14.1-14.24) OR has data within past 365 days from today
-          if (hasEnoughGames && (hasSeason2024Data || hasPast365DaysData)) {
+          // 2. Has Past Season data (patch 14.1 to 14.25, 2024-01-09 to 2025-01-06) OR has data within past 365 days from today
+          if (hasEnoughGames && (hasPastSeasonData || hasPast365DaysData)) {
             setDataReady(true);
             setInsufficientData(false);
           } else {
@@ -237,7 +338,145 @@ export default function AICoachAnalysis({
     };
     
     checkInitialDataStatus();
+    checkFetchStatus();
   }, [gameName, tagLine]);
+
+  const checkFetchStatus = async () => {
+    try {
+      // Check if there's a task_id stored in localStorage for this player
+      const storageKey = `fetch_task_${gameName}_${tagLine}`;
+      const storedTaskId = localStorage.getItem(storageKey);
+      
+      // Check data status for both time ranges
+      const dataStatusResponse = await fetch(`/api/player/${gameName}/${tagLine}/data-status`);
+      if (dataStatusResponse.ok) {
+        const dataStatus = await dataStatusResponse.json();
+        
+        if (dataStatus.has_data && dataStatus.patches && dataStatus.patches.length > 0) {
+          // Use backend-calculated games counts for Past Season and Past 365 Days
+          // Backend now provides accurate counts based on actual match dates
+          const pastSeasonGames = dataStatus.total_past_season_games || 0;
+          const past365Games = dataStatus.total_past_365_days_games || 0;
+          const hasPastSeasonData = pastSeasonGames > 0;
+          const hasPast365DaysData = past365Games > 0;
+          
+          console.log(`[Past Season] Backend calculated: ${pastSeasonGames} games (hasData: ${hasPastSeasonData})`);
+          console.log(`[Past 365] Backend calculated: ${past365Games} games (hasData: ${hasPast365DaysData})`);
+          
+          // Check if data is sufficient for analysis
+          const hasEnoughGames = dataStatus.total_games >= 10;
+          const isDataSufficient = hasEnoughGames && (hasPastSeasonData || hasPast365DaysData);
+          
+          // Set indicator status and match counts
+          if (isDataSufficient) {
+            // Data is sufficient - show success/unknown based on actual data availability
+            setPastSeasonStatus(hasPastSeasonData ? 'success' : 'unknown');
+            setPast365Status(hasPast365DaysData ? 'success' : 'unknown');
+          } else {
+            // Data exists but is insufficient - show failed (red)
+            setPastSeasonStatus('failed');
+            setPast365Status('failed');
+          }
+          setPastSeasonMatchCount(pastSeasonGames);
+          setPast365MatchCount(past365Games);
+        } else {
+          // No data at all - show failed (red)
+          setPastSeasonStatus('failed');
+          setPast365Status('failed');
+          setPastSeasonMatchCount(0);
+          setPast365MatchCount(0);
+          
+          // No data yet, check task status if exists
+          if (storedTaskId) {
+            setFetchTaskId(storedTaskId);
+            
+            // Check task status
+            const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+            const response = await fetch(`${BACKEND_URL}/v1/player/fetch-status/${storedTaskId}`);
+            
+            if (response.ok) {
+              const taskStatus = await response.json();
+              
+              if (taskStatus.status === 'completed') {
+                // Task completed, check data again
+                const recheckResponse = await fetch(`/api/player/${gameName}/${tagLine}/data-status`);
+                if (recheckResponse.ok) {
+                  const recheckData = await recheckResponse.json();
+                  if (recheckData.has_data && recheckData.patches) {
+                    const hasPastSeason = recheckData.patches.some((p: any) => {
+                      return (p.earliest_match_date && isMatchDateInPastSeason(p.earliest_match_date)) ||
+                             (p.latest_match_date && isMatchDateInPastSeason(p.latest_match_date));
+                    }) || (recheckData.earliest_match_date && isMatchDateInPastSeason(recheckData.earliest_match_date)) ||
+                          (recheckData.latest_match_date && isMatchDateInPastSeason(recheckData.latest_match_date));
+                    
+                    const hasPast365 = recheckData.patches && recheckData.patches.some((p: any) => {
+                      return (p.earliest_match_date && isMatchDateWithinPast365Days(p.earliest_match_date)) ||
+                             (p.latest_match_date && isMatchDateWithinPast365Days(p.latest_match_date));
+                    }) || (recheckData.latest_match_date && isMatchDateWithinPast365Days(recheckData.latest_match_date));
+                    
+                    setPastSeasonStatus(hasPastSeason ? 'success' : 'unknown');
+                    setPast365Status(hasPast365 ? 'success' : 'unknown');
+                  } else {
+                    // Task completed but no data - might be failed
+                    setPastSeasonStatus('unknown');
+                    setPast365Status('unknown');
+                  }
+                } else {
+                  setPastSeasonStatus('unknown');
+                  setPast365Status('unknown');
+                }
+                localStorage.removeItem(storageKey);
+              } else if (taskStatus.status === 'failed') {
+                setPastSeasonStatus('failed');
+                setPast365Status('failed');
+              } else {
+                setPastSeasonStatus('pending');
+                setPast365Status('pending');
+              }
+            } else {
+              // Task not found, check if data exists anyway
+              const dataStatusResponse2 = await fetch(`/api/player/${gameName}/${tagLine}/data-status`);
+              if (dataStatusResponse2.ok) {
+                const dataStatus2 = await dataStatusResponse2.json();
+                if (dataStatus2.has_data && dataStatus2.patches) {
+                  const hasPastSeason = dataStatus2.patches.some((p: any) => {
+                    return (p.earliest_match_date && isMatchDateInPastSeason(p.earliest_match_date)) ||
+                           (p.latest_match_date && isMatchDateInPastSeason(p.latest_match_date));
+                  }) || (dataStatus2.earliest_match_date && isMatchDateInPastSeason(dataStatus2.earliest_match_date)) ||
+                        (dataStatus2.latest_match_date && isMatchDateInPastSeason(dataStatus2.latest_match_date));
+                  
+                  const hasPast365 = dataStatus2.patches && dataStatus2.patches.some((p: any) => {
+                    return (p.earliest_match_date && isMatchDateWithinPast365Days(p.earliest_match_date)) ||
+                           (p.latest_match_date && isMatchDateWithinPast365Days(p.latest_match_date));
+                  }) || (dataStatus2.latest_match_date && isMatchDateWithinPast365Days(dataStatus2.latest_match_date));
+                  
+                  setPastSeasonStatus(hasPastSeason ? 'success' : 'unknown');
+                  setPast365Status(hasPast365 ? 'success' : 'unknown');
+                } else {
+                  setPastSeasonStatus('unknown');
+                  setPast365Status('unknown');
+                }
+              } else {
+                setPastSeasonStatus('unknown');
+                setPast365Status('unknown');
+              }
+            }
+          } else {
+            // No task_id and no data - check if data exists anyway
+            setPastSeasonStatus('unknown');
+            setPast365Status('unknown');
+          }
+        }
+      } else {
+        setPastSeasonStatus('unknown');
+        setPast365Status('unknown');
+      }
+    } catch (err) {
+      console.error('Error checking fetch status:', err);
+      setPastSeasonStatus('unknown');
+      setPast365Status('unknown');
+    }
+  };
 
   // Modal states for parameter selection
   const [championModalOpen, setChampionModalOpen] = useState(false);
@@ -322,7 +561,7 @@ export default function AICoachAnalysis({
     {
       id: 'match-analysis',
       name: 'Match Analysis',
-      description: 'Deep dive into match timeline',
+      description: 'Deep dive into recent match timeline',
       icon: Clock,
       endpoint: '/v1/agents/timeline-deep-dive', // Merges timeline + postgame
       status: 'idle'
@@ -563,35 +802,54 @@ export default function AICoachAnalysis({
       };
 
       // Add time range parameter if agent has time range options
-      if (agent.selectedTimeRange) {
-        body.time_range = agent.selectedTimeRange;
+      // Get the latest agent state to ensure we have the correct selectedTimeRange
+      // Use functional update to get the most recent state
+      let latestAgent: AgentState | undefined;
+      setAgents((prev) => {
+        latestAgent = prev.find((a) => a.id === agent.id);
+        return prev; // Don't modify, just read
+      });
+      
+      if (latestAgent?.selectedTimeRange) {
+        body.time_range = latestAgent.selectedTimeRange;
+        console.log(`[${agent.id}] Using time_range: ${latestAgent.selectedTimeRange}`);
+      } else {
+        console.log(`[${agent.id}] No time_range selected`);
       }
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
-      const currentTimeRange = agent.selectedTimeRange || 'default';
+      const currentTimeRange = latestAgent?.selectedTimeRange || 'default';
+      
+      console.log(`[${agent.id}] Storing report for time_range: ${currentTimeRange}`);
 
-      // Store report by time range
-      const reportsByTimeRange = agent.reportsByTimeRange || {};
-      reportsByTimeRange[currentTimeRange] = {
-        detailedReport,
-        analysisData,
-        status: 'ready'
-      };
+      // Store report by time range - use functional update to ensure we have the latest reportsByTimeRange
+      setAgents((prev) => {
+        const currentAgent = prev.find((a) => a.id === agent.id);
+        const currentReportsByTimeRange = currentAgent?.reportsByTimeRange || {};
+        currentReportsByTimeRange[currentTimeRange] = {
+          detailedReport,
+          analysisData,
+          status: 'ready'
+        };
 
-      updateAgentStatus(agent.id, {
-        status: 'ready',
-        detailedReport: detailedReport,
-        analysisData: analysisData,
-        reportsByTimeRange: reportsByTimeRange
+        // Update agent status
+        updateAgentStatus(agent.id, {
+          status: 'ready',
+          detailedReport: detailedReport,
+          analysisData: analysisData,
+          reportsByTimeRange: currentReportsByTimeRange
+        });
+
+        // Auto-open modal with report and analysis data
+        const updatedAgent = prev.find((a) => a.id === agent.id);
+        if (updatedAgent) {
+          setSelectedAgent({ ...updatedAgent, detailedReport, analysisData });
+        }
+
+        return prev;
       });
-
-      // Auto-open modal with report and analysis data
-      const updatedAgent = agents.find((a) => a.id === agent.id);
-      if (updatedAgent) {
-        setSelectedAgent({ ...updatedAgent, detailedReport, analysisData });
-      }
     } catch (error) {
       console.error(`❌ Error generating analysis for ${agent.id}:`, error);
       updateAgentStatus(agent.id, {
@@ -624,25 +882,54 @@ export default function AICoachAnalysis({
       };
 
       // Add time range parameter if agent has time range options
-      const agent = agents.find((a) => a.id === agentId);
-      if (agent?.selectedTimeRange) {
-        body.time_range = agent.selectedTimeRange;
+      // Get the latest agent state to ensure we have the correct selectedTimeRange
+      // Use functional update to get the most recent state
+      let latestAgent: AgentState | undefined;
+      setAgents((prev) => {
+        latestAgent = prev.find((a) => a.id === agentId);
+        return prev; // Don't modify, just read
+      });
+      
+      if (latestAgent?.selectedTimeRange) {
+        body.time_range = latestAgent.selectedTimeRange;
+        console.log(`[${agentId}] Using time_range: ${latestAgent.selectedTimeRange}`);
+      } else {
+        console.log(`[${agentId}] No time_range selected`);
       }
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
+      const currentTimeRange = latestAgent?.selectedTimeRange || 'default';
+      
+      console.log(`[${agentId}] Storing report for time_range: ${currentTimeRange}`);
 
-      updateAgentStatus(agentId, {
-        status: 'ready',
-        detailedReport: detailedReport,
-        analysisData: analysisData  // Store analysis data
+      // Store report by time range - use functional update to ensure we have the latest reportsByTimeRange
+      setAgents((prev) => {
+        const currentAgent = prev.find((a) => a.id === agentId);
+        const currentReportsByTimeRange = currentAgent?.reportsByTimeRange || {};
+        currentReportsByTimeRange[currentTimeRange] = {
+          detailedReport,
+          analysisData,
+          status: 'ready'
+        };
+
+        // Update agent status
+        updateAgentStatus(agentId, {
+          status: 'ready',
+          detailedReport: detailedReport,
+          analysisData: analysisData,  // Store analysis data
+          reportsByTimeRange: currentReportsByTimeRange
+        });
+
+        // Auto-open modal
+        const updatedAgent = prev.find((a) => a.id === agentId);
+        if (updatedAgent) {
+          setSelectedAgent({ ...updatedAgent, detailedReport, analysisData });
+        }
+
+        return prev;
       });
-
-      // Auto-open modal (reuse agent variable from above)
-      if (agent) {
-        setSelectedAgent({ ...agent, detailedReport, analysisData });
-      }
     } catch (error) {
       console.error('Champion mastery error:', error);
       updateAgentStatus(agentId, {
@@ -730,25 +1017,54 @@ export default function AICoachAnalysis({
       };
 
       // Add time range parameter if agent has time range options
-      const agent = agents.find((a) => a.id === agentId);
-      if (agent?.selectedTimeRange) {
-        body.time_range = agent.selectedTimeRange;
+      // Get the latest agent state to ensure we have the correct selectedTimeRange
+      // Use functional update to get the most recent state
+      let latestAgent: AgentState | undefined;
+      setAgents((prev) => {
+        latestAgent = prev.find((a) => a.id === agentId);
+        return prev; // Don't modify, just read
+      });
+      
+      if (latestAgent?.selectedTimeRange) {
+        body.time_range = latestAgent.selectedTimeRange;
+        console.log(`[${agentId}] Using time_range: ${latestAgent.selectedTimeRange}`);
+      } else {
+        console.log(`[${agentId}] No time_range selected`);
       }
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
+      const currentTimeRange = latestAgent?.selectedTimeRange || 'default';
+      
+      console.log(`[${agentId}] Storing report for time_range: ${currentTimeRange}`);
 
-      updateAgentStatus(agentId, {
-        status: 'ready',
-        detailedReport: detailedReport,
-        analysisData: analysisData  // Store analysis data
+      // Store report by time range - use functional update to ensure we have the latest reportsByTimeRange
+      setAgents((prev) => {
+        const currentAgent = prev.find((a) => a.id === agentId);
+        const currentReportsByTimeRange = currentAgent?.reportsByTimeRange || {};
+        currentReportsByTimeRange[currentTimeRange] = {
+          detailedReport,
+          analysisData,
+          status: 'ready'
+        };
+
+        // Update agent status
+        updateAgentStatus(agentId, {
+          status: 'ready',
+          detailedReport: detailedReport,
+          analysisData: analysisData,  // Store analysis data
+          reportsByTimeRange: currentReportsByTimeRange
+        });
+
+        // Auto-open modal
+        const updatedAgent = prev.find((a) => a.id === agentId);
+        if (updatedAgent) {
+          setSelectedAgent({ ...updatedAgent, detailedReport, analysisData });
+        }
+
+        return prev;
       });
-
-      // Auto-open modal (reuse agent variable from above)
-      if (agent) {
-        setSelectedAgent({ ...agent, detailedReport, analysisData });
-      }
     } catch (error) {
       console.error('Role specialization error:', error);
       updateAgentStatus(agentId, {
@@ -879,9 +1195,157 @@ export default function AICoachAnalysis({
       {/* Section Header */}
       <div className="mb-6 text-center">
         <ShinyText text="AI Analysis Hub" speed={4} className="text-3xl font-bold mb-2" />
-        <p className="text-sm" style={{ color: '#8E8E93' }}>
-          Personalized insights powered by AWS Bedrock
-        </p>
+        {/* Data Fetch Status Indicators */}
+        <div className="flex items-center justify-center gap-3 mt-2">
+          {/* Past Season Indicator */}
+          <div 
+            ref={pastSeasonRef}
+            className="flex items-center gap-1 px-2 py-1 rounded cursor-help relative" 
+            style={{ backgroundColor: pastSeasonStatus === 'success' ? 'rgba(16, 185, 129, 0.2)' : pastSeasonStatus === 'failed' ? 'rgba(239, 68, 68, 0.2)' : pastSeasonStatus === 'pending' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(107, 114, 128, 0.2)' }} 
+            onMouseEnter={(e) => {
+              if (pastSeasonRef.current) {
+                const rect = pastSeasonRef.current.getBoundingClientRect();
+                setTooltipPosition({
+                  top: rect.bottom + 8,
+                  left: rect.left + rect.width / 2
+                });
+              }
+              setShowPastSeasonTooltip(true);
+            }}
+            onMouseLeave={() => setShowPastSeasonTooltip(false)}
+          >
+            {pastSeasonStatus === 'success' && (
+              <CheckCircle2 className="w-4 h-4" style={{ color: '#10B981' }} />
+            )}
+            {pastSeasonStatus === 'failed' && (
+              <XCircle className="w-4 h-4" style={{ color: '#EF4444' }} />
+            )}
+            {pastSeasonStatus === 'pending' && (
+              <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#FBBF24' }} />
+            )}
+            {pastSeasonStatus === 'unknown' && (
+              <XCircle className="w-4 h-4" style={{ color: '#6B7280' }} />
+            )}
+            <span className="text-xs" style={{ color: pastSeasonStatus === 'success' ? '#10B981' : pastSeasonStatus === 'failed' ? '#EF4444' : pastSeasonStatus === 'pending' ? '#FBBF24' : '#6B7280' }}>
+              Past Season
+            </span>
+            
+            {/* Custom Tooltip */}
+            <AnimatePresence>
+              {showPastSeasonTooltip && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: -5 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -5 }}
+                  transition={{ duration: 0.15 }}
+                  className="fixed z-50 pointer-events-none"
+                  style={{
+                    top: `${tooltipPosition.top}px`,
+                    left: `${tooltipPosition.left}px`,
+                    transform: 'translate(-50%, 0)',
+                    marginTop: '0'
+                  }}
+                >
+                  <div
+                    className="px-3 py-2 rounded-lg shadow-lg border text-xs whitespace-nowrap"
+                    style={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                      color: '#F5F5F7'
+                    }}
+                  >
+                    {pastSeasonStatus === 'success' ? (
+                      <>
+                        <div>Past Season data available</div>
+                        <div style={{ color: '#10B981', marginTop: '2px' }}>{pastSeasonMatchCount} matches</div>
+                      </>
+                    ) : pastSeasonStatus === 'failed' ? (
+                      'Past Season data fetch failed'
+                    ) : pastSeasonStatus === 'pending' ? (
+                      'Past Season data fetch in progress'
+                    ) : (
+                      'Past Season data not available'
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          {/* Past 365 Days Indicator */}
+          <div 
+            ref={past365Ref}
+            className="flex items-center gap-1 px-2 py-1 rounded cursor-help relative" 
+            style={{ backgroundColor: past365Status === 'success' ? 'rgba(16, 185, 129, 0.2)' : past365Status === 'failed' ? 'rgba(239, 68, 68, 0.2)' : past365Status === 'pending' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(107, 114, 128, 0.2)' }} 
+            onMouseEnter={(e) => {
+              if (past365Ref.current) {
+                const rect = past365Ref.current.getBoundingClientRect();
+                setTooltipPosition({
+                  top: rect.bottom + 8,
+                  left: rect.left + rect.width / 2
+                });
+              }
+              setShowPast365Tooltip(true);
+            }}
+            onMouseLeave={() => setShowPast365Tooltip(false)}
+          >
+            {past365Status === 'success' && (
+              <CheckCircle2 className="w-4 h-4" style={{ color: '#10B981' }} />
+            )}
+            {past365Status === 'failed' && (
+              <XCircle className="w-4 h-4" style={{ color: '#EF4444' }} />
+            )}
+            {past365Status === 'pending' && (
+              <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#FBBF24' }} />
+            )}
+            {past365Status === 'unknown' && (
+              <XCircle className="w-4 h-4" style={{ color: '#6B7280' }} />
+            )}
+            <span className="text-xs" style={{ color: past365Status === 'success' ? '#10B981' : past365Status === 'failed' ? '#EF4444' : past365Status === 'pending' ? '#FBBF24' : '#6B7280' }}>
+              Past 365 Days
+            </span>
+            
+            {/* Custom Tooltip */}
+            <AnimatePresence>
+              {showPast365Tooltip && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: -5 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -5 }}
+                  transition={{ duration: 0.15 }}
+                  className="fixed z-50 pointer-events-none"
+                  style={{
+                    top: `${tooltipPosition.top}px`,
+                    left: `${tooltipPosition.left}px`,
+                    transform: 'translate(-50%, 0)',
+                    marginTop: '0'
+                  }}
+                >
+                  <div
+                    className="px-3 py-2 rounded-lg shadow-lg border text-xs whitespace-nowrap"
+                    style={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                      color: '#F5F5F7'
+                    }}
+                  >
+                    {past365Status === 'success' ? (
+                      <>
+                        <div>Past 365 Days data available</div>
+                        <div style={{ color: '#10B981', marginTop: '2px' }}>{past365MatchCount} matches</div>
+                      </>
+                    ) : past365Status === 'failed' ? (
+                      'Past 365 Days data fetch failed'
+                    ) : past365Status === 'pending' ? (
+                      'Past 365 Days data fetch in progress'
+                    ) : (
+                      'Past 365 Days data not available'
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
 
       {/* Data Status Checker */}
@@ -901,18 +1365,24 @@ export default function AICoachAnalysis({
                   // Check if data is sufficient
                   const hasEnoughGames = status.has_data && status.total_games >= 10;
                   
-                  // Check if there's data from Season 2024 (patch 14.1 - 14.24)
-                  const hasSeason2024Data = status.patches?.some((p: any) => {
-                    return isSeason2024Patch(p.patch);
-                  }) || false;
+                  // Check if there's data from Past Season (patch 14.1 to 14.25, 2024-01-09 to 2025-01-06) - check match dates
+                  const hasPastSeasonData = status.patches?.some((p: any) => {
+                    return (p.earliest_match_date && isMatchDateInPastSeason(p.earliest_match_date)) ||
+                           (p.latest_match_date && isMatchDateInPastSeason(p.latest_match_date));
+                  }) || (status.earliest_match_date && isMatchDateInPastSeason(status.earliest_match_date)) ||
+                        (status.latest_match_date && isMatchDateInPastSeason(status.latest_match_date)) || false;
                   
-                  // Check if latest patch is within past 365 days from today
-                  const hasPast365DaysData = status.latest_patch && isPatchWithinPast365Days(status.latest_patch);
+                  // Check if latest match date is within past 365 days from today
+                  const hasPast365DaysData = (status.latest_match_date && isMatchDateWithinPast365Days(status.latest_match_date)) ||
+                                             (status.patches && status.patches.some((p: any) => {
+                                               return (p.earliest_match_date && isMatchDateWithinPast365Days(p.earliest_match_date)) ||
+                                                      (p.latest_match_date && isMatchDateWithinPast365Days(p.latest_match_date));
+                                             }));
                   
                   // Data is sufficient only if:
                   // 1. Has enough games (>=10)
-                  // 2. Has Season 2024 data (14.1-14.24) OR has data within past 365 days from today
-                  if (hasEnoughGames && (hasSeason2024Data || hasPast365DaysData)) {
+                  // 2. Has Past Season data (patch 14.1 to 14.25, 2024-01-09 to 2025-01-06) OR has data within past 365 days from today
+                  if (hasEnoughGames && (hasPastSeasonData || hasPast365DaysData)) {
                     setDataReady(true);
                     setInsufficientData(false);
                   } else {
@@ -945,7 +1415,7 @@ export default function AICoachAnalysis({
               </p>
               <ul className="text-sm text-gray-300 mb-2 list-disc list-inside space-y-1">
                 <li>At least 10 games played</li>
-                <li>Matches from Season 2024 (patch 14.1-14.24) OR within past 365 days from today</li>
+                <li>Matches from Past Season (patch 14.1 to 14.25, 2024-01-09 to 2025-01-06) OR within past 365 days from today</li>
               </ul>
               {dataStatus && (
                 <div className="text-xs text-gray-400 space-y-1">

@@ -65,13 +65,26 @@ export default function AgentCard({
   const getStatusColor = () => {
     switch (status) {
       case 'generating':
-        return colors.accentBlue;
+        return '#FFD60A'; // Yellow to match border
       case 'ready':
         return '#32D74B'; // Green
       case 'error':
         return '#FF453A'; // Red
       default:
-        return '#8E8E93'; // Gray
+        return 'rgba(255, 255, 255, 0.6)'; // Lighter white to match border
+    }
+  };
+
+  const getBorderColor = () => {
+    switch (status) {
+      case 'ready':
+        return '#32D74B';
+      case 'error':
+        return '#FF453A';
+      case 'generating':
+        return '#FFD60A';
+      default:
+        return 'rgba(255, 255, 255, 0.1)';
     }
   };
 
@@ -95,7 +108,13 @@ export default function AgentCard({
   const getButtonText = () => {
     if (isLoading) return 'Generating...';
     if (canView) return 'View Report';
-    if (canGenerate) return 'Generate Analysis';
+    if (canGenerate) {
+      // Role Specialization, Champion Mastery, and Match Analysis need parameter selection first
+      if (id === 'role-specialization' || id === 'champion-mastery' || id === 'match-analysis') {
+        return 'Select';
+      }
+      return 'Generate Analysis';
+    }
     return 'More info';
   };
 
@@ -106,7 +125,7 @@ export default function AgentCard({
         animate={{ opacity: 1, y: 0 }}
         className="card"
         style={{
-          borderColor: status === 'ready' ? '#32D74B' : status === 'error' ? '#FF453A' : status === 'generating' ? '#FFD60A' : 'rgba(255, 255, 255, 0.1)'
+          borderColor: getBorderColor()
         }}
       >
         <div className="card-details">

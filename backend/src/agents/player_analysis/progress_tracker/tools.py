@@ -15,7 +15,7 @@ def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = N
         packs_dir: Player-Pack directory path
         window_size: Number of recent patches to load
         time_range: Time range filter
-            - "2024-01-01": Load data from 2024-01-01 to today
+            - "2024-01-01": Load data from Past Season 2024 (2024-01-09 to 2025-01-06, patches 14.1 to 14.25)
             - "past-365": Load data from past 365 days
             - None: Load recent window_size patches
 
@@ -26,8 +26,12 @@ def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = N
 
     # Calculate time filter if needed
     cutoff_timestamp = None
+    cutoff_end_timestamp = None  # For date range filtering
+    
     if time_range == "2024-01-01":
-        cutoff_timestamp = datetime(2024, 1, 1).timestamp()
+        # Past Season 2024: patch 14.1 (2024-01-09) to patch 14.25 (2025-01-06)
+        cutoff_timestamp = datetime(2024, 1, 9).timestamp()
+        cutoff_end_timestamp = datetime(2025, 1, 6, 23, 59, 59, 999000).timestamp()
     elif time_range == "past-365":
         cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
 
@@ -40,18 +44,89 @@ def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = N
         for pack_file in all_pack_files:
             with open(pack_file, 'r') as f:
                 pack_data = json.load(f)
-                # Check if pack has timestamp and is after cutoff
+                
+                # Check match dates first (more accurate)
+                pack_earliest = pack_data.get("earliest_match_date")
+                pack_latest = pack_data.get("latest_match_date")
+                
+                has_match_in_range = False
+                
+                if pack_earliest or pack_latest:
+                    # Parse dates
+                    earliest_dt = None
+                    latest_dt = None
+                    
+                    if pack_earliest:
+                        try:
+                            if isinstance(pack_earliest, str):
+                                date_str = pack_earliest.replace('Z', '+00:00')
+                                if '+' not in date_str and 'T' in date_str:
+                                    date_str = date_str + '+00:00'
+                                earliest_dt = datetime.fromisoformat(date_str)
+                            else:
+                                earliest_dt = pack_earliest
+                            if earliest_dt.tzinfo:
+                                earliest_dt = earliest_dt.replace(tzinfo=None)
+                        except:
+                            pass
+                    
+                    if pack_latest:
+                        try:
+                            if isinstance(pack_latest, str):
+                                date_str = pack_latest.replace('Z', '+00:00')
+                                if '+' not in date_str and 'T' in date_str:
+                                    date_str = date_str + '+00:00'
+                                latest_dt = datetime.fromisoformat(date_str)
+                            else:
+                                latest_dt = pack_latest
+                            if latest_dt.tzinfo:
+                                latest_dt = latest_dt.replace(tzinfo=None)
+                        except:
+                            pass
+                    
+                    # Check if date range overlaps with the filter range
+                    if earliest_dt and latest_dt:
+                        earliest_ts = earliest_dt.timestamp()
+                        latest_ts = latest_dt.timestamp()
+                        
+                        if cutoff_end_timestamp:
+                            # Date range filter: check if pack date range overlaps with filter range
+                            if earliest_ts <= cutoff_end_timestamp and latest_ts >= cutoff_timestamp:
+                                has_match_in_range = True
+                        else:
+                            # Single cutoff: check if pack has matches after cutoff
+                            if latest_ts >= cutoff_timestamp:
+                                has_match_in_range = True
+                    elif earliest_dt:
+                        earliest_ts = earliest_dt.timestamp()
+                        if cutoff_end_timestamp:
+                            if earliest_ts <= cutoff_end_timestamp and earliest_ts >= cutoff_timestamp:
+                                has_match_in_range = True
+                        else:
+                            if earliest_ts >= cutoff_timestamp:
+                                has_match_in_range = True
+                    elif latest_dt:
+                        latest_ts = latest_dt.timestamp()
+                        if cutoff_end_timestamp:
+                            if latest_ts <= cutoff_end_timestamp and latest_ts >= cutoff_timestamp:
+                                has_match_in_range = True
+                        else:
+                            if latest_ts >= cutoff_timestamp:
+                                has_match_in_range = True
+                else:
+                    # Fallback to generation_timestamp if match dates not available
                 if "generation_timestamp" in pack_data:
                     pack_timestamp = pack_data["generation_timestamp"]
-                    # If timestamp is string, convert to timestamp
                     if isinstance(pack_timestamp, str):
                         pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
-
-                    # Include if after cutoff
+                        if cutoff_end_timestamp:
+                            if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
+                                has_match_in_range = True
+                        else:
                     if pack_timestamp >= cutoff_timestamp:
-                        filtered_pack_files.append(pack_file)
-                else:
-                    # If no timestamp, include by default
+                                has_match_in_range = True
+                
+                if has_match_in_range:
                     filtered_pack_files.append(pack_file)
 
         pack_files = filtered_pack_files

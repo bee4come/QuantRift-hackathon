@@ -270,7 +270,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
               isModalOpen ? 'blur-sm pointer-events-none opacity-50' : ''
             }`}
           >
-            <span className="text-base font-medium" style={{ color: colors.textSecondary }}>Season 2024</span>
+            <span className="text-base font-medium" style={{ color: colors.textSecondary }}>Season 2025</span>
             <div className="w-px h-4" style={{ backgroundColor: colors.borderColor }}></div>
             <a 
               href="https://www.leagueoflegends.com/en-us/news/game-updates/patch-25-22-notes/" 

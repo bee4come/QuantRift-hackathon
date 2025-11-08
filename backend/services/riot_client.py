@@ -162,12 +162,18 @@ class RiotAPIClient:
             self.primary_key = self.api_keys[0] if self.api_keys else None
 
         if not self.api_keys:
-            raise ValueError("No Riot API keys found")
+            raise ValueError("No Riot API keys found. Please set RIOT_API_KEY_PRIMARY environment variable.")
 
         self.default_region = default_region
         self.current_key_index = 0
 
         logger.info(f"Riot API client initialized with {len(self.api_keys)} API key(s)")
+        
+        # Warn if primary key is missing or invalid
+        if not self.primary_key:
+            logger.warning("⚠️  RIOT_API_KEY_PRIMARY is not set. PUUID-based API calls will fail.")
+        elif len(self.primary_key) < 40:
+            logger.warning(f"⚠️  RIOT_API_KEY_PRIMARY appears to be invalid (too short: {len(self.primary_key)} chars). Expected ~40+ characters.")
 
         # Per-endpoint rate limiter (每个API endpoint独立限速，每个key独立配额)
         if rate_limit_enabled:
@@ -296,9 +302,13 @@ class RiotAPIClient:
                     return await self._make_request(method, url, **kwargs)
                 else:
                     response_text = await response.text()
+                    # Provide more helpful error messages for common issues
+                    error_message = f"API request failed: {response_text}"
+                    if response.status == 400 and "decrypting" in response_text.lower():
+                        error_message = f"Riot API authentication error (400): Invalid or expired API key. The API key may not be able to decrypt the encrypted PUUID. Please check your RIOT_API_KEY_PRIMARY environment variable. Original error: {response_text}"
                     raise RiotAPIError(
                         status_code=response.status,
-                        message=f"API request failed: {response_text}",
+                        message=error_message,
                         response_data={"url": url, "response": response_text}
                     )
 

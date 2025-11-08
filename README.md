@@ -1,6 +1,33 @@
 # QuantRift - AI-Powered League of Legends Analytics Platform
 
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 **QuantRift** is a comprehensive, production-ready analytics platform that provides deep insights into League of Legends player performance through quantitative analysis and AI-powered coaching agents.
+
+## 📑 Table of Contents
+
+- [💡 Motivation](#-motivation)
+- [🎯 Project Overview](#-project-overview)
+- [🚀 Quick Start](#-quick-start)
+- [📊 AI Module System](#-ai-module-system)
+- [🛠️ Technology Stack](#️-technology-stack)
+- [👥 Authors](#-authors)
+- [📄 License](#-license)
+- [🙏 Acknowledgments](#-acknowledgments)
+
+## 💡 Motivation
+
+QuantRift was built with a clear vision: **we don't want to recreate another OP.GG-style dashboard**. Instead, we leverage AI agents to provide deep, personalized insights that go beyond what traditional stat dashboards can show.
+
+### Our Approach
+
+- **Beyond Surface Stats**: While dashboards show KDA, win rates, and basic metrics, QuantRift's AI agents dive deep into *why* you're performing the way you are
+- **Personalized Feedback**: Every analysis is tailored to your specific playstyle, champion pool, and performance patterns
+- **Actionable Insights**: Instead of just showing numbers, our agents provide context, explanations, and concrete recommendations for improvement
+- **Rank Climbing Focus**: Designed specifically to help players climb ranks with personalized, data-driven coaching feedback
+
+Traditional dashboards answer "what happened?" - QuantRift answers "why did it happen?" and "what should you do differently?"
 
 ## 🎯 Project Overview
 
@@ -8,235 +35,106 @@ QuantRift combines rigorous statistical methods, extensive match data processing
 
 ### Key Features
 
-- **18 Specialized AI Agents**: Comprehensive analysis covering weakness diagnosis, champion mastery, progress tracking, peer comparison, and more
-- **Quantitative Metrics Engine**: 20+ statistical metrics including combat power, KDA adjustments, objective participation, and Wilson confidence intervals
-- **Real-time Data Pipeline**: Asynchronous data fetching from Riot Games API with intelligent caching and 5-key rotation
-- **Modern Web Interface**: Next.js 15 + React 19 frontend with responsive design and WebGL animations
-- **Production Deployment**: Fully containerized with Docker, pre-loaded player data, and health monitoring
-
-## 🏗️ Architecture
-
-### Three-Tier System
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   Frontend (Next.js 15)                     │
-│  - Player search & profiles                                 │
-│  - Real-time data status polling                            │
-│  - 18 agent analysis interfaces                             │
-│  - WebGL background animations                              │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────┐
-│                 Backend API (FastAPI)                       │
-│  - Riot API client (5-key rotation, 1800 req/10s)          │
-│  - Player data manager (async preparation & caching)        │
-│  - 18 AI agent endpoints (AWS Bedrock Claude 3.5/4.5)      │
-│  - Combat power calculation service                         │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────┐
-│              Analytics Engine (Python)                      │
-│  - Bronze → Silver → Gold data pipeline                    │
-│  - 20 quantitative metrics with Wilson CI                   │
-│  - Multi-agent analysis system                              │
-│  - Statistical modeling & data aggregation                  │
-└─────────────────────────────────────────────────────────────┘
-```
+- **9 Specialized AI Modules**: Comprehensive analysis covering annual summary, performance insights, comparison hub, match analysis, version trends, champion recommendation, role specialization, champion mastery, and build optimization
+- **Quantitative Metrics Engine**: 20+ statistical metrics including combat power index, Wilson confidence intervals, objective participation, and gold efficiency analysis
+- **Multi-Source Data Integration**: Seamless data fetching from Riot Games API, OP.GG MCP, Data Dragon, and Community Dragon with intelligent caching and rate limit management
+- **Time Range Analysis**: Support for "Past Season 2024" (Patches 14.1-14.25) and "Past 365 Days" filtering across all analysis agents
+- **Real-time Data Status**: Live monitoring of data availability with automatic background fetching and progress tracking
+- **Modern Web Interface**: Next.js 15 + React 19 frontend with responsive design, WebGL animations, and glassmorphism UI
+- **Production Ready**: Fully containerized with Docker, pre-loaded player data, health monitoring, and scalable architecture
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- Docker & Docker Compose
-- Riot Games API Key (get from [Riot Developer Portal](https://developer.riotgames.com/))
-- AWS Bedrock access (for AI agents)
-
-### Running with Docker
-
-1. **Clone the repository**:
+**First-time setup (install dependencies):**
    ```bash
-   git clone https://github.com/yourusername/QuantRift_hackathon.git
-   cd QuantRift_hackathon
+./requirements.sh
    ```
 
-2. **Configure environment variables**:
+**Start services:**
    ```bash
-   # Copy and configure .env from template
-   cp .env.example .env
-
-   # Edit .env with your actual credentials
-   # Required: RIOT_API_KEY (get from https://developer.riotgames.com/)
-   # Required: AWS credentials (for Bedrock AI services)
-   nano .env  # or use your preferred editor
-
-   # Create frontend .env.local
-   cat > frontend/.env.local << EOF
-   NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
-   EOF
+./start.sh
    ```
 
-3. **Build and start services**:
+**Stop services:**
    ```bash
-   docker compose up -d
+./stop.sh
    ```
 
-4. **Access the application**:
+Services will be available at:
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
    - API Docs: http://localhost:8000/docs
 
-### Development Mode
+## 📊 AI Module System
 
-**Backend** (port 8000):
-```bash
-cd backend
-export PYTHONPATH=$(pwd)/..
-python -m uvicorn api.server:app --reload
-```
+QuantRift features **9 specialized AI modules** powered by AWS Bedrock (Claude 3.5 Haiku and Claude 4.5 Sonnet):
 
-**Frontend** (port 3000):
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## 📊 AI Agent System
-
-QuantRift features **18 specialized AI agents** powered by AWS Bedrock (Claude 3.5 Haiku and Claude 4.5 Sonnet):
-
-### Player Analysis Agents (11)
-- **Weakness Analysis**: Diagnoses performance weaknesses and provides improvement recommendations
-- **Champion Mastery**: Deep analysis of champion expertise and mechanics
-- **Progress Tracker**: Tracks improvement over time with statistical validation
-- **Detailed Analysis**: Comprehensive multi-dimensional performance review
-- **Peer Comparison**: Benchmarks against players of similar rank
-- **Role Specialization**: Analyzes role-specific strengths and weaknesses
-- **Timeline Deep Dive**: Minute-by-minute game analysis for pattern detection
-- **Annual Summary**: Year-in-review with tri-period analysis
-- **Risk Forecaster**: Predicts performance volatility and risk factors
-- **Friend Comparison**: Compares performance with friends and teammates
-- **Laning Phase**: Specialized early-game analysis
-
-### Meta Analysis Agents (3)
-- **Champion Recommendation**: Suggests champions based on playstyle and meta
-- **Multi-Version Analysis**: Cross-patch performance comparison
-- **Version Comparison**: Adaptation analysis across game updates
-
-### Coach Tools (4)
-- **Build Simulator**: Optimizes item builds for specific matchups
-- **Drafting Coach**: Team composition and pick/ban strategy
-- **Team Synergy**: Analyzes team composition effectiveness
-- **Post-game Review**: Detailed game review with actionable feedback
-
-## 🔬 Quantitative Analysis System
-
-### 20 Statistical Metrics
-
-**Behavioral Metrics** (1-5):
-- Pick rate, attach rate, rune diversity, synergy, counter matchups
-
-**Win Rate Metrics** (6-10):
-- Baseline win rate, confidence intervals (Wilson), effective sample size, data governance tier
-
-**Objective Metrics** (11-13):
-- Objective participation rate, Baron control, Dragon control
-
-**Gold Efficiency Metrics** (14-16):
-- Item efficiency, gold per minute, CS efficiency
-
-**Combat Metrics** (17-20):
-- Combat power index, damage efficiency, time to core items, shock impact
-
-### Data Pipeline
-
-```
-Raw Match Data (Riot API)
-    ↓
-Bronze Layer (Raw JSON, 6.7GB)
-    ↓
-Silver Layer (Normalized, SCD2, 362MB)
-    ↓
-Gold Layer (Aggregated Metrics, 354MB)
-    ↓
-Player-Pack Format (Agent-ready)
-```
-
-### Statistical Methods
-
-- **Wilson Confidence Intervals**: Robust win rate estimation with proper uncertainty quantification
-- **Beta-Binomial Shrinkage**: Combats small sample bias
-- **Combat Power Index**: Multi-dimensional strength metric combining damage, survival, and impact
-- **Governance Framework**: CONFIDENT/CAUTION/CONTEXT quality tiers based on sample size
+1. **Annual Summary**: Year-in-review performance highlights with tri-period analysis
+2. **Performance Insights**: Comprehensive analysis of strengths, weaknesses, and growth opportunities
+3. **Comparison Hub**: Compare performance with friends or players of similar rank
+4. **Match Analysis**: Deep dive into recent match timeline and post-game review
+5. **Version Trends**: Cross-patch performance analysis and adaptation tracking
+6. **Champion Recommendation**: Personalized champion suggestions based on playstyle and meta
+7. **Role Specialization**: Role-specific performance insights and optimization
+8. **Champion Mastery**: Deep analysis of champion expertise and mechanics
+9. **Build Simulator**: Optimize item builds and itemization strategies
 
 ## 🛠️ Technology Stack
 
 ### Frontend
 - **Framework**: Next.js 15.5.5 with Turbopack
 - **UI Library**: React 19.1.0
-- **Styling**: Tailwind CSS 4.0
+- **Styling**: Tailwind CSS 4.0, styled-components
 - **Animation**: OGL (WebGL), Framer Motion
+- **Visualization**: Recharts
+- **Markdown**: react-markdown, remark-gfm
 - **Language**: TypeScript 5
 
 ### Backend
 - **API Framework**: FastAPI
 - **Server**: Uvicorn with async support
 - **AI Models**: AWS Bedrock (Claude 3.5 Haiku, Claude 4.5 Sonnet)
+- **AWS SDK**: boto3
+- **HTTP Clients**: aiohttp, requests
 - **Database**: DuckDB for analytics, SQLite for caching
+- **Validation**: Pydantic
 - **Language**: Python 3.11
 
 ### Data Processing
-- **Pipeline**: Bronze → Silver → Gold medallion architecture
-- **Statistics**: NumPy, SciPy, Pandas
-- **Computation**: Wilson CI, Beta-Binomial models
+- **Libraries**: NumPy, SciPy, Pandas
+- **Machine Learning**: scikit-learn
 - **Storage**: Parquet for efficient columnar storage
+- **Pipeline**: Bronze → Silver → Gold medallion architecture
+
+### External Services
+- **Riot Games API**: Match data and player information
+- **OP.GG MCP Server**: Meta data and tier rankings
+- **Data Dragon**: Static game data
+- **Community Dragon**: Supplementary game data
+- **AWS Bedrock**: AI model inference
 
 ### Deployment
 - **Containerization**: Docker multi-stage builds
 - **Orchestration**: Docker Compose
 - **Health Monitoring**: Container health checks
-- **Data Pre-loading**: 393MB player packs included in images
-
-## 📈 Production Data
-
-- **Match Records**: 107,570 matches analyzed
-- **Unique Matches**: 10,423 games
-- **Patches Covered**: 25.17, 25.18, 25.19
-- **Region**: NA1 (North America)
-- **Data Size**: ~7.4GB total (6.7GB bronze, 362MB silver, 354MB gold)
-
-## 🎨 User Experience
-
-- **Instant Search**: Fast player lookup by Riot ID
-- **Real-time Progress**: Live status polling during data preparation
-- **Responsive Design**: Mobile-first approach with adaptive layouts
-- **Interactive Visualizations**: Recharts-powered analytics dashboard
-- **AI-Generated Insights**: Natural language analysis reports
-- **One-click Analysis**: Simple interface for deep agent-powered insights
-
-## 📝 Documentation
-
-- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)**: Detailed system architecture and design
-- **[QUANTITATIVE_ANALYSIS.md](./docs/QUANTITATIVE_ANALYSIS.md)**: Statistical methods and data pipeline
-- **[AGENTS_OVERVIEW.md](./docs/AGENTS_OVERVIEW.md)**: Complete specifications for all 18 AI agents
-- **Agent DESIGN.md files**: Individual design documentation for each AI agent in `backend/src/agents/`
+- **Scripts**: start.sh / stop.sh for local development
 
 ## 👥 Authors
 
-- **uzerone** - System architecture, backend development, quantitative analysis
-- **bee4come** - Frontend development, UI/UX design, agent integration
+- **[bee4come](https://github.com/bee4come)** - Architect, Data and Integration
+- **[uzerone](https://github.com/uzerone)** - Product & UX/UI Design, Integration
 
 ## 📄 License
 
-This project is built for the League of Legends Analytics Hackathon 2025.
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- Riot Games for the official API
-- AWS Bedrock for AI model access
-- The League of Legends community for inspiration
+This is an open source project developed for [Rift Rewind Hackathon](https://riftrewind.devpost.com/?ref_feature=challenge&ref_medium=your-open-hackathons&ref_content=Submissions+open).
 
----
+- **Riot Games** for the official API and game data
+- **AWS Bedrock** for AI model access
+- **Anthropic** for Claude AI models
+- **[Jayde Garrow](https://jaydegarrow.wixsite.com/jaydefonts)** for the PaybAck font used in titles
+- The League of Legends community for inspiration and feedback
 
-**QuantRift**: Quantitative insights that shift the rift in your favor.

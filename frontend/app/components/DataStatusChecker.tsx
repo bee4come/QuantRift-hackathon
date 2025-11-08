@@ -76,8 +76,8 @@ export default function DataStatusChecker({
         
         // Patch date mapping (from patch_manager.py)
         const patchDates: Record<string, string> = {
-          // 2024 Season patches (14.1 - 14.24)
-          '14.1': '2024-01-10',
+          // 2024 Season patches (14.1 - 14.25)
+          '14.1': '2024-01-09', // Updated: patch 14.1 starts from 2024-01-09
           '14.2': '2024-01-24',
           '14.3': '2024-02-07',
           '14.4': '2024-02-21',
@@ -101,6 +101,7 @@ export default function DataStatusChecker({
           '14.22': '2024-11-05',
           '14.23': '2024-11-19',
           '14.24': '2024-12-10',
+          '14.25': '2024-12-24', // patch 14.25 (ends 2025-01-06)
           // 2025 Season patches
           '25.S1.1': '2025-01-07',
           '25.S1.2': '2025-01-22',
@@ -157,34 +158,56 @@ export default function DataStatusChecker({
         return minor >= 1 && minor <= 24;
       };
 
-      // Check if patch is within past 365 days from today
-      const isPatchWithinPast365Days = (patch: string): boolean => {
-        if (!patch) return false;
+      // Check if match date is within past 365 days from today
+      const isMatchDateWithinPast365Days = (matchDate: string): boolean => {
+        if (!matchDate) return false;
         
-        const patchDate = getPatchDate(patch);
-        if (!patchDate) return false;
+        try {
+          const matchDateTime = new Date(matchDate);
+          const today = new Date();
+          const daysDiff = Math.floor((today.getTime() - matchDateTime.getTime()) / (1000 * 60 * 60 * 24));
+          
+          return daysDiff >= 0 && daysDiff <= 365;
+        } catch {
+          return false;
+        }
+      };
+      
+      // Helper function to get Past Season date range based on patch versions
+      // Past Season 2024: patch 14.1 (2024-01-09) to patch 14.25 (2025-01-06)
+      const getPastSeasonDateRange = (): { start: Date; end: Date } => {
+        return {
+          start: new Date('2024-01-09'), // patch 14.1 start date
+          end: new Date('2025-01-06T23:59:59.999') // patch 14.25 end date
+        };
+      };
+
+      // Check if match date is in Past Season (2024-01-09 to 2025-01-06, patch 14.1 to 14.25)
+      const isMatchDateInPastSeason = (matchDate: string): boolean => {
+        if (!matchDate) return false;
         
-        const today = new Date();
-        const daysDiff = Math.floor((today.getTime() - patchDate.getTime()) / (1000 * 60 * 60 * 24));
-        
-        return daysDiff >= 0 && daysDiff <= 365;
+        try {
+          const { start, end } = getPastSeasonDateRange();
+          const matchDateTime = new Date(matchDate);
+          
+          return matchDateTime >= start && matchDateTime <= end;
+        } catch {
+          return false;
+        }
       };
 
       // Check if data is sufficient
       const hasEnoughGames = data.has_data && data.total_games >= 10;
       
-      // Check if there's data from Season 2024 (patch 14.1 - 14.24)
-      const hasSeason2024Data = data.patches?.some((p: any) => {
-        return isSeason2024Patch(p.patch);
-      }) || false;
-      
-      // Check if latest patch is within past 365 days from today
-      const hasPast365DaysData = data.latest_patch && isPatchWithinPast365Days(data.latest_patch);
+      // Use backend-calculated games counts for Past Season and Past 365 Days
+      // Backend now provides accurate counts based on actual match dates
+      const hasPastSeasonData = (data.total_past_season_games || 0) > 0;
+      const hasPast365DaysData = (data.total_past_365_days_games || 0) > 0;
       
       // Data is sufficient only if:
       // 1. Has enough games (>=10)
-      // 2. Has Season 2024 data (14.1-14.24) OR has data within past 365 days from today
-      if (hasEnoughGames && (hasSeason2024Data || hasPast365DaysData)) {
+      // 2. Has Past Season data (patch 14.1 to 14.25, 2024-01-09 to 2025-01-06) OR has data within past 365 days from today
+      if (hasEnoughGames && (hasPastSeasonData || hasPast365DaysData)) {
         // Data is ready
         onDataReady();
       } else if (!data.has_data || data.total_games < 10) {
@@ -211,7 +234,28 @@ export default function DataStatusChecker({
       setFetching(true);
       setFetchProgress(0);
 
-      // Trigger FULL YEAR data fetch (365 days) via backend API
+      // Helper function to get Past Season date range based on patch versions
+      // Past Season 2024: patch 14.1 (2024-01-09) to patch 14.25 (2025-01-06)
+      const getPastSeasonDateRange = (): { start: Date; end: Date } => {
+        return {
+          start: new Date('2024-01-09'), // patch 14.1 start date
+          end: new Date('2025-01-06T23:59:59.999') // patch 14.25 end date
+        };
+      };
+
+      // Calculate days needed to cover both Past Season and Past 365 Days
+      const today = new Date();
+      const { start: pastSeasonStart } = getPastSeasonDateRange();
+      const past365DaysStart = new Date(today);
+      past365DaysStart.setDate(past365DaysStart.getDate() - 365);
+      
+      // Get the earlier date between Past Season start and Past 365 Days start
+      const startDate = pastSeasonStart < past365DaysStart ? pastSeasonStart : past365DaysStart;
+      
+      // Calculate days from start date to today
+      const daysDiff = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Trigger FULL YEAR data fetch (covering Past Season and Past 365 Days) via backend API
       const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
       const fetchResponse = await fetch(
         `${BACKEND_URL}/v1/player/fetch-data`,
@@ -222,7 +266,7 @@ export default function DataStatusChecker({
             game_name: gameName,
             tag_line: tagLine,
             region: 'na1',
-            days: 365,
+            days: daysDiff,
             include_timeline: true
           })
         }
@@ -384,8 +428,8 @@ export default function DataStatusChecker({
       
       // Patch date mapping (from patch_manager.py)
       const patchDates: Record<string, string> = {
-        // 2024 Season patches (14.1 - 14.24)
-        '14.1': '2024-01-10',
+        // 2024 Season patches (14.1 - 14.25)
+        '14.1': '2024-01-09', // Updated: patch 14.1 starts from 2024-01-09
         '14.2': '2024-01-24',
         '14.3': '2024-02-07',
         '14.4': '2024-02-21',
@@ -409,6 +453,7 @@ export default function DataStatusChecker({
         '14.22': '2024-11-05',
         '14.23': '2024-11-19',
         '14.24': '2024-12-10',
+        '14.25': '2024-12-24', // patch 14.25 (ends 2025-01-06)
         // 2025 Season patches
         '25.S1.1': '2025-01-07',
         '25.S1.2': '2025-01-22',
@@ -465,26 +510,57 @@ export default function DataStatusChecker({
       return minor >= 1 && minor <= 24;
     };
 
-    // Check if patch is within past 365 days from today
-    const isPatchWithinPast365Days = (patch: string): boolean => {
-      if (!patch) return false;
+    // Check if match date is within past 365 days from today
+    const isMatchDateWithinPast365Days = (matchDate: string): boolean => {
+      if (!matchDate) return false;
       
-      const patchDate = getPatchDate(patch);
-      if (!patchDate) return false;
-      
-      const today = new Date();
-      const daysDiff = Math.floor((today.getTime() - patchDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      return daysDiff >= 0 && daysDiff <= 365;
+      try {
+        const matchDateTime = new Date(matchDate);
+        const today = new Date();
+        const daysDiff = Math.floor((today.getTime() - matchDateTime.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return daysDiff >= 0 && daysDiff <= 365;
+      } catch {
+        return false;
+      }
+    };
+    
+    // Helper function to get Past Season date range based on patch versions
+    // Past Season 2024: patch 14.1 (2024-01-09) to patch 14.25 (2025-01-06)
+    const getPastSeasonDateRange = (): { start: Date; end: Date } => {
+      return {
+        start: new Date('2024-01-09'), // patch 14.1 start date
+        end: new Date('2025-01-06T23:59:59.999') // patch 14.25 end date
+      };
     };
 
-    // Check if data is sufficient (has Season 2024 data or past 365 days data)
+    // Check if match date is in Past Season (2024-01-09 to 2025-01-06, patch 14.1 to 14.25)
+    const isMatchDateInPastSeason = (matchDate: string): boolean => {
+      if (!matchDate) return false;
+      
+      try {
+        const { start, end } = getPastSeasonDateRange();
+        const matchDateTime = new Date(matchDate);
+        
+        return matchDateTime >= start && matchDateTime <= end;
+      } catch {
+        return false;
+      }
+    };
+
+    // Check if data is sufficient (has Past Season data or past 365 days data)
     const hasEnoughGames = status.total_games >= 10;
-    const hasSeason2024Data = status.patches?.some((p: any) => {
-      return isSeason2024Patch(p.patch);
-    }) || false;
-    const hasPast365DaysData = status.latest_patch && isPatchWithinPast365Days(status.latest_patch);
-    const isSufficient = hasEnoughGames && (hasSeason2024Data || hasPast365DaysData);
+    const hasPastSeasonData = status.patches?.some((p: any) => {
+      return (p.earliest_match_date && isMatchDateInPastSeason(p.earliest_match_date)) ||
+             (p.latest_match_date && isMatchDateInPastSeason(p.latest_match_date));
+    }) || (status.earliest_match_date && isMatchDateInPastSeason(status.earliest_match_date)) ||
+          (status.latest_match_date && isMatchDateInPastSeason(status.latest_match_date)) || false;
+    const hasPast365DaysData = (status.latest_match_date && isMatchDateWithinPast365Days(status.latest_match_date)) ||
+                               (status.patches && status.patches.some((p: any) => {
+                                 return (p.earliest_match_date && isMatchDateWithinPast365Days(p.earliest_match_date)) ||
+                                        (p.latest_match_date && isMatchDateWithinPast365Days(p.latest_match_date));
+                               }));
+    const isSufficient = hasEnoughGames && (hasPastSeasonData || hasPast365DaysData);
     
     // Only show "Data Ready!" if data is sufficient
     if (isSufficient) {

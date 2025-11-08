@@ -181,13 +181,14 @@ Please generate a complete annual summary report including all required sections
 """
 
 
-def build_annual_summary_prompt(analysis: Dict[str, Any], formatted_analysis: str) -> str:
+def build_annual_summary_prompt(analysis: Dict[str, Any], formatted_analysis: str, time_range: str = None) -> str:
     """
     Build complete annual summary prompt
 
     Args:
         analysis: Analysis data returned by generate_comprehensive_annual_analysis
         formatted_analysis: Text formatted by format_analysis_for_prompt
+        time_range: Time range filter ("2024-01-01" for Past Season 2024, "past-365" for Past 365 Days, None for all data)
 
     Returns:
         Complete user prompt
@@ -195,6 +196,13 @@ def build_annual_summary_prompt(analysis: Dict[str, Any], formatted_analysis: st
     # Extract season information
     metadata = analysis["metadata"]
     patch_range = metadata["patch_range"]
+    
+    # Determine season name based on time_range
+    if time_range == "2024-01-01":
+        season = "Past Season 2024 (Patches 14.1 - 14.25)"
+    elif time_range == "past-365":
+        season = "Past 365 Days"
+    else:
     season = f"{patch_range[0]} - {patch_range[1]}"
 
     # Format key turning points
@@ -231,13 +239,14 @@ def build_annual_summary_prompt(analysis: Dict[str, Any], formatted_analysis: st
     return user_prompt
 
 
-def build_narrative_prompt(analysis: Dict[str, Any], formatted_analysis: str) -> Dict[str, str]:
+def build_narrative_prompt(analysis: Dict[str, Any], formatted_analysis: str, time_range: str = None) -> Dict[str, str]:
     """
     Build complete dialogue including system and user prompts
 
     Args:
         analysis: Analysis data
         formatted_analysis: Formatted analysis text
+        time_range: Time range filter ("2024-01-01" for Past Season 2024, "past-365" for Past 365 Days, None for all data)
 
     Returns:
         {
@@ -245,7 +254,7 @@ def build_narrative_prompt(analysis: Dict[str, Any], formatted_analysis: str) ->
             "user": "User prompt"
         }
     """
-    user_prompt = build_annual_summary_prompt(analysis, formatted_analysis)
+    user_prompt = build_annual_summary_prompt(analysis, formatted_analysis, time_range=time_range)
 
     return {
         "system": SYSTEM_PROMPT,

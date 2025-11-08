@@ -1,0 +1,106 @@
+{
+  "puuid": "wEgQnqx00hbQ4QnlPnOSWAzoRbcJXfzxjlcSkzI-jOWqc7Z6ud9tYs1489RQpVpRGXSICk-flKGHjg",
+  "patch": "15.17",
+  "generation_timestamp": "2025-11-08T06:15:00.988967",
+  "total_games": 4,
+  "by_cr": [
+    {
+      "champ_id": 950,
+      "role": "MIDDLE",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 7.5,
+      "obj_rate": 1.0,
+      "cp_25": 15489.6,
+      "build_core": [
+        1055,
+        3073,
+        6701
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8112,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 59,
+      "role": "JUNGLE",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 3.55,
+      "obj_rate": 1.0,
+      "cp_25": 12181.9,
+      "build_core": [
+        6701,
+        6698,
+        2055
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8112,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 246,
+      "role": "MIDDLE",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 3.13,
+      "obj_rate": 0.0,
+      "cp_25": 11048.8,
+      "build_core": [
+        6701,
+        6698,
+        6694
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8112,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 2,
+      "role": "JUNGLE",
+      "games": 1,
+      "wins": 1,
+      "losses": 0,
+      "p_hat": 1.0,
+      "p_hat_ci": [
+        0.2065,
+        1.0
+      ],
+      "kda_adj": 8.3,
+      "obj_rate": 3.0,
+      "cp_25": 12292.0,
+      "build_core": [
+        6610,
+        3173,
+        3073
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8010,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    }
+  ],
+  "earliest_match_date": "2025-08-29T23:42:22.040000+00:00",
+  "latest_match_date": "2025-09-02T08:15:29.397000+00:00"
+}

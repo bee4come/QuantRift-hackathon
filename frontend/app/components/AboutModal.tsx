@@ -203,7 +203,7 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
                           @uzerone
                         </span>
                         <p className="text-xs mt-1" style={{ color: '#8E8E93' }}>
-                          Product & UX/UI Design
+                          Product & UX/UI Design, Integration
                         </p>
                       </div>
                     </motion.a>

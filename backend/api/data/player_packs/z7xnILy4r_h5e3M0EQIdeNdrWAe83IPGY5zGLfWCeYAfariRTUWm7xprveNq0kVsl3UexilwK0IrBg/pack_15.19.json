@@ -1,0 +1,106 @@
+{
+  "puuid": "z7xnILy4r_h5e3M0EQIdeNdrWAe83IPGY5zGLfWCeYAfariRTUWm7xprveNq0kVsl3UexilwK0IrBg",
+  "patch": "15.19",
+  "generation_timestamp": "2025-11-08T06:32:54.405206",
+  "total_games": 9,
+  "by_cr": [
+    {
+      "champ_id": 777,
+      "role": "TOP",
+      "games": 2,
+      "wins": 1,
+      "losses": 1,
+      "p_hat": 0.5,
+      "p_hat_ci": [
+        0.0945,
+        0.9055
+      ],
+      "kda_adj": 1.16,
+      "obj_rate": 2.0,
+      "cp_25": 9998.5,
+      "build_core": [
+        3153,
+        3006,
+        2055
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8008,
+      "effective_n": 2,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 11,
+      "role": "JUNGLE",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 0.57,
+      "obj_rate": 1.0,
+      "cp_25": 8525.3,
+      "build_core": [
+        3153,
+        3006,
+        3124
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8008,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 104,
+      "role": "JUNGLE",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 3.86,
+      "obj_rate": 3.0,
+      "cp_25": 13364.8,
+      "build_core": [
+        6673,
+        3142,
+        3047
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8128,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 777,
+      "role": "MIDDLE",
+      "games": 5,
+      "wins": 2,
+      "losses": 3,
+      "p_hat": 0.4,
+      "p_hat_ci": [
+        0.1176,
+        0.7693
+      ],
+      "kda_adj": 1.7,
+      "obj_rate": 2.0,
+      "cp_25": 10484.1,
+      "build_core": [
+        3153,
+        6673,
+        3006
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8008,
+      "effective_n": 5,
+      "governance_tag": "CONTEXT"
+    }
+  ],
+  "earliest_match_date": "2025-09-25T20:17:14.735000+00:00",
+  "latest_match_date": "2025-10-02T20:54:58.886000+00:00"
+}
