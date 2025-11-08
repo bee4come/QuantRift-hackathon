@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, Brain, Loader2 } from 'lucide-react';
 import ShinyText from './ui/ShinyText';
@@ -39,11 +39,39 @@ export default function StreamingAnalysisModal({
   const [error, setError] = useState('');
   const [isComplete, setIsComplete] = useState(false);
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     if (isOpen && !isComplete && !error) {
+      // Create new AbortController for this stream
+      abortControllerRef.current = new AbortController();
       startStreaming();
     }
+
+    // Cleanup: abort stream on unmount or when modal closes
+    return () => {
+      if (abortControllerRef.current) {
+        console.log('[StreamingAnalysisModal] Aborting stream on cleanup');
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
   }, [isOpen]);
+
+  // Handle page refresh/unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (abortControllerRef.current) {
+        console.log('[StreamingAnalysisModal] Aborting stream on page unload');
+        abortControllerRef.current.abort();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   const startStreaming = async () => {
     try {
@@ -86,10 +114,15 @@ export default function StreamingAnalysisModal({
           setIsComplete(true);
         },
         onError: (err) => {
+          // Don't set error if aborted
+          if (abortControllerRef.current?.signal.aborted) {
+            console.log('[StreamingAnalysisModal] Stream aborted');
+            return;
+          }
           setError(err);
           setIsComplete(true);
         }
-      });
+      }, abortControllerRef.current || undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Stream failed');
       setIsComplete(true);

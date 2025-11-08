@@ -35,7 +35,7 @@ export async function GET(
     console.log('Backend URL:', BACKEND_URL);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout for year data
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
     
     try {
       const response = await fetch(url, {
@@ -81,6 +81,18 @@ export async function GET(
         
         console.error('Backend error:', response.status, errorData);
         
+        // Handle 429 - Rate limit / Too many requests
+        if (response.status === 429) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: 'Request too frequent. Please wait a moment and try again later.',
+              details: errorData,
+            },
+            { status: 429 }
+          );
+        }
+        
         // Extract error message from FastAPI format (detail field) or custom format (error field)
         const errorMessage = errorData.detail || errorData.error || `Backend returned ${response.status}: ${response.statusText}`;
         
@@ -106,7 +118,7 @@ export async function GET(
         return NextResponse.json(
           {
             success: false,
-            error: 'Request timed out after 120 seconds. Backend may be processing large dataset. Please try again.',
+            error: 'Request timeout. The server is taking too long to respond. This may be due to high traffic. Please try again later.',
             backendUrl: url
           },
           { status: 504 }

@@ -28,13 +28,16 @@ export interface StreamCallbacks {
  * @param url - API endpoint URL
  * @param body - Request body (JSON)
  * @param callbacks - Stream event callback functions
+ * @param abortController - Optional AbortController to cancel the request
  */
 export async function handleSSEStream(
   url: string,
   body: any,
-  callbacks: StreamCallbacks
+  callbacks: StreamCallbacks,
+  abortController?: AbortController
 ): Promise<void> {
   let timeoutId: NodeJS.Timeout | null = null;
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
   try {
     console.log('[SSE] Starting stream request:', url);
@@ -54,6 +57,7 @@ export async function handleSSEStream(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        signal: abortController?.signal,
       });
 
       if (!response.ok) {
@@ -64,7 +68,7 @@ export async function handleSSEStream(
         throw new Error('Response body is null');
       }
 
-      const reader = response.body.getReader();
+      reader = response.body.getReader();
       const decoder = new TextDecoder();
 
       let buffer = '';
@@ -144,6 +148,11 @@ export async function handleSSEStream(
     await Promise.race([fetchPromise, timeoutPromise]);
 
   } catch (error) {
+    // Don't throw error if aborted
+    if (abortController?.signal.aborted) {
+      console.log('[SSE] Stream aborted');
+      return;
+    }
     const errorMessage = error instanceof Error ? error.message : 'Stream error';
     console.error('[SSE] Stream error:', error);
     callbacks.onError?.(errorMessage);
@@ -151,6 +160,14 @@ export async function handleSSEStream(
   } finally {
     if (timeoutId) {
       clearTimeout(timeoutId);
+    }
+    // Clean up reader if aborted
+    if (reader && abortController?.signal.aborted) {
+      try {
+        reader.cancel();
+      } catch (e) {
+        // Ignore cancel errors
+      }
     }
   }
 }
@@ -163,7 +180,8 @@ export async function handleSSEStream(
  */
 export async function fetchAgentStream(
   url: string,
-  body: any
+  body: any,
+  abortController?: AbortController
 ): Promise<{ one_liner: string; detailed: string; analysis?: any }> {
   return new Promise((resolve, reject) => {
     let oneLiner = '';
@@ -183,6 +201,6 @@ export async function fetchAgentStream(
       onError: (error) => {
         reject(new Error(error));
       },
-    }).catch(reject);
+    }, abortController).catch(reject);
   });
 }

@@ -14,7 +14,7 @@ from src.core.statistical_utils import wilson_ci_tuple as wilson_confidence_inte
 from src.utils.id_mappings import get_champion_name
 
 
-def load_champion_data(packs_dir: str, champion_id: int, all_packs_data: List[Dict] = None, time_range: str = None) -> Dict[str, Any]:
+def load_champion_data(packs_dir: str, champion_id: int, all_packs_data: List[Dict] = None, time_range: str = None, queue_id: int = None) -> Dict[str, Any]:
     """
     从所有pack文件中提取指定英雄的数据
 
@@ -49,13 +49,34 @@ def load_champion_data(packs_dir: str, champion_id: int, all_packs_data: List[Di
     if all_packs_data is not None:
         packs = all_packs_data
     else:
-        # 否则从文件系统读取
+        # Otherwise read from file system
         packs_dir = Path(packs_dir)
-        pack_files = sorted(packs_dir.glob("pack_*.json"))
+        # Build file pattern based on queue_id
+        if queue_id is not None:
+            pack_pattern = f"pack_*_{queue_id}.json"
+        else:
+            pack_pattern = "pack_*.json"
+        pack_files = sorted(packs_dir.glob(pack_pattern))
         packs = []
         for pack_file in pack_files:
+            # Extract patch version from filename
+            filename = pack_file.stem
+            if filename.startswith("pack_"):
+                patch = filename.replace("pack_", "")
+                # Remove queue_id suffix if present
+                if "_" in patch:
+                    patch = patch.rsplit("_", 1)[0]
+            else:
+                continue
+                
             with open(pack_file, 'r', encoding='utf-8') as f:
                 pack_data = json.load(f)
+                
+                # Verify queue_id matches if specified
+                if queue_id is not None:
+                    pack_queue_id = pack_data.get('queue_id', 420)
+                    if pack_queue_id != queue_id:
+                        continue
                 
                 # Apply time range filter based on match dates, not generation timestamp
                 if cutoff_timestamp:
@@ -137,8 +158,8 @@ def load_champion_data(packs_dir: str, champion_id: int, all_packs_data: List[Di
                                 if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
                                     has_match_in_range = True
                             else:
-                            if pack_timestamp >= cutoff_timestamp:
-                                has_match_in_range = True
+                                if pack_timestamp >= cutoff_timestamp:
+                                    has_match_in_range = True
                     
                     # Skip if no matches in the time range
                     if not has_match_in_range:

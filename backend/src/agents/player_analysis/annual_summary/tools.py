@@ -24,7 +24,7 @@ from src.agents.player_analysis.multi_version.tools import (
 from src.utils.id_mappings import get_champion_name
 
 
-def load_all_annual_packs(packs_dir: str, time_range: str = None) -> Dict[str, Any]:
+def load_all_annual_packs(packs_dir: str, time_range: str = None, queue_id: int = None) -> Dict[str, Any]:
     """
     Load all Player-Pack files for the entire season
 
@@ -34,6 +34,11 @@ def load_all_annual_packs(packs_dir: str, time_range: str = None) -> Dict[str, A
             - "2024-01-01": Load data from Past Season 2024 (2024-01-09 to 2025-01-06, patches 14.1 to 14.25)
             - "past-365": Load data from past 365 days
             - None: Load all available data
+        queue_id: Queue ID filter
+            - 420: Ranked Solo/Duo
+            - 440: Ranked Flex
+            - 400: Normal
+            - None: Load all queue types
 
     Returns:
         {
@@ -56,12 +61,35 @@ def load_all_annual_packs(packs_dir: str, time_range: str = None) -> Dict[str, A
     elif time_range == "past-365":
         cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
 
-    for pack_file in sorted(packs_path.glob("pack_*.json")):
-        # Extract patch version from filename (pack_15.18.json → 15.18)
-        patch_version = pack_file.stem.replace("pack_", "")
+    # Build file pattern based on queue_id
+    if queue_id is not None:
+        # Load specific queue_id packs: pack_{patch}_{queue_id}.json
+        pack_pattern = f"pack_*_{queue_id}.json"
+    else:
+        # Load all packs (legacy format: pack_{patch}.json or new format: pack_{patch}_{queue_id}.json)
+        pack_pattern = "pack_*.json"
+
+    for pack_file in sorted(packs_path.glob(pack_pattern)):
+        # Extract patch version from filename
+        # pack_15.18_420.json → 15.18 (new format)
+        # pack_15.18.json → 15.18 (legacy format)
+        filename = pack_file.stem
+        if filename.startswith("pack_"):
+            patch_version = filename.replace("pack_", "")
+            # Remove queue_id suffix if present (e.g., "15.18_420" → "15.18")
+            if "_" in patch_version:
+                patch_version = patch_version.rsplit("_", 1)[0]
+        else:
+            continue
 
         with open(pack_file, 'r', encoding='utf-8') as f:
             pack_data = json.load(f)
+            
+            # Verify queue_id matches if specified
+            if queue_id is not None:
+                pack_queue_id = pack_data.get('queue_id', 420)  # Default to Solo/Duo for legacy packs
+                if pack_queue_id != queue_id:
+                    continue
 
             # Apply time range filter based on match dates, not generation timestamp
             if cutoff_timestamp:
@@ -138,8 +166,8 @@ def load_all_annual_packs(packs_dir: str, time_range: str = None) -> Dict[str, A
                             if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
                                 has_match_in_range = True
                         else:
-                        if pack_timestamp >= cutoff_timestamp:
-                            has_match_in_range = True
+                            if pack_timestamp >= cutoff_timestamp:
+                                has_match_in_range = True
                 
                 # Skip if no matches in the time range
                 if not has_match_in_range:

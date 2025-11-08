@@ -55,7 +55,7 @@ interface HeaderProps {
 export default function Header({ hideServerAndEsports = false }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { selectedServer, servers, selectServer, currentTimezone, timeDiff, showLocationModal, handleLocationAllow, handleLocationDeny } = useServerContext();
+  const { selectedServer, servers, selectServer, currentTimezone, showLocationModal, handleLocationAllow, handleLocationDeny } = useServerContext();
   const { isSearched, clearPlayers } = useSearch();
   const { isModalOpen } = useModal();
   const timeOfDay = useTimeOfDay(currentTimezone);
@@ -95,16 +95,10 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
     return () => clearInterval(interval);
   }, [formatters]);
 
-  // Fix hydration mismatch for timeDiff
+  // Fix hydration mismatch
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  const formatTimeDiff = (diff: number) => {
-    if (diff === 0) return '';
-    const sign = diff > 0 ? '+' : '';
-    return `${sign}${diff}h`;
-  };
 
   const handleServerSelect = (serverCode: string) => {
     selectServer(serverCode);
@@ -316,21 +310,6 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                   speed={3}
                   className="text-sm font-medium"
                 />
-                {isMounted && timeDiff !== 0 && (
-                  <span
-                    className="text-xs font-mono px-1.5 py-0.5 rounded"
-                    style={{
-                      color: timeDiff > 0 ? '#32D74B' : '#FF453A',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                    }}
-                  >
-                    <ShinyText
-                      text={formatTimeDiff(timeDiff)}
-                      speed={2}
-                      className="text-xs font-mono"
-                    />
-                  </span>
-                )}
                 <ChevronDown className="w-3 h-3" style={{ color: '#AEAEB2' }} />
                 <div 
                   className="w-2 h-2 rounded-full"
@@ -372,17 +351,51 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
             >
               {/* Gateway Header */}
               <div 
-                className="px-8 py-5 border-b relative z-10 flex items-center justify-center"
+                className="px-8 py-5 border-b relative z-10"
                 style={{ 
                   background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.25) 100%)',
                   borderColor: 'rgba(255, 255, 255, 0.12)'
                 }}
               >
-                <ShinyText 
-                  text="SERVER GATEWAY" 
-                  speed={4} 
-                  className="text-2xl font-bold tracking-tight"
-                />
+                <div className="flex items-center justify-between relative">
+                  <div className="flex-1 flex justify-center">
+                    <ShinyText 
+                      text="SERVER GATEWAY" 
+                      speed={4} 
+                      className="text-2xl font-bold tracking-tight"
+                    />
+                  </div>
+                  <div className="absolute right-0">
+                    <ClickSpark
+                      sparkColor="#FF453A"
+                      sparkSize={6}
+                      sparkRadius={10}
+                      sparkCount={4}
+                      duration={250}
+                      inline={true}
+                    >
+                      <button
+                        onClick={() => setIsGatewayOpen(false)}
+                        className="p-2 rounded border transition-all backdrop-blur-sm"
+                        style={{
+                          backgroundColor: 'rgba(255, 69, 58, 0.15)',
+                          borderColor: 'rgba(255, 69, 58, 0.3)',
+                          color: '#FF453A'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(255, 69, 58, 0.25)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(255, 69, 58, 0.15)';
+                        }}
+                        title="Close"
+                        aria-label="Close"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </ClickSpark>
+                  </div>
+                </div>
               </div>
 
               {/* Gateway Grid Header */}
@@ -396,8 +409,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                 }}
               >
                 <div className="col-span-2">GATE</div>
-                <div className="col-span-5 text-center">DESTINATION</div>
-                <div className="col-span-2 text-center">TIME</div>
+                <div className="col-span-7 text-center">DESTINATION</div>
                 <div className="col-span-3 text-right">STATUS</div>
               </div>
 
@@ -411,8 +423,6 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                 }}
               >
                 {servers.slice(0, showAllServers ? servers.length : 3).map((server) => {
-                  const localOffset = -new Date().getTimezoneOffset() / 60;
-                  const serverTimeDiff = server.offset - localOffset;
                   const isSelected = selectedServer.code === server.code;
                   
                   return (
@@ -455,36 +465,13 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                       </div>
 
                       {/* Destination/Server Name */}
-                      <div className="col-span-5 flex items-center justify-center">
+                      <div className="col-span-7 flex items-center justify-center">
                         <span 
                           className="text-sm font-semibold tracking-wide"
                           style={{ color: '#F5F5F7' }}
                         >
                           {server.name}
                         </span>
-                      </div>
-
-                      {/* Time Difference */}
-                      <div className="col-span-2 flex items-center justify-center">
-                        {serverTimeDiff !== 0 ? (
-                          <span 
-                            className="font-mono text-sm font-bold px-2.5 py-1 rounded"
-                            style={{ 
-                              color: serverTimeDiff > 0 ? '#32D74B' : '#FFD60A',
-                              backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                              border: `1px solid ${serverTimeDiff > 0 ? 'rgba(50, 215, 75, 0.3)' : 'rgba(255, 214, 10, 0.3)'}`
-                            }}
-                          >
-                            {formatTimeDiff(serverTimeDiff)}
-                          </span>
-                        ) : (
-                          <span 
-                            className="font-mono text-sm font-bold"
-                            style={{ color: '#5AC8FA' }}
-                          >
-                            UTC
-                          </span>
-                        )}
                       </div>
 
                       {/* Status Indicator */}
@@ -513,7 +500,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
               {servers.length > 3 && (
                 <div className="px-8 py-4 border-t relative z-10" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
                   <ClickSpark
-                    sparkColor="#0A84FF"
+                    sparkColor="#FFFFFF"
                     sparkSize={6}
                     sparkRadius={10}
                     sparkCount={4}
@@ -523,11 +510,11 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                       onClick={() => setShowAllServers(!showAllServers)}
                       className="w-full py-2 rounded-lg font-semibold text-sm transition-all"
                       style={{
-                        backgroundColor: 'rgba(10, 132, 255, 0.2)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
                         borderWidth: '1px',
                         borderStyle: 'solid',
-                        borderColor: 'rgba(10, 132, 255, 0.5)',
-                        color: '#0A84FF'
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        color: '#FFFFFF'
                       }}
                     >
                       {showAllServers ? 'Show Less' : `Show More (${servers.length - 3} more servers)`}

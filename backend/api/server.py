@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import sys
 from pathlib import Path
 import threading
@@ -226,7 +226,7 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "services": {
             "risk_forecaster": "ready",
             "annual_summary": "ready"
@@ -338,7 +338,7 @@ async def analyze_match_risk(request: RiskForecastRequest):
         # Build response
         response = {
             "match_id": request.match_id,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "analysis_version": "2.1.0",
             "overview": {
                 "our_comp_type": analysis.get('our_comp_type', 'balanced'),
@@ -574,10 +574,13 @@ task_lock = threading.Lock()
 @app.post("/v1/player/fetch-data", response_model=PlayerDataFetchResponse)
 async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: BackgroundTasks):
     """
-    Fetch a year's worth of match data for a player (matches + timelines)
+    Fetch match data for a player from patch 14.1 (2024-01-09) to today
 
     This endpoint triggers a background task to fetch all matches and timelines
-    for a player over the specified time period. Use the task_id to check status.
+    for a player from patch 14.1 to today. Use the task_id to check status.
+
+    **Data fetching**: Always starts from patch 14.1 (2024-01-09) to today
+    **Time range filtering**: Applied in agents (past-365, Season 2024, etc.)
 
     **Processing time**: 5-30 minutes depending on match count
 
@@ -585,7 +588,7 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
     - game_name: Player's game name (e.g., "S1NE")
     - tag_line: Player's tag line (e.g., "NA1")
     - region: Region code (na1, euw1, kr, etc.)
-    - days: Number of days to fetch (default: 365)
+    - days: Kept for compatibility but not used (default: 365)
     - include_timeline: Whether to fetch timeline data (default: true)
 
     **Returns**:
@@ -598,7 +601,8 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
 
         print(f"\n{'='*60}")
         print(f"📥 Data Fetch Request: {request.game_name}#{request.tag_line}")
-        print(f"   Region: {request.region}, Days: {request.days}")
+        print(f"   Region: {request.region}")
+        print(f"   Fetching from: Patch 14.1 (2024-01-09) to today")
         print(f"{'='*60}")
 
         # Generate task ID
@@ -637,7 +641,7 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
                 "puuid": puuid,
                 "days": request.days,
                 "include_timeline": request.include_timeline,
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "progress": {
                     "total_matches": 0,
                     "fetched_matches": 0,
@@ -651,7 +655,7 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
             try:
                 with task_lock:
                     fetch_tasks[task_id]["status"] = "in_progress"
-                    fetch_tasks[task_id]["started_at"] = datetime.now().isoformat()
+                    fetch_tasks[task_id]["started_at"] = datetime.now(timezone.utc).isoformat()
 
                 # Step 2: Use PlayerDataManager to prepare data
                 print(f"🚀 Starting PlayerDataManager.prepare_player_data()...")
@@ -684,7 +688,7 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
                 # Mark as completed
                 with task_lock:
                     fetch_tasks[task_id]["status"] = "completed"
-                    fetch_tasks[task_id]["completed_at"] = datetime.now().isoformat()
+                    fetch_tasks[task_id]["completed_at"] = datetime.now(timezone.utc).isoformat()
                     fetch_tasks[task_id]["result"] = {
                         "puuid": puuid,
                         "player_pack_path": f"data/player_packs/{puuid}/",
@@ -698,7 +702,7 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
                 with task_lock:
                     fetch_tasks[task_id]["status"] = "failed"
                     fetch_tasks[task_id]["error"] = str(e)
-                    fetch_tasks[task_id]["failed_at"] = datetime.now().isoformat()
+                    fetch_tasks[task_id]["failed_at"] = datetime.now(timezone.utc).isoformat()
 
         # Start async background task
         asyncio.create_task(run_fetch_task_async())
@@ -766,6 +770,7 @@ class AgentRequest(BaseModel):
     friend_game_name: Optional[str] = Field(None, description="Friend's game name for friend-comparison agent")
     friend_tag_line: Optional[str] = Field(None, description="Friend's tag line for friend-comparison agent")
     time_range: Optional[str] = Field(None, description="Time range filter: '2024-01-01' for 2024 full year, 'past-365' for past 365 days")
+    queue_id: Optional[int] = Field(None, description="Queue ID filter: 420 for Ranked Solo/Duo, 440 for Ranked Flex, 400 for Normal")
 
 class AgentResponse(BaseModel):
     """Generic Agent Response Model"""
@@ -965,16 +970,24 @@ async def annual_summary(request: AgentRequest):
             )
             from src.agents.player_analysis.annual_summary.prompts import build_narrative_prompt
 
-            # Load packs with optional time range filter
+            # Load packs with optional time range and queue_id filter
             time_range = getattr(request, 'time_range', None)
-            print(f"🔍 [Annual Summary] Received time_range parameter: {time_range}")
-            all_packs_dict = load_all_annual_packs(packs_dir, time_range=time_range)
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Annual Summary] Received time_range parameter: {time_range}, queue_id: {queue_id}")
+            all_packs_dict = load_all_annual_packs(packs_dir, time_range=time_range, queue_id=queue_id)
 
-            print(f"📊 Loaded {len(all_packs_dict)} patches" + (f" (time_range: {time_range})" if time_range else ""))
+            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+            print(f"📊 Loaded {len(all_packs_dict)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
 
-            # Check if no data found for the selected time range
+            # Check if no data found for the selected filters
             if len(all_packs_dict) == 0:
-                if time_range == "2024-01-01":
+                if queue_id == 400:
+                    error_msg = "No Normal game data found. Please play some Normal games first."
+                elif queue_id == 440:
+                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                elif queue_id == 420:
+                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                elif time_range == "2024-01-01":
                     error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
@@ -1419,11 +1432,19 @@ async def role_specialization(request: AgentRequest):
             if role == 'ADC':
                 role = 'BOTTOM'
             time_range = getattr(request, 'time_range', None)
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Role Specialization] Received time_range: {time_range}, queue_id: {queue_id}")
             
-            # Check if data exists for the selected time range before generating analysis
-            role_data = load_role_data(packs_dir, role, time_range=time_range)
+            # Check if data exists for the selected filters before generating analysis
+            role_data = load_role_data(packs_dir, role, time_range=time_range, queue_id=queue_id)
             if not role_data:
-                if time_range == "2024-01-01":
+                if queue_id == 400:
+                    error_msg = "No Normal game data found. Please play some Normal games first."
+                elif queue_id == 440:
+                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                elif queue_id == 420:
+                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                elif time_range == "2024-01-01":
                     error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
@@ -1435,7 +1456,8 @@ async def role_specialization(request: AgentRequest):
             analysis = generate_comprehensive_role_analysis(
                 role=role,
                 packs_dir=packs_dir,
-                time_range=time_range
+                time_range=time_range,
+                queue_id=queue_id
             )
             formatted_data = format_analysis_for_prompt(analysis)
             prompts = build_narrative_prompt(analysis, formatted_data)
@@ -1499,11 +1521,19 @@ async def champion_recommendation(request: AgentRequest):
             from src.agents.player_analysis.champion_recommendation.prompts import build_narrative_prompt
 
             time_range = getattr(request, 'time_range', None)
-            champion_pool = analyze_champion_pool(packs_dir, time_range=time_range)
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Champion Recommendation] Received time_range: {time_range}, queue_id: {queue_id}")
+            champion_pool = analyze_champion_pool(packs_dir, time_range=time_range, queue_id=queue_id)
             
-            # Check if no data found for the selected time range
+            # Check if no data found for the selected filters
             if champion_pool.get("total_champions", 0) == 0 or len(champion_pool.get("core_champions", [])) == 0:
-                if time_range == "2024-01-01":
+                if queue_id == 400:
+                    error_msg = "No Normal game data found. Please play some Normal games first."
+                elif queue_id == 440:
+                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                elif queue_id == 420:
+                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                elif time_range == "2024-01-01":
                     error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
@@ -1575,8 +1605,31 @@ async def multi_version_comparison(request: AgentRequest):
             )
             from src.agents.player_analysis.multi_version.prompts import build_multi_version_prompt
 
-            # Load all patch data
-            all_packs = load_all_packs(packs_dir)
+            # Load all patch data with optional time range and queue_id filter
+            time_range = getattr(request, 'time_range', None)
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Multi-Version] Received time_range: {time_range}, queue_id: {queue_id}")
+            all_packs = load_all_packs(packs_dir, time_range=time_range, queue_id=queue_id)
+            
+            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+            print(f"📊 Loaded {len(all_packs)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
+            
+            # Check if no data found
+            if len(all_packs) == 0:
+                if queue_id == 400:
+                    error_msg = "No Normal game data found. Please play some Normal games first."
+                elif queue_id == 440:
+                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                elif queue_id == 420:
+                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                elif time_range == "2024-01-01":
+                    error_msg = "No data found for Season 2024"
+                elif time_range == "past-365":
+                    error_msg = "No data found for Past 365 Days"
+                else:
+                    error_msg = "No data found"
+                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                return
 
             # Analyze trends
             trends = analyze_trends(all_packs)
@@ -2284,14 +2337,23 @@ async def version_trends(request: AgentRequest):
             )
             from src.agents.player_analysis.multi_version.prompts import build_multi_version_prompt
 
-            # Load packs with optional time range filter
+            # Load packs with optional time range and queue_id filter
             time_range = getattr(request, 'time_range', None)
-            all_packs = load_all_packs(packs_dir, time_range=time_range)
-            print(f"📊 Loaded {len(all_packs)} patches" + (f" (time_range: {time_range})" if time_range else ""))
+            queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Version Comparison] Received time_range: {time_range}, queue_id: {queue_id}")
+            all_packs = load_all_packs(packs_dir, time_range=time_range, queue_id=queue_id)
+            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+            print(f"📊 Loaded {len(all_packs)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
             
-            # Check if no data found for the selected time range
+            # Check if no data found for the selected filters
             if len(all_packs) == 0:
-                if time_range == "2024-01-01":
+                if queue_id == 400:
+                    error_msg = "No Normal game data found. Please play some Normal games first."
+                elif queue_id == 440:
+                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                elif queue_id == 420:
+                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                elif time_range == "2024-01-01":
                     error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
@@ -2483,26 +2545,14 @@ async def get_player_summary(
     from datetime import datetime, timedelta
     start_time = time.time()
 
-    # Calculate days based on priority: time_range > count > days > default
-    # Note: count parameter is legacy and should be converted to days
+    # Data fetching now always starts from patch 14.1 (2024-01-09) to today
+    # time_range parameter is only used for filtering data in agents, not for fetching
+    # Keep days parameter for compatibility but it's not used for fetching anymore
+    if days is None:
+        days = 365  # Default value for compatibility
+    print(f"📅 Fetching data from patch 14.1 (2024-01-09) to today")
     if time_range:
-        if time_range == "2024-01-01":
-            # Calculate days from 2024-01-01 to today
-            start_date = datetime(2024, 1, 1)
-            days_calculated = (datetime.now() - start_date).days
-            days = days_calculated
-            print(f"📅 Time range '2024-01-01' → {days} days")
-        elif time_range == "past-365":
-            days = 365
-            print(f"📅 Time range 'past-365' → {days} days")
-    elif count:
-        # Convert count to days (assume ~1 match per day)
-        days = count
-        print(f"📅 Count {count} → {days} days")
-    elif days is None:
-        # Default to 365 days if nothing specified
-        days = 365
-        print(f"📅 Using default → {days} days")
+        print(f"📅 Time range filter will be applied in agents: {time_range}")
 
     try:
         print(f"\n{'='*60}")
@@ -2567,7 +2617,7 @@ async def get_player_summary(
         summoner_error = None
         
         try:
-        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=platform)
+            summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=platform)
         except Exception as e:
             error_msg = str(e)
             # Check if it's a decrypt error (API key issue)
@@ -2588,11 +2638,11 @@ async def get_player_summary(
                 if plat != platform:
                     print(f"🔍 Trying platform: {plat}")
                     try:
-                    summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=plat)
-                    if summoner:
-                        print(f"✅ Found summoner on {plat}")
-                        platform = plat  # Update platform to the one that worked
-                        break
+                        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=plat)
+                        if summoner:
+                            print(f"✅ Found summoner on {plat}")
+                            platform = plat  # Update platform to the one that worked
+                            break
                     except Exception as e:
                         error_msg = str(e)
                         if "decrypting" in error_msg.lower():
@@ -2612,13 +2662,13 @@ async def get_player_summary(
         print(f"✅ [2/2] Got summoner info ({time.time()-step_start:.2f}s)")
 
         # Step 4: Start background data preparation (non-blocking)
-        print(f"\n🔄 Starting background data preparation for past {days} days...")
+        print(f"\n🔄 Starting background data preparation from patch 14.1 (2024-01-09) to today...")
         job = await player_data_manager.prepare_player_data(
             puuid=puuid,
             region=platform,
             game_name=game_name,
             tag_line=tag_line,
-            days=days
+            days=days  # days parameter kept for compatibility but not used for fetching
         )
 
         # Step 4: Try to get role stats and champion stats
@@ -2708,8 +2758,8 @@ async def get_player_summary(
             best_champions = best_champions[:5]
         else:
             # Use existing pack files (for time_range or days-based requests)
-        role_stats = player_data_manager.get_role_stats(puuid)
-        best_champions = player_data_manager.get_best_champions(puuid, limit=5)
+            role_stats = player_data_manager.get_role_stats(puuid)
+            best_champions = player_data_manager.get_best_champions(puuid, limit=5)
 
         # Step 5: Calculate analysis summary from role_stats
         analysis = {
@@ -3052,10 +3102,15 @@ async def get_player_data_status(game_name: str, tag_line: str):
                 "has_data": False,
                 "total_patches": 0,
                 "total_games": 0,
-                "patches": []
+                "patches": [],
+                "rank_types": {
+                    "solo_duo": {"total_games": 0, "past_season_games": 0, "past_365_days_games": 0},
+                    "flex": {"total_games": 0, "past_season_games": 0, "past_365_days_games": 0},
+                    "normal": {"total_games": 0, "past_season_games": 0, "past_365_days_games": 0}
+                }
             }
 
-        # Read all pack files
+        # Read all pack files (including queue_id-specific packs)
         pack_files = sorted(player_dir.glob("pack_*.json"))
 
         if not pack_files:
@@ -3067,14 +3122,24 @@ async def get_player_data_status(game_name: str, tag_line: str):
                 "has_data": False,
                 "total_patches": 0,
                 "total_games": 0,
-                "patches": []
+                "patches": [],
+                "rank_types": {
+                    "solo_duo": {"total_games": 0, "past_season_games": 0, "past_365_days_games": 0},
+                    "flex": {"total_games": 0, "past_season_games": 0, "past_365_days_games": 0},
+                    "normal": {"total_games": 0, "past_season_games": 0, "past_365_days_games": 0}
+                }
             }
 
-        # Collect patch information
+        # Collect patch information, grouped by queue_id
         patches = []
         total_games = 0
         earliest_match_date = None
         latest_match_date = None
+        
+        # Track games by queue_id
+        queue_games = {420: 0, 440: 0, 400: 0}  # solo_duo, flex, normal
+        queue_past_season_games = {420: 0, 440: 0, 400: 0}
+        queue_past_365_days_games = {420: 0, 440: 0, 400: 0}
         
         # Patch release date mapping for Season 2024 (14.1 - 14.24)
         # Also include patch 15.x (2025 season) for fallback date inference
@@ -3097,8 +3162,8 @@ async def get_player_data_status(game_name: str, tag_line: str):
         past_season_start = datetime(2024, 1, 9)
         past_season_end = datetime(2025, 1, 6, 23, 59, 59, 999000)
         
-        # Past 365 Days: from today - 365 days to today
-        today = datetime.now()
+        # Past 365 Days: from today - 365 days to today (UTC)
+        today = datetime.now(timezone.utc)
         past_365_days_start = today - timedelta(days=365)
 
         for pack_file in pack_files:
@@ -3107,6 +3172,7 @@ async def get_player_data_status(game_name: str, tag_line: str):
 
             patch = pack.get("patch", "unknown")
             games = pack.get("total_games", 0)
+            queue_id = pack.get("queue_id", 420)  # Default to Solo/Duo for legacy packs
             
             # Extract match dates from pack
             pack_earliest = pack.get("earliest_match_date")
@@ -3200,6 +3266,12 @@ async def get_player_data_status(game_name: str, tag_line: str):
                         past_season_games = 0
                     if past_365_days_games is None:
                         past_365_days_games = 0
+            
+            # Track games by queue_id (after calculating past_season_games and past_365_days_games)
+            if queue_id in queue_games:
+                queue_games[queue_id] += games
+                queue_past_season_games[queue_id] += past_season_games if past_season_games is not None else 0
+                queue_past_365_days_games[queue_id] += past_365_days_games if past_365_days_games is not None else 0
             
             # Parse and track earliest/latest match dates
             if pack_earliest:
@@ -3299,7 +3371,24 @@ async def get_player_data_status(game_name: str, tag_line: str):
             "latest_patch": patches_sorted[-1]["patch"] if patches_sorted else None,
             "earliest_match_date": earliest_match_date_str,
             "latest_match_date": latest_match_date_str,
-            "patches": patches_sorted
+            "patches": patches_sorted,
+            "rank_types": {
+                "solo_duo": {
+                    "total_games": queue_games[420],
+                    "past_season_games": queue_past_season_games[420],
+                    "past_365_days_games": queue_past_365_days_games[420]
+                },
+                "flex": {
+                    "total_games": queue_games[440],
+                    "past_season_games": queue_past_season_games[440],
+                    "past_365_days_games": queue_past_365_days_games[440]
+                },
+                "normal": {
+                    "total_games": queue_games[400],
+                    "past_season_games": queue_past_season_games[400],
+                    "past_365_days_games": queue_past_365_days_games[400]
+                }
+            }
         }
 
     except HTTPException:

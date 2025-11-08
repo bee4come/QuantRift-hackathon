@@ -29,7 +29,7 @@ import RankSelectorModal from './RankSelectorModal';
 import MatchSelectorModal from './MatchSelectorModal';
 import ShinyText from './ui/ShinyText';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
-import type { TimeRangeOption } from './AgentCard';
+import type { TimeRangeOption, RankTypeOption } from './AgentCard';
 
 interface SubOption {
   id: string;
@@ -49,6 +49,8 @@ interface AgentState {
   error?: string;
   timeRangeOptions?: TimeRangeOption[];
   selectedTimeRange?: string;
+  rankTypeOptions?: RankTypeOption[];
+  selectedRankType?: number;
   analysisData?: any; // For widgets (Annual Summary, Progress Tracker)
   subOptions?: SubOption[];
   reportsByTimeRange?: Record<string, { detailedReport?: string; analysisData?: any; status: AgentStatus }>; // Store reports by time range
@@ -89,11 +91,41 @@ export default function AICoachAnalysis({
   const [past365Status, setPast365Status] = useState<'success' | 'failed' | 'pending' | 'unknown'>('unknown');
   const [pastSeasonMatchCount, setPastSeasonMatchCount] = useState<number>(0);
   const [past365MatchCount, setPast365MatchCount] = useState<number>(0);
-  const [showPastSeasonTooltip, setShowPastSeasonTooltip] = useState(false);
-  const [showPast365Tooltip, setShowPast365Tooltip] = useState(false);
-  const pastSeasonRef = useRef<HTMLDivElement>(null);
-  const past365Ref = useRef<HTMLDivElement>(null);
+  const [showDataTooltip, setShowDataTooltip] = useState(false);
+  const dataIndicatorRef = useRef<HTMLDivElement>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Rank type data status
+  const [rankTypeStatus, setRankTypeStatus] = useState<{
+    solo_duo: { past_season: number; past_365: number; status: 'success' | 'failed' | 'pending' | 'unknown' };
+    flex: { past_season: number; past_365: number; status: 'success' | 'failed' | 'pending' | 'unknown' };
+    normal: { past_season: number; past_365: number; status: 'success' | 'failed' | 'pending' | 'unknown' };
+  }>({
+    solo_duo: { past_season: 0, past_365: 0, status: 'unknown' },
+    flex: { past_season: 0, past_365: 0, status: 'unknown' },
+    normal: { past_season: 0, past_365: 0, status: 'unknown' }
+  });
+  const [showRankTooltip, setShowRankTooltip] = useState<{ [key: string]: boolean }>({});
+  const rankIndicatorRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const [rankTooltipPositions, setRankTooltipPositions] = useState<{ [key: string]: { top: number; left: number } }>({});
+  
+  // Calculate combined status
+  const getCombinedStatus = (): 'success' | 'failed' | 'pending' | 'unknown' => {
+    if (pastSeasonStatus === 'pending' || past365Status === 'pending') {
+      return 'pending';
+    }
+    if (pastSeasonStatus === 'success' || past365Status === 'success') {
+      return 'success';
+    }
+    if (pastSeasonStatus === 'failed' && past365Status === 'failed') {
+      return 'failed';
+    }
+    return 'unknown';
+  };
+  
+  const combinedStatus = getCombinedStatus();
+  const totalMatches = pastSeasonMatchCount + past365MatchCount;
 
   // Helper function to get Past Season date range based on patch versions
   // Past Season 2024: patch 14.1 (2024-01-09) to patch 14.25 (2025-01-06)
@@ -275,6 +307,26 @@ export default function AICoachAnalysis({
   };
 
   // Initial data check on mount
+  // Handle page refresh/unload - abort all ongoing streams
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (abortControllerRef.current) {
+        console.log('[AICoachAnalysis] Aborting stream on page unload');
+        abortControllerRef.current.abort();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Also abort on component unmount
+      if (abortControllerRef.current) {
+        console.log('[AICoachAnalysis] Aborting stream on component unmount');
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const checkInitialDataStatus = async () => {
       try {
@@ -319,6 +371,27 @@ export default function AICoachAnalysis({
             setPast365Status('failed');
             setPastSeasonMatchCount(0);
             setPast365MatchCount(0);
+          }
+
+          // Set rank type status from backend response
+          if (status.rank_types) {
+            setRankTypeStatus({
+              solo_duo: {
+                past_season: status.rank_types.solo_duo?.past_season_games || 0,
+                past_365: status.rank_types.solo_duo?.past_365_days_games || 0,
+                status: (status.rank_types.solo_duo?.past_season_games || 0) > 0 || (status.rank_types.solo_duo?.past_365_days_games || 0) > 0 ? 'success' : 'unknown'
+              },
+              flex: {
+                past_season: status.rank_types.flex?.past_season_games || 0,
+                past_365: status.rank_types.flex?.past_365_days_games || 0,
+                status: (status.rank_types.flex?.past_season_games || 0) > 0 || (status.rank_types.flex?.past_365_days_games || 0) > 0 ? 'success' : 'unknown'
+              },
+              normal: {
+                past_season: status.rank_types.normal?.past_season_games || 0,
+                past_365: status.rank_types.normal?.past_365_days_games || 0,
+                status: (status.rank_types.normal?.past_season_games || 0) > 0 || (status.rank_types.normal?.past_365_days_games || 0) > 0 ? 'success' : 'unknown'
+              }
+            });
           }
 
           // Data is sufficient only if:
@@ -379,6 +452,27 @@ export default function AICoachAnalysis({
           }
           setPastSeasonMatchCount(pastSeasonGames);
           setPast365MatchCount(past365Games);
+          
+          // Set rank type status from backend response
+          if (dataStatus.rank_types) {
+            setRankTypeStatus({
+              solo_duo: {
+                past_season: dataStatus.rank_types.solo_duo?.past_season_games || 0,
+                past_365: dataStatus.rank_types.solo_duo?.past_365_days_games || 0,
+                status: (dataStatus.rank_types.solo_duo?.past_season_games || 0) > 0 || (dataStatus.rank_types.solo_duo?.past_365_days_games || 0) > 0 ? 'success' : 'unknown'
+              },
+              flex: {
+                past_season: dataStatus.rank_types.flex?.past_season_games || 0,
+                past_365: dataStatus.rank_types.flex?.past_365_days_games || 0,
+                status: (dataStatus.rank_types.flex?.past_season_games || 0) > 0 || (dataStatus.rank_types.flex?.past_365_days_games || 0) > 0 ? 'success' : 'unknown'
+              },
+              normal: {
+                past_season: dataStatus.rank_types.normal?.past_season_games || 0,
+                past_365: dataStatus.rank_types.normal?.past_365_days_games || 0,
+                status: (dataStatus.rank_types.normal?.past_season_games || 0) > 0 || (dataStatus.rank_types.normal?.past_365_days_games || 0) > 0 ? 'success' : 'unknown'
+              }
+            });
+          }
         } else {
           // No data at all - show failed (red)
           setPastSeasonStatus('failed');
@@ -499,6 +593,12 @@ export default function AICoachAnalysis({
       icon: FileText,
       endpoint: '/v1/agents/annual-summary',
       status: 'idle',
+      rankTypeOptions: [
+        { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
+        { id: 'flex', label: 'Rank Flex', value: 440 },
+        { id: 'normal', label: 'Normal', value: 400 }
+      ],
+      selectedRankType: 420, // Default to Solo/Duo
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -520,6 +620,12 @@ export default function AICoachAnalysis({
       icon: BarChart3,
       endpoint: '/v1/agents/weakness-analysis', // Merges weakness + detailed + progress
       status: 'idle',
+      rankTypeOptions: [
+        { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
+        { id: 'flex', label: 'Rank Flex', value: 440 },
+        { id: 'normal', label: 'Normal', value: 400 }
+      ],
+      selectedRankType: 420, // Default to Solo/Duo
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -541,6 +647,12 @@ export default function AICoachAnalysis({
       icon: Users,
       endpoint: '/v1/agents/friend-comparison', // Will handle both friend and peer
       status: 'idle',
+      rankTypeOptions: [
+        { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
+        { id: 'flex', label: 'Rank Flex', value: 440 },
+        { id: 'normal', label: 'Normal', value: 400 }
+      ],
+      selectedRankType: 420, // Default to Solo/Duo
       subOptions: [
         {
           id: 'friend-comparison',
@@ -573,6 +685,12 @@ export default function AICoachAnalysis({
       icon: Zap,
       endpoint: '/v1/agents/multi-version', // Merges multi-version + version-comparison
       status: 'idle',
+      rankTypeOptions: [
+        { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
+        { id: 'flex', label: 'Rank Flex', value: 440 },
+        { id: 'normal', label: 'Normal', value: 400 }
+      ],
+      selectedRankType: 420, // Default to Solo/Duo
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -594,6 +712,12 @@ export default function AICoachAnalysis({
       icon: Lightbulb,
       endpoint: '/v1/agents/champion-recommendation',
       status: 'idle',
+      rankTypeOptions: [
+        { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
+        { id: 'flex', label: 'Rank Flex', value: 440 },
+        { id: 'normal', label: 'Normal', value: 400 }
+      ],
+      selectedRankType: 420, // Default to Solo/Duo
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -617,6 +741,12 @@ export default function AICoachAnalysis({
       icon: Target,
       endpoint: '/v1/agents/role-specialization',
       status: 'idle',
+      rankTypeOptions: [
+        { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
+        { id: 'flex', label: 'Rank Flex', value: 440 },
+        { id: 'normal', label: 'Normal', value: 400 }
+      ],
+      selectedRankType: 420, // Default to Solo/Duo
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -659,6 +789,12 @@ export default function AICoachAnalysis({
       icon: Boxes,
       endpoint: '/v1/agents/build-simulator',
       status: 'idle',
+      rankTypeOptions: [
+        { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
+        { id: 'flex', label: 'Rank Flex', value: 440 },
+        { id: 'normal', label: 'Normal', value: 400 }
+      ],
+      selectedRankType: 420, // Default to Solo/Duo
       timeRangeOptions: [
         {
           id: '2024-full-year',
@@ -678,6 +814,17 @@ export default function AICoachAnalysis({
   const updateAgentStatus = (id: string, updates: Partial<AgentState>) => {
     setAgents((prev) =>
       prev.map((agent) => (agent.id === id ? { ...agent, ...updates } : agent))
+    );
+  };
+
+  const handleRankTypeChange = (agentId: string, rankType: number) => {
+    setAgents((prev) =>
+      prev.map((agent) => {
+        if (agent.id === agentId) {
+          return { ...agent, selectedRankType: rankType };
+        }
+        return agent;
+      })
     );
   };
 
@@ -791,6 +938,9 @@ export default function AICoachAnalysis({
     updateAgentStatus(agent.id, { status: 'generating', error: undefined });
 
     try {
+      // Create new AbortController for this stream
+      abortControllerRef.current = new AbortController();
+      
       const { fetchAgentStream } = await import('@/app/lib/streamUtils');
 
       const url = `/api/agents/${agent.id}`;
@@ -817,7 +967,14 @@ export default function AICoachAnalysis({
         console.log(`[${agent.id}] No time_range selected`);
       }
 
-      const result = await fetchAgentStream(url, body);
+      // Add queue_id parameter if agent has rankTypeOptions
+      if (latestAgent?.selectedRankType !== undefined) {
+        body.queue_id = latestAgent.selectedRankType;
+        const queueNames: Record<number, string> = { 420: 'Solo/Duo', 440: 'Flex', 400: 'Normal' };
+        console.log(`[${agent.id}] Using queue_id: ${latestAgent.selectedRankType} (${queueNames[latestAgent.selectedRankType] || 'Unknown'})`);
+      }
+
+      const result = await fetchAgentStream(url, body, abortControllerRef.current);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
       const currentTimeRange = latestAgent?.selectedTimeRange || 'default';
@@ -851,6 +1008,11 @@ export default function AICoachAnalysis({
         return prev;
       });
     } catch (error) {
+      // Don't set error if aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log(`[${agent.id}] Stream aborted`);
+        return;
+      }
       console.error(`❌ Error generating analysis for ${agent.id}:`, error);
       updateAgentStatus(agent.id, {
         status: 'error',
@@ -870,6 +1032,9 @@ export default function AICoachAnalysis({
     updateAgentStatus(agentId, { status: 'generating', error: undefined });
 
     try {
+      // Create new AbortController for this stream
+      abortControllerRef.current = new AbortController();
+      
       const { fetchAgentStream } = await import('@/app/lib/streamUtils');
 
       const url = `/api/agents/${agentId}`;
@@ -897,7 +1062,7 @@ export default function AICoachAnalysis({
         console.log(`[${agentId}] No time_range selected`);
       }
 
-      const result = await fetchAgentStream(url, body);
+      const result = await fetchAgentStream(url, body, abortControllerRef.current);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
       const currentTimeRange = latestAgent?.selectedTimeRange || 'default';
@@ -931,6 +1096,11 @@ export default function AICoachAnalysis({
         return prev;
       });
     } catch (error) {
+      // Don't set error if aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log(`[${agentId}] Stream aborted`);
+        return;
+      }
       console.error('Champion mastery error:', error);
       updateAgentStatus(agentId, {
         status: 'error',
@@ -950,6 +1120,9 @@ export default function AICoachAnalysis({
     updateAgentStatus(agentId, { status: 'generating', error: undefined });
 
     try {
+      // Create new AbortController for this stream
+      abortControllerRef.current = new AbortController();
+      
       const { fetchAgentStream } = await import('@/app/lib/streamUtils');
 
       const url = `/api/agents/${agentId}`;
@@ -970,7 +1143,7 @@ export default function AICoachAnalysis({
         body.friend_tag_line = friendTagLine;
       }
 
-      const result = await fetchAgentStream(url, body);
+      const result = await fetchAgentStream(url, body, abortControllerRef.current);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
 
@@ -986,6 +1159,11 @@ export default function AICoachAnalysis({
         setSelectedAgent({ ...agent, detailedReport, analysisData });
       }
     } catch (error) {
+      // Don't set error if aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log(`[${agentId}] Stream aborted`);
+        return;
+      }
       console.error('Comparison hub error:', error);
       updateAgentStatus(agentId, {
         status: 'error',
@@ -1005,6 +1183,9 @@ export default function AICoachAnalysis({
     updateAgentStatus(agentId, { status: 'generating', error: undefined });
 
     try {
+      // Create new AbortController for this stream
+      abortControllerRef.current = new AbortController();
+      
       const { fetchAgentStream } = await import('@/app/lib/streamUtils');
 
       const url = `/api/agents/${agentId}`;
@@ -1032,7 +1213,7 @@ export default function AICoachAnalysis({
         console.log(`[${agentId}] No time_range selected`);
       }
 
-      const result = await fetchAgentStream(url, body);
+      const result = await fetchAgentStream(url, body, abortControllerRef.current);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
       const currentTimeRange = latestAgent?.selectedTimeRange || 'default';
@@ -1066,6 +1247,11 @@ export default function AICoachAnalysis({
         return prev;
       });
     } catch (error) {
+      // Don't set error if aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log(`[${agentId}] Stream aborted`);
+        return;
+      }
       console.error('Role specialization error:', error);
       updateAgentStatus(agentId, {
         status: 'error',
@@ -1131,6 +1317,9 @@ export default function AICoachAnalysis({
     updateAgentStatus(agentId, { status: 'generating', error: undefined });
 
     try {
+      // Create new AbortController for this stream
+      abortControllerRef.current = new AbortController();
+      
       // Import stream utility
       const { fetchAgentStream } = await import('@/app/lib/streamUtils');
 
@@ -1144,7 +1333,7 @@ export default function AICoachAnalysis({
         match_id: matchId
       };
 
-      const result = await fetchAgentStream(url, body);
+      const result = await fetchAgentStream(url, body, abortControllerRef.current);
 
       const detailedReport = result.detailed || '';
 
@@ -1159,6 +1348,11 @@ export default function AICoachAnalysis({
         setSelectedAgent({ ...agent, detailedReport });
       }
     } catch (error) {
+      // Don't set error if aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log(`[${agentId}] Stream aborted`);
+        return;
+      }
       console.error('Timeline deep dive error:', error);
       updateAgentStatus(agentId, {
         status: 'error',
@@ -1195,44 +1389,43 @@ export default function AICoachAnalysis({
       {/* Section Header */}
       <div className="mb-6 text-center">
         <ShinyText text="AI Analysis Hub" speed={4} className="text-3xl font-bold mb-2" />
-        {/* Data Fetch Status Indicators */}
-        <div className="flex items-center justify-center gap-3 mt-2">
-          {/* Past Season Indicator */}
+        {/* Data Fetch Status Indicator */}
+        <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
           <div 
-            ref={pastSeasonRef}
+            ref={dataIndicatorRef}
             className="flex items-center gap-1 px-2 py-1 rounded cursor-help relative" 
-            style={{ backgroundColor: pastSeasonStatus === 'success' ? 'rgba(16, 185, 129, 0.2)' : pastSeasonStatus === 'failed' ? 'rgba(239, 68, 68, 0.2)' : pastSeasonStatus === 'pending' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(107, 114, 128, 0.2)' }} 
+            style={{ backgroundColor: combinedStatus === 'success' ? 'rgba(16, 185, 129, 0.2)' : combinedStatus === 'failed' ? 'rgba(239, 68, 68, 0.2)' : combinedStatus === 'pending' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(107, 114, 128, 0.2)' }} 
             onMouseEnter={(e) => {
-              if (pastSeasonRef.current) {
-                const rect = pastSeasonRef.current.getBoundingClientRect();
+              if (dataIndicatorRef.current) {
+                const rect = dataIndicatorRef.current.getBoundingClientRect();
                 setTooltipPosition({
                   top: rect.bottom + 8,
                   left: rect.left + rect.width / 2
                 });
               }
-              setShowPastSeasonTooltip(true);
+              setShowDataTooltip(true);
             }}
-            onMouseLeave={() => setShowPastSeasonTooltip(false)}
+            onMouseLeave={() => setShowDataTooltip(false)}
           >
-            {pastSeasonStatus === 'success' && (
+            {combinedStatus === 'success' && (
               <CheckCircle2 className="w-4 h-4" style={{ color: '#10B981' }} />
             )}
-            {pastSeasonStatus === 'failed' && (
+            {combinedStatus === 'failed' && (
               <XCircle className="w-4 h-4" style={{ color: '#EF4444' }} />
             )}
-            {pastSeasonStatus === 'pending' && (
+            {combinedStatus === 'pending' && (
               <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#FBBF24' }} />
             )}
-            {pastSeasonStatus === 'unknown' && (
+            {combinedStatus === 'unknown' && (
               <XCircle className="w-4 h-4" style={{ color: '#6B7280' }} />
             )}
-            <span className="text-xs" style={{ color: pastSeasonStatus === 'success' ? '#10B981' : pastSeasonStatus === 'failed' ? '#EF4444' : pastSeasonStatus === 'pending' ? '#FBBF24' : '#6B7280' }}>
-              Past Season
+            <span className="text-xs" style={{ color: combinedStatus === 'success' ? '#10B981' : combinedStatus === 'failed' ? '#EF4444' : combinedStatus === 'pending' ? '#FBBF24' : '#6B7280' }}>
+              Data Status
             </span>
             
             {/* Custom Tooltip */}
             <AnimatePresence>
-              {showPastSeasonTooltip && (
+              {showDataTooltip && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9, y: -5 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1247,104 +1440,151 @@ export default function AICoachAnalysis({
                   }}
                 >
                   <div
-                    className="px-3 py-2 rounded-lg shadow-lg border text-xs whitespace-nowrap"
+                    className="px-3 py-2 rounded-lg shadow-lg border text-xs"
                     style={{
                       backgroundColor: 'rgba(0, 0, 0, 0.9)',
                       borderColor: 'rgba(255, 255, 255, 0.2)',
                       color: '#F5F5F7'
                     }}
                   >
-                    {pastSeasonStatus === 'success' ? (
+                    {combinedStatus === 'success' ? (
                       <>
-                        <div>Past Season data available</div>
-                        <div style={{ color: '#10B981', marginTop: '2px' }}>{pastSeasonMatchCount} matches</div>
+                        <div>Data available</div>
+                        <div style={{ color: '#10B981', marginTop: '4px' }}>
+                          <div>Past Season: {pastSeasonMatchCount} matches</div>
+                          <div>Past 365 Days: {past365MatchCount} matches</div>
+                          <div style={{ marginTop: '4px', borderTop: '1px solid rgba(255, 255, 255, 0.2)', paddingTop: '4px' }}>
+                            Total: {totalMatches} matches
+                          </div>
+                        </div>
                       </>
-                    ) : pastSeasonStatus === 'failed' ? (
-                      'Past Season data fetch failed'
-                    ) : pastSeasonStatus === 'pending' ? (
-                      'Past Season data fetch in progress'
+                    ) : combinedStatus === 'failed' ? (
+                      <>
+                        <div>Data fetch failed</div>
+                        <div style={{ marginTop: '4px', fontSize: '0.75rem', color: '#8E8E93' }}>
+                          Past Season: {pastSeasonMatchCount} matches<br/>
+                          Past 365 Days: {past365MatchCount} matches
+                        </div>
+                      </>
+                    ) : combinedStatus === 'pending' ? (
+                      <>
+                        <div>Data fetch in progress</div>
+                        <div style={{ marginTop: '4px', fontSize: '0.75rem', color: '#8E8E93' }}>
+                          Past Season: {pastSeasonMatchCount} matches<br/>
+                          Past 365 Days: {past365MatchCount} matches
+                        </div>
+                      </>
                     ) : (
-                      'Past Season data not available'
+                      <>
+                        <div>Data not available</div>
+                        <div style={{ marginTop: '4px', fontSize: '0.75rem', color: '#8E8E93' }}>
+                          Past Season: {pastSeasonMatchCount} matches<br/>
+                          Past 365 Days: {past365MatchCount} matches
+                        </div>
+                      </>
                     )}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-          {/* Past 365 Days Indicator */}
-          <div 
-            ref={past365Ref}
-            className="flex items-center gap-1 px-2 py-1 rounded cursor-help relative" 
-            style={{ backgroundColor: past365Status === 'success' ? 'rgba(16, 185, 129, 0.2)' : past365Status === 'failed' ? 'rgba(239, 68, 68, 0.2)' : past365Status === 'pending' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(107, 114, 128, 0.2)' }} 
-            onMouseEnter={(e) => {
-              if (past365Ref.current) {
-                const rect = past365Ref.current.getBoundingClientRect();
-                setTooltipPosition({
-                  top: rect.bottom + 8,
-                  left: rect.left + rect.width / 2
-                });
-              }
-              setShowPast365Tooltip(true);
-            }}
-            onMouseLeave={() => setShowPast365Tooltip(false)}
-          >
-            {past365Status === 'success' && (
-              <CheckCircle2 className="w-4 h-4" style={{ color: '#10B981' }} />
-            )}
-            {past365Status === 'failed' && (
-              <XCircle className="w-4 h-4" style={{ color: '#EF4444' }} />
-            )}
-            {past365Status === 'pending' && (
-              <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#FBBF24' }} />
-            )}
-            {past365Status === 'unknown' && (
-              <XCircle className="w-4 h-4" style={{ color: '#6B7280' }} />
-            )}
-            <span className="text-xs" style={{ color: past365Status === 'success' ? '#10B981' : past365Status === 'failed' ? '#EF4444' : past365Status === 'pending' ? '#FBBF24' : '#6B7280' }}>
-              Past 365 Days
-            </span>
+          
+          {/* Rank Type Indicators */}
+          {['solo_duo', 'flex', 'normal'].map((rankType) => {
+            const rankData = rankTypeStatus[rankType as keyof typeof rankTypeStatus];
+            const rankLabel = rankType === 'solo_duo' ? 'Rank Solo/Duo' : rankType === 'flex' ? 'Rank Flex' : 'Normal';
+            const status = rankData.status;
             
-            {/* Custom Tooltip */}
-            <AnimatePresence>
-              {showPast365Tooltip && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: -5 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: -5 }}
-                  transition={{ duration: 0.15 }}
-                  className="fixed z-50 pointer-events-none"
-                  style={{
-                    top: `${tooltipPosition.top}px`,
-                    left: `${tooltipPosition.left}px`,
-                    transform: 'translate(-50%, 0)',
-                    marginTop: '0'
-                  }}
-                >
-                  <div
-                    className="px-3 py-2 rounded-lg shadow-lg border text-xs whitespace-nowrap"
-                    style={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
-                      color: '#F5F5F7'
-                    }}
-                  >
-                    {past365Status === 'success' ? (
-                      <>
-                        <div>Past 365 Days data available</div>
-                        <div style={{ color: '#10B981', marginTop: '2px' }}>{past365MatchCount} matches</div>
-                      </>
-                    ) : past365Status === 'failed' ? (
-                      'Past 365 Days data fetch failed'
-                    ) : past365Status === 'pending' ? (
-                      'Past 365 Days data fetch in progress'
-                    ) : (
-                      'Past 365 Days data not available'
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+            return (
+              <div
+                key={rankType}
+                ref={(el) => { rankIndicatorRefs.current[rankType] = el; }}
+                className="flex items-center gap-1 px-2 py-1 rounded cursor-help relative"
+                style={{
+                  backgroundColor: status === 'success' ? 'rgba(16, 185, 129, 0.2)' : status === 'failed' ? 'rgba(239, 68, 68, 0.2)' : status === 'pending' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(107, 114, 128, 0.2)'
+                }}
+                onMouseEnter={(e) => {
+                  const ref = rankIndicatorRefs.current[rankType];
+                  if (ref) {
+                    const rect = ref.getBoundingClientRect();
+                    setRankTooltipPositions({
+                      ...rankTooltipPositions,
+                      [rankType]: {
+                        top: rect.bottom + 8,
+                        left: rect.left + rect.width / 2
+                      }
+                    });
+                  }
+                  setShowRankTooltip({ ...showRankTooltip, [rankType]: true });
+                }}
+                onMouseLeave={() => {
+                  setShowRankTooltip({ ...showRankTooltip, [rankType]: false });
+                }}
+              >
+                {status === 'success' && (
+                  <CheckCircle2 className="w-4 h-4" style={{ color: '#10B981' }} />
+                )}
+                {status === 'failed' && (
+                  <XCircle className="w-4 h-4" style={{ color: '#EF4444' }} />
+                )}
+                {status === 'pending' && (
+                  <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#FBBF24' }} />
+                )}
+                {status === 'unknown' && (
+                  <XCircle className="w-4 h-4" style={{ color: '#6B7280' }} />
+                )}
+                <span className="text-xs" style={{ color: status === 'success' ? '#10B981' : status === 'failed' ? '#EF4444' : status === 'pending' ? '#FBBF24' : '#6B7280' }}>
+                  {rankLabel}
+                </span>
+                
+                {/* Rank Type Tooltip */}
+                <AnimatePresence>
+                  {showRankTooltip[rankType] && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9, y: -5 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: -5 }}
+                      transition={{ duration: 0.15 }}
+                      className="fixed z-50 pointer-events-none"
+                      style={{
+                        top: `${rankTooltipPositions[rankType]?.top || 0}px`,
+                        left: `${rankTooltipPositions[rankType]?.left || 0}px`,
+                        transform: 'translate(-50%, 0)',
+                        marginTop: '0'
+                      }}
+                    >
+                      <div
+                        className="px-3 py-2 rounded-lg shadow-lg border text-xs"
+                        style={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                          borderColor: 'rgba(255, 255, 255, 0.2)',
+                          color: '#F5F5F7'
+                        }}
+                      >
+                        {status === 'success' ? (
+                          <>
+                            <div>{rankLabel} Data</div>
+                            <div style={{ color: '#10B981', marginTop: '4px' }}>
+                              <div>Past Season: {rankData.past_season} matches</div>
+                              <div>Past 365 Days: {rankData.past_365} matches</div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div>{rankLabel} Data</div>
+                            <div style={{ marginTop: '4px', fontSize: '0.75rem', color: '#8E8E93' }}>
+                              Past Season: {rankData.past_season} matches<br/>
+                              Past 365 Days: {rankData.past_365} matches
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -1450,6 +1690,7 @@ export default function AICoachAnalysis({
             {...agent}
             onGenerate={() => handleGenerate(agent)}
             onTimeRangeChange={(timeRange) => handleTimeRangeChange(agent.id, timeRange)}
+            onRankTypeChange={(rankType) => handleRankTypeChange(agent.id, rankType)}
             onSubOptionClick={(subOptionId) => handleSubOptionClick(agent.id, subOptionId)}
           />
         ))}
@@ -1463,6 +1704,7 @@ export default function AICoachAnalysis({
             {...agent}
             onGenerate={() => handleGenerate(agent)}
             onTimeRangeChange={(timeRange) => handleTimeRangeChange(agent.id, timeRange)}
+            onRankTypeChange={(rankType) => handleRankTypeChange(agent.id, rankType)}
             onSubOptionClick={(subOptionId) => handleSubOptionClick(agent.id, subOptionId)}
           />
         ))}
@@ -1476,6 +1718,7 @@ export default function AICoachAnalysis({
             {...agent}
             onGenerate={() => handleGenerate(agent)}
             onTimeRangeChange={(timeRange) => handleTimeRangeChange(agent.id, timeRange)}
+            onRankTypeChange={(rankType) => handleRankTypeChange(agent.id, rankType)}
             onSubOptionClick={(subOptionId) => handleSubOptionClick(agent.id, subOptionId)}
           />
         ))}

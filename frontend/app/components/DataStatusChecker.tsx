@@ -234,28 +234,8 @@ export default function DataStatusChecker({
       setFetching(true);
       setFetchProgress(0);
 
-      // Helper function to get Past Season date range based on patch versions
-      // Past Season 2024: patch 14.1 (2024-01-09) to patch 14.25 (2025-01-06)
-      const getPastSeasonDateRange = (): { start: Date; end: Date } => {
-        return {
-          start: new Date('2024-01-09'), // patch 14.1 start date
-          end: new Date('2025-01-06T23:59:59.999') // patch 14.25 end date
-        };
-      };
-
-      // Calculate days needed to cover both Past Season and Past 365 Days
-      const today = new Date();
-      const { start: pastSeasonStart } = getPastSeasonDateRange();
-      const past365DaysStart = new Date(today);
-      past365DaysStart.setDate(past365DaysStart.getDate() - 365);
-      
-      // Get the earlier date between Past Season start and Past 365 Days start
-      const startDate = pastSeasonStart < past365DaysStart ? pastSeasonStart : past365DaysStart;
-      
-      // Calculate days from start date to today
-      const daysDiff = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      // Trigger FULL YEAR data fetch (covering Past Season and Past 365 Days) via backend API
+      // Data fetching now always starts from patch 14.1 (2024-01-09) to today
+      // time_range parameter is only used for filtering data in agents, not for fetching
       const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
       const fetchResponse = await fetch(
         `${BACKEND_URL}/v1/player/fetch-data`,
@@ -266,7 +246,7 @@ export default function DataStatusChecker({
             game_name: gameName,
             tag_line: tagLine,
             region: 'na1',
-            days: daysDiff,
+            days: 365,  // Kept for compatibility but not used for fetching
             include_timeline: true
           })
         }

@@ -44,93 +44,123 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
     setError('');
 
     try {
-      // Fetch player data
-      const response = await fetch(
+      // Create timeout promise (60 seconds)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Request timeout. The server is taking too long to respond. This may be due to high traffic. Please try again later.'));
+        }, 60000); // 60 seconds timeout
+      });
+
+      // Fetch player data with timeout
+      const fetchPromise = fetch(
         `/api/summoner/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}?count=20`
       );
-      
-      if (!response.ok) {
-        let errorData: any = {};
-        try {
-          errorData = await response.json();
-        } catch (e) {
-          // If response is not JSON, use status text
-          errorData = { error: response.statusText };
-        }
-        
-        console.error(`Failed to fetch data for ${display}:`, response.status, errorData);
-        
-        // Handle 404 - player not found
-        if (response.status === 404) {
-          // Use error message from backend if available, otherwise use default
-          const errorMsg = errorData.error || errorData.detail || `Invalid ID, please double check: ${display}`;
-          throw new Error(errorMsg);
-        }
-        
-        // Bubble up helpful backend messages
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('Riot API Unauthorized. Please set RIOT_API_KEY in combatpower/.env and restart the backend.');
-        }
-        
-        // Use error message from backend if available
-        if (errorData?.error || errorData?.detail) {
-          throw new Error(errorData.error || errorData.detail);
-        }
-        
-        throw new Error('Failed to fetch player data');
-      }
 
-      const data = await response.json();
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
       
-      if (!data.success) {
-        console.error(`Error for ${display}:`, data.error);
-        throw new Error(data.error || 'Failed to fetch player data');
-      }
-
-      // Trigger background year data fetch (non-blocking)
-      // Calculate days needed to cover both Past Season and Past 365 Days
-      const today = new Date();
-      const pastSeasonStart = new Date('2024-01-09'); // patch 14.1 start date
-      const past365DaysStart = new Date(today);
-      past365DaysStart.setDate(past365DaysStart.getDate() - 365);
-      
-      // Get the earlier date between Past Season start and Past 365 Days start
-      const startDate = pastSeasonStart < past365DaysStart ? pastSeasonStart : past365DaysStart;
-      
-      // Calculate days from start date to today
-      const daysDiff = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      fetch('/api/player/fetch-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          gameName: gameName,
-          tagLine: tagLine,
-          region: data.player?.region || 'na1',
-          days: daysDiff,
-          includeTimeline: true,
-        }),
-      }).then(res => res.json())
-        .then(result => {
-          console.log(`Background data fetch started for ${display} (${daysDiff} days to cover Past Season 2024 and Past 365 Days):`, result.task_id);
-          // Store task_id in localStorage for status checking
-          const storageKey = `fetch_task_${gameName}_${tagLine}`;
-          localStorage.setItem(storageKey, result.task_id);
-        })
-        .catch(err => {
-          console.warn(`Failed to start background fetch for ${display}:`, err);
-        });
-
-      // Navigate to player profile page
-      setTimeout(() => {
+      // Check response status first - if successful, navigate immediately
+      if (response.ok) {
+        // Clone response to read it multiple times
+        const clonedResponse = response.clone();
+        
+        // Navigate immediately after successful response
         router.push(`/player/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`);
-      }, 100);
+        
+        // Parse response and trigger background data fetch in background (non-blocking)
+        clonedResponse.json().then(data => {
+          if (data.success) {
+            // Trigger background year data fetch (non-blocking)
+            // Calculate days needed to cover both Past Season and Past 365 Days
+            const today = new Date();
+            const pastSeasonStart = new Date('2024-01-09'); // patch 14.1 start date
+            const past365DaysStart = new Date(today);
+            past365DaysStart.setDate(past365DaysStart.getDate() - 365);
+            
+            // Get the earlier date between Past Season start and Past 365 Days start
+            const startDate = pastSeasonStart < past365DaysStart ? pastSeasonStart : past365DaysStart;
+            
+            // Calculate days from start date to today
+            const daysDiff = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            fetch('/api/player/fetch-data', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                gameName: gameName,
+                tagLine: tagLine,
+                region: data.player?.region || 'na1',
+                days: daysDiff,
+                includeTimeline: true,
+              }),
+            }).then(res => res.json())
+              .then(result => {
+                console.log(`Background data fetch started for ${display} (${daysDiff} days to cover Past Season 2024 and Past 365 Days):`, result.task_id);
+                // Store task_id in localStorage for status checking
+                const storageKey = `fetch_task_${gameName}_${tagLine}`;
+                localStorage.setItem(storageKey, result.task_id);
+              })
+              .catch(err => {
+                console.warn(`Failed to start background fetch for ${display}:`, err);
+              });
+          }
+        }).catch(err => {
+          console.warn(`Failed to parse response for ${display}:`, err);
+        });
+        
+        // Exit early - navigation happens immediately
+        setIsLoading(false);
+        return;
+      }
+      
+      // Handle errors - only show error if response is not ok
+      let errorData: any = {};
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        // If response is not JSON, use status text
+        errorData = { error: response.statusText };
+      }
+      
+      console.error(`Failed to fetch data for ${display}:`, response.status, errorData);
+      
+      // Handle 429 - Rate limit / Too many requests
+      if (response.status === 429) {
+        throw new Error('Request too frequent. Please wait a moment and try again later.');
+      }
+      
+      // Handle 404 - player not found
+      if (response.status === 404) {
+        // Use error message from backend if available, otherwise use default
+        const errorMsg = errorData.error || errorData.detail || `Invalid ID, please double check: ${display}`;
+        throw new Error(errorMsg);
+      }
+      
+      // Bubble up helpful backend messages
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Riot API Unauthorized. Please set RIOT_API_KEY in combatpower/.env and restart the backend.');
+      }
+      
+      // Use error message from backend if available
+      if (errorData?.error || errorData?.detail) {
+        throw new Error(errorData.error || errorData.detail);
+      }
+      
+      throw new Error('Failed to fetch player data');
     } catch (error) {
       console.error('Search error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred while searching. Please try again.';
+      let errorMessage = error instanceof Error ? error.message : 'An error occurred while searching. Please try again.';
+      
+      // Check if it's a timeout or rate limit error
+      if (errorMessage.includes('timeout') || errorMessage.includes('too long')) {
+        errorMessage = 'Request timeout. The server is taking too long to respond. This may be due to high traffic. Please try again later.';
+      } else if (errorMessage.includes('too frequent') || errorMessage.includes('429')) {
+        errorMessage = 'Request too frequent. Please wait a moment and try again later.';
+      }
+      
       setError(errorMessage);
-      // Show "Invalid ID" messages longer
-      const timeout = errorMessage.includes('Invalid ID') ? 5000 : 3000;
+      // Show timeout/rate limit messages longer
+      const timeout = errorMessage.includes('timeout') || errorMessage.includes('too frequent') ? 8000 : 
+                      errorMessage.includes('Invalid ID') ? 5000 : 3000;
       setTimeout(() => setError(''), timeout);
     } finally {
       setIsLoading(false);

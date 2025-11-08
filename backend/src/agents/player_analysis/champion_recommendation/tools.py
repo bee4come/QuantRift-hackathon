@@ -7,7 +7,7 @@ from src.analytics import ChampionSimilarityCalculator, MetaTierClassifier
 from src.utils.id_mappings import get_champion_name
 
 
-def analyze_champion_pool(packs_dir: str, time_range: str = None) -> Dict[str, Any]:
+def analyze_champion_pool(packs_dir: str, time_range: str = None, queue_id: int = None) -> Dict[str, Any]:
     """分析玩家英雄池特征"""
     from datetime import datetime, timedelta
     
@@ -24,13 +24,35 @@ def analyze_champion_pool(packs_dir: str, time_range: str = None) -> Dict[str, A
     elif time_range == "past-365":
         cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
     
-    pack_files = sorted(packs_dir.glob("pack_*.json"))
+    # Build file pattern based on queue_id
+    if queue_id is not None:
+        pack_pattern = f"pack_*_{queue_id}.json"
+    else:
+        pack_pattern = "pack_*.json"
 
-    # 聚合所有英雄数据
+    pack_files = sorted(packs_dir.glob(pack_pattern))
+
+    # Aggregate all champion data
     champion_stats = {}
     for pack_file in pack_files:
+        # Extract patch version from filename
+        filename = pack_file.stem
+        if filename.startswith("pack_"):
+            patch = filename.replace("pack_", "")
+            # Remove queue_id suffix if present
+            if "_" in patch:
+                patch = patch.rsplit("_", 1)[0]
+        else:
+            continue
+            
         with open(pack_file, 'r') as f:
             pack_data = json.load(f)
+            
+            # Verify queue_id matches if specified
+            if queue_id is not None:
+                pack_queue_id = pack_data.get('queue_id', 420)
+                if pack_queue_id != queue_id:
+                    continue
             
             # Apply time range filter based on match dates, not generation timestamp
             if cutoff_timestamp:
@@ -112,8 +134,8 @@ def analyze_champion_pool(packs_dir: str, time_range: str = None) -> Dict[str, A
                             if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
                                 has_match_in_range = True
                         else:
-                        if pack_timestamp >= cutoff_timestamp:
-                            has_match_in_range = True
+                            if pack_timestamp >= cutoff_timestamp:
+                                has_match_in_range = True
                 
                 # Skip if no matches in the time range
                 if not has_match_in_range:

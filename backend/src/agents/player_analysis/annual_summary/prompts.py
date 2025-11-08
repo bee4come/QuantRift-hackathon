@@ -203,7 +203,7 @@ def build_annual_summary_prompt(analysis: Dict[str, Any], formatted_analysis: st
     elif time_range == "past-365":
         season = "Past 365 Days"
     else:
-    season = f"{patch_range[0]} - {patch_range[1]}"
+        season = f"{patch_range[0]} - {patch_range[1]}"
 
     # Format key turning points
     transitions = analysis["version_adaptation"]["key_transitions"]

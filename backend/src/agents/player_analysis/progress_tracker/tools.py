@@ -115,15 +115,15 @@ def load_recent_packs(packs_dir: str, window_size: int = 10, time_range: str = N
                                 has_match_in_range = True
                 else:
                     # Fallback to generation_timestamp if match dates not available
-                if "generation_timestamp" in pack_data:
-                    pack_timestamp = pack_data["generation_timestamp"]
+                    if "generation_timestamp" in pack_data:
+                        pack_timestamp = pack_data["generation_timestamp"]
                     if isinstance(pack_timestamp, str):
                         pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
                         if cutoff_end_timestamp:
                             if cutoff_timestamp <= pack_timestamp <= cutoff_end_timestamp:
                                 has_match_in_range = True
                         else:
-                    if pack_timestamp >= cutoff_timestamp:
+                            if pack_timestamp >= cutoff_timestamp:
                                 has_match_in_range = True
                 
                 if has_match_in_range:

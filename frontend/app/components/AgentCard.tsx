@@ -29,6 +29,13 @@ interface SubOption {
   icon: LucideIcon;
 }
 
+export interface RankTypeOption {
+  id: string;
+  label: string;
+  value: number; // 420: Solo/Duo, 440: Flex, 400: Normal
+  description?: string;
+}
+
 interface AgentCardProps {
   id: string;
   name: string;
@@ -41,6 +48,9 @@ interface AgentCardProps {
   timeRangeOptions?: TimeRangeOption[];
   selectedTimeRange?: string;
   onTimeRangeChange?: (timeRange: string) => void;
+  rankTypeOptions?: RankTypeOption[];
+  selectedRankType?: number;
+  onRankTypeChange?: (rankType: number) => void;
   subOptions?: SubOption[];
   onSubOptionClick?: (subOptionId: string) => void;
 }
@@ -57,6 +67,9 @@ export default function AgentCard({
   timeRangeOptions,
   selectedTimeRange,
   onTimeRangeChange,
+  rankTypeOptions,
+  selectedRankType,
+  onRankTypeChange,
   subOptions,
   onSubOptionClick
 }: AgentCardProps) {
@@ -158,6 +171,24 @@ export default function AgentCard({
                 {error}
               </p>
             </motion.div>
+          )}
+
+          {/* Rank Type Selector */}
+          {rankTypeOptions && rankTypeOptions.length > 0 && (
+            <div className="rank-type-wrapper">
+              <select
+                value={selectedRankType || rankTypeOptions[0].value}
+                onChange={(e) => onRankTypeChange?.(parseInt(e.target.value))}
+                disabled={status === 'generating'}
+                className="rank-type-select"
+              >
+                {rankTypeOptions.map((option) => (
+                  <option key={option.id} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
 
           {/* Time Range Selector */}
@@ -331,8 +362,47 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     border: 1px solid rgba(255, 69, 58, 0.3);
   }
 
-  .time-range-wrapper {
+  .rank-type-wrapper {
     margin-top: auto;
+    margin-bottom: 0.5rem;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    transform: translateY(-0.5rem);
+  }
+
+  .rank-type-select {
+    width: 200px;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: ${props => props.$isLight 
+      ? 'rgba(255, 255, 255, 0.1)' 
+      : 'rgba(255, 255, 255, 0.05)'};
+    border: 1px solid ${props => props.$isLight 
+      ? 'rgba(255, 255, 255, 0.2)' 
+      : 'rgba(255, 255, 255, 0.1)'};
+    color: #F5F5F7;
+    font-size: 0.875rem;
+    text-align: center;
+    text-align-last: center;
+    box-sizing: border-box;
+    margin: 0 auto;
+    display: block;
+  }
+
+  .rank-type-select option {
+    text-align: center;
+  }
+
+  .rank-type-select:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .time-range-wrapper {
+    margin-top: 0;
     margin-bottom: 0.5rem;
     width: 100%;
     display: flex;

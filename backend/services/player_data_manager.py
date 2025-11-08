@@ -140,7 +140,7 @@ class PlayerDataManager:
         try:
             print(f"\n🔄 Starting player data preparation: {game_name}#{tag_line}")
             print(f"   PUUID: {job.puuid[:30]}...")
-            print(f"   Time range: Past {job.days} days")
+            print(f"   Time range: Patch 14.1 (2024-01-09) to today")
 
             # 阶段1: 拉取match list (基于时间范围自动检测)
             job.status = DataStatus.FETCHING_MATCHES
@@ -148,8 +148,7 @@ class PlayerDataManager:
 
             match_ids = await self._fetch_all_match_ids(
                 puuid=job.puuid,
-                platform=job.region,
-                days=job.days
+                platform=job.region
             )
 
             if not match_ids:
@@ -233,12 +232,18 @@ class PlayerDataManager:
             total_patches = len(player_packs)
             total_games = sum(pack['total_games'] for pack in player_packs)
 
-            # ✅ 为每个patch保存单独文件
+            # ✅ Save pack files for each patch and queue_id combination
+            # File naming: pack_{patch}_{queue_id}.json (e.g., pack_15.1_420.json for Solo/Duo)
+            queue_id_names = {420: 'solo', 440: 'flex', 400: 'normal'}
+            
             for pack in player_packs:
                 patch = pack['patch']
-                cache_file = player_dir / f"pack_{patch}.json"
+                queue_id = pack.get('queue_id', 420)  # Default to Solo/Duo if not specified
+                queue_name = queue_id_names.get(queue_id, str(queue_id))
+                
+                cache_file = player_dir / f"pack_{patch}_{queue_id}.json"
 
-                # ✅ 只有当新数据 >= 现有数据时才覆盖（防止小count请求覆盖大数据集）
+                # ✅ Only overwrite if new data >= existing data (prevent smaller requests from overwriting larger datasets)
                 should_save = True
                 if cache_file.exists():
                     try:
@@ -249,14 +254,14 @@ class PlayerDataManager:
 
                         if new_games < existing_games:
                             should_save = False
-                            print(f"⏭️  Skipping save pack_{patch}.json: Existing data more complete ({existing_games} games vs {new_games} games)")
+                            print(f"⏭️  Skipping save pack_{patch}_{queue_id}.json: Existing data more complete ({existing_games} games vs {new_games} games)")
                     except Exception as e:
-                        print(f"⚠️  Cannot read existing pack_{patch}.json, will overwrite: {e}")
+                        print(f"⚠️  Cannot read existing pack_{patch}_{queue_id}.json, will overwrite: {e}")
 
                 if should_save:
                     with open(cache_file, 'w', encoding='utf-8') as f:
                         json.dump(pack, f, indent=2, ensure_ascii=False)
-                    print(f"✅ Saved pack_{patch}.json: {pack['total_games']} games")
+                    print(f"✅ Saved pack_{patch}_{queue_id}.json ({queue_name}): {pack['total_games']} games")
 
             # Save individual match files to global pool (shared across players)
             global_matches_dir = Path("data/matches")
@@ -341,55 +346,70 @@ class PlayerDataManager:
             job.error = str(e)
             job.completed_at = datetime.utcnow()
 
-    async def _fetch_all_match_ids(self, puuid: str, platform: str, days: int = 365) -> List[str]:
-        """根据count参数拉取最近N场比赛，不使用时间过滤
+    async def _fetch_all_match_ids(self, puuid: str, platform: str, days: int = None) -> List[str]:
+        """从patch 14.1开始获取到今天的所有比赛数据（包括所有queue类型）
 
         Args:
             puuid: Player PUUID
             platform: Platform code (e.g., 'na1')
-            days: count参数（表示要获取的比赛数量，默认365场）
+            days: 已弃用，保留以兼容旧代码
 
         Returns:
-            List of match IDs
+            List of match IDs (包含所有queue类型: 420=Solo/Duo, 440=Flex, 400=Normal)
         """
-        print(f"   📊 Fetching recent {days} matches (no time filter)")
+        # Patch 14.1 start date: 2024-01-09
+        patch_14_1_start = datetime(2024, 1, 9, tzinfo=timezone.utc)
+        start_timestamp = int(patch_14_1_start.timestamp() * 1000)  # Riot API uses milliseconds
+        end_timestamp = int(datetime.now(timezone.utc).timestamp() * 1000)  # Today
+
+        print(f"   📊 Fetching all matches from patch 14.1 (2024-01-09) to today (all queue types)")
 
         all_match_ids = []
-        start_index = 0
-        batch_size = 100  # Riot API单次最多返回100场
-        target_count = days  # days参数实际表示要获取的比赛数量
+        queue_types = [
+            (420, "Ranked Solo/Duo"),
+            (440, "Ranked Flex"),
+            (400, "Normal")
+        ]
 
-        while len(all_match_ids) < target_count:
-            # Calculate how many matches to fetch in this batch
-            remaining = target_count - len(all_match_ids)
-            current_batch_size = min(batch_size, remaining)
+        for queue_id, queue_name in queue_types:
+            print(f"   📥 Fetching {queue_name} matches...")
+            start_index = 0
+            batch_size = 100  # Riot API单次最多返回100场
+            queue_match_ids = []
 
-            print(f"   📥 Fetching matches {start_index}-{start_index + current_batch_size}...")
+            while True:
+                print(f"      Fetching {queue_name} matches {start_index}-{start_index + batch_size}...")
 
-            # Fetch without time filter, only use count and queue_id
-            batch = await riot_client.get_match_history(
-                puuid=puuid,
-                platform=platform,
-                count=current_batch_size,
-                start=start_index,
-                queue_id=420  # Ranked Solo/Duo
-            )
+                # Fetch with time filter: from patch 14.1 to today
+                batch = await riot_client.get_match_history(
+                    puuid=puuid,
+                    platform=platform,
+                    count=batch_size,
+                    start=start_index,
+                    start_time=start_timestamp,
+                    end_time=end_timestamp,
+                    queue_id=queue_id
+                )
 
-            if not batch or len(batch) == 0:
-                # No more matches available
-                print(f"   ✅ All available matches fetched: {len(all_match_ids)} matches")
-                break
+                if not batch or len(batch) == 0:
+                    # No more matches available for this queue type
+                    print(f"      ✅ All {queue_name} matches fetched: {len(queue_match_ids)} matches")
+                    break
 
-            all_match_ids.extend(batch)
-            print(f"   ✅ Batch retrieved {len(batch)} matches, total {len(all_match_ids)} matches")
+                queue_match_ids.extend(batch)
+                print(f"      ✅ Batch retrieved {len(batch)} {queue_name} matches, total {len(queue_match_ids)} matches")
 
-            # If returned less than requested, we've reached the end
-            if len(batch) < current_batch_size:
-                print(f"   ℹ️  Reached end of player match history")
-                break
+                # If returned less than requested, we've reached the end
+                if len(batch) < batch_size:
+                    print(f"      ℹ️  Reached end of {queue_name} match history")
+                    break
 
-            start_index += len(batch)
+                start_index += len(batch)
 
+            all_match_ids.extend(queue_match_ids)
+            print(f"   ✅ Total {queue_name} matches: {len(queue_match_ids)}")
+
+        print(f"   ✅ All queue types fetched: {len(all_match_ids)} total matches")
         return all_match_ids
 
     async def _fetch_match(self, match_id: str, platform: str):
@@ -488,8 +508,9 @@ class PlayerDataManager:
         timelines_map = {t['metadata']['matchId']: t for t in timelines_data}
         print(f"     ⏱️  Creating timeline mapping: {time.time()-t0:.3f}s")
 
-        # ✅ 按(patch, champ_id, role)聚合数据
-        patch_cr_data = defaultdict(lambda: defaultdict(list))
+        # ✅ 按(patch, queue_id, champ_id, role)聚合数据
+        # Structure: patch_cr_data[patch][queue_id][(champ_id, role)] = [game_stats]
+        patch_cr_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
         # 📊 添加过滤统计
         filter_stats = {
@@ -521,6 +542,9 @@ class PlayerDataManager:
         for match in matches_data:
             match_id = match['metadata']['matchId']
             timeline = timelines_map.get(match_id)
+            
+            # Extract queue_id from match
+            queue_id = match['info'].get('queueId', 420)  # Default to Solo/Duo if not specified
 
             # Extract match date from gameCreation timestamp
             game_creation = match['info'].get('gameCreation', 0)
@@ -586,8 +610,8 @@ class PlayerDataManager:
                 timeline_data=timeline
             )
 
-            # ✅ 按(patch, champ_id, role)存储
-            key = (champ_id, role)
+            # ✅ 按(patch, queue_id, champ_id, role)聚合数据
+            key = (champ_id, role, queue_id)
             patch_cr_data[patch][key].append(game_stats)
             filter_stats['processed'] += 1
 
@@ -623,98 +647,138 @@ class PlayerDataManager:
                 if patch_match_dates[patch]['latest'] is None or match_date > patch_match_dates[patch]['latest']:
                     patch_match_dates[patch]['latest'] = match_date
 
-        for patch, cr_data in sorted(patch_cr_data.items()):
-            # 计算每个(champ_id, role)的聚合metrics
-            by_cr = []
-
-            for (champ_id, role), games_stats in cr_data.items():
-                if not games_stats:
-                    continue
-
-                games = len(games_stats)
-                wins = sum(1 for g in games_stats if g['win'])
-                losses = games - wins
-
-                # Win rate with Wilson CI
-                p_hat = wins / games if games > 0 else 0.0
-                _, ci_lower, ci_upper = wilson_confidence_interval(wins, games)
-
-                # KDA adjusted (winsorized)
-                kda_values = [g['kda_adj'] for g in games_stats]
-                kda_winsorized = winsorize(kda_values)
-                kda_adj = np.mean(kda_winsorized) if kda_winsorized else 0.0
-
-                # Objective rate
-                obj_rate = np.mean([g['obj_rate'] for g in games_stats])
-
-                # Combat power at 25min
-                cp_25 = np.mean([g['cp_25'] for g in games_stats])
-
-                # Build core: most common items
-                item_counts = defaultdict(int)
-                for g in games_stats:
-                    for item_id in g['items_at_25']:
-                        item_counts[item_id] += 1
-                build_core = sorted(item_counts.keys(), key=lambda x: item_counts[x], reverse=True)[:3]
-
-                # Average time to core
-                avg_time_to_core = np.mean([g['time_to_core'] for g in games_stats])
-
-                # Most common rune keystone
-                rune_counts = defaultdict(int)
-                for g in games_stats:
-                    rune_counts[g['rune_keystone']] += 1
-                rune_keystone = max(rune_counts.keys(), key=lambda x: rune_counts[x]) if rune_counts else 0
-
-                # Governance tag
-                if games >= 100:
-                    governance_tag = "CONFIDENT"
-                elif games >= 30:
-                    governance_tag = "CAUTION"
-                else:
-                    governance_tag = "CONTEXT"
-
-                by_cr.append({
-                    "champ_id": champ_id,
-                    "role": role,
-                    "games": games,
-                    "wins": wins,
-                    "losses": losses,
-                    "p_hat": round(p_hat, 4),
-                    "p_hat_ci": [round(ci_lower, 4), round(ci_upper, 4)],
-                    "kda_adj": round(kda_adj, 2),
-                    "obj_rate": round(obj_rate, 3),
-                    "cp_25": round(cp_25, 1),
-                    "build_core": build_core,
-                    "avg_time_to_core": round(avg_time_to_core, 2),
-                    "rune_keystone": rune_keystone,
-                    "effective_n": games,
-                    "governance_tag": governance_tag
-                })
-
-            # ✅ 创建该patch的pack
-            pack = {
-                "puuid": puuid,
-                "patch": patch,  # ✅ 真实patch版本
-                "generation_timestamp": datetime.utcnow().isoformat(),
-                "total_games": sum(entry['games'] for entry in by_cr),
-                "by_cr": by_cr
-            }
+        # Generate packs for each patch and queue_id combination
+        for patch in sorted(patch_cr_data.keys()):
+            patch_queue_data = patch_cr_data[patch]
             
-            # Add match date range for this patch
-            if patch in patch_match_dates:
-                earliest = patch_match_dates[patch]['earliest']
-                latest = patch_match_dates[patch]['latest']
-                if earliest:
-                    pack["earliest_match_date"] = earliest.isoformat()
-                if latest:
-                    pack["latest_match_date"] = latest.isoformat()
-            
-            # Add games count for Past Season and Past 365 Days
-            pack["past_season_games"] = patch_past_season_games.get(patch, 0)
-            pack["past_365_days_games"] = patch_past_365_games.get(patch, 0)
-            
-            packs.append(pack)
+            # Generate a pack for each queue_id
+            for queue_id in sorted(patch_queue_data.keys()):
+                cr_data = patch_queue_data[queue_id]
+                
+                # Calculate aggregated metrics for each (champ_id, role)
+                by_cr = []
+
+                for (champ_id, role), games_stats in cr_data.items():
+                    if not games_stats:
+                        continue
+
+                    games = len(games_stats)
+                    wins = sum(1 for g in games_stats if g['win'])
+                    losses = games - wins
+
+                    # Win rate with Wilson CI
+                    p_hat = wins / games if games > 0 else 0.0
+                    _, ci_lower, ci_upper = wilson_confidence_interval(wins, games)
+
+                    # KDA adjusted (winsorized)
+                    kda_values = [g['kda_adj'] for g in games_stats]
+                    kda_winsorized = winsorize(kda_values)
+                    kda_adj = np.mean(kda_winsorized) if kda_winsorized else 0.0
+
+                    # Objective rate
+                    obj_rate = np.mean([g['obj_rate'] for g in games_stats])
+
+                    # Combat power at 25min
+                    cp_25 = np.mean([g['cp_25'] for g in games_stats])
+
+                    # Build core: most common items
+                    item_counts = defaultdict(int)
+                    for g in games_stats:
+                        for item_id in g['items_at_25']:
+                            item_counts[item_id] += 1
+                    build_core = sorted(item_counts.keys(), key=lambda x: item_counts[x], reverse=True)[:3]
+
+                    # Average time to core
+                    avg_time_to_core = np.mean([g['time_to_core'] for g in games_stats])
+
+                    # Most common rune keystone
+                    rune_counts = defaultdict(int)
+                    for g in games_stats:
+                        rune_counts[g['rune_keystone']] += 1
+                    rune_keystone = max(rune_counts.keys(), key=lambda x: rune_counts[x]) if rune_counts else 0
+
+                    # Governance tag
+                    if games >= 100:
+                        governance_tag = "CONFIDENT"
+                    elif games >= 30:
+                        governance_tag = "CAUTION"
+                    else:
+                        governance_tag = "CONTEXT"
+
+                    by_cr.append({
+                        "champ_id": champ_id,
+                        "role": role,
+                        "games": games,
+                        "wins": wins,
+                        "losses": losses,
+                        "p_hat": round(p_hat, 4),
+                        "p_hat_ci": [round(ci_lower, 4), round(ci_upper, 4)],
+                        "kda_adj": round(kda_adj, 2),
+                        "obj_rate": round(obj_rate, 3),
+                        "cp_25": round(cp_25, 1),
+                        "build_core": build_core,
+                        "avg_time_to_core": round(avg_time_to_core, 2),
+                        "rune_keystone": rune_keystone,
+                        "effective_n": games,
+                        "governance_tag": governance_tag
+                    })
+
+                # ✅ Create pack for this patch and queue_id
+                pack = {
+                    "puuid": puuid,
+                    "patch": patch,
+                    "queue_id": queue_id,  # Store queue_id in pack
+                    "generation_timestamp": datetime.utcnow().isoformat(),
+                    "total_games": sum(entry['games'] for entry in by_cr),
+                    "by_cr": by_cr
+                }
+                
+                # Add match date range for this patch (filtered by queue_id)
+                # Calculate date range for this specific queue_id
+                queue_earliest = None
+                queue_latest = None
+                for match in matches_data:
+                    match_queue_id = match['info'].get('queueId', 420)
+                    if match_queue_id == queue_id:
+                        game_version = match['info'].get('gameVersion', '0.0.0.0')
+                        match_patch = '.'.join(game_version.split('.')[:2])
+                        if match_patch == patch:
+                            game_creation = match['info'].get('gameCreation', 0)
+                            if game_creation:
+                                match_date = datetime.fromtimestamp(game_creation / 1000, tz=timezone.utc)
+                                if queue_earliest is None or match_date < queue_earliest:
+                                    queue_earliest = match_date
+                                if queue_latest is None or match_date > queue_latest:
+                                    queue_latest = match_date
+                
+                if queue_earliest:
+                    pack["earliest_match_date"] = queue_earliest.isoformat()
+                if queue_latest:
+                    pack["latest_match_date"] = queue_latest.isoformat()
+                
+                # Add games count for Past Season and Past 365 Days (for this queue_id)
+                queue_past_season_games = 0
+                queue_past_365_games = 0
+                for match in matches_data:
+                    match_queue_id = match['info'].get('queueId', 420)
+                    if match_queue_id == queue_id:
+                        game_version = match['info'].get('gameVersion', '0.0.0.0')
+                        match_patch = '.'.join(game_version.split('.')[:2])
+                        if match_patch == patch:
+                            game_creation = match['info'].get('gameCreation', 0)
+                            if game_creation:
+                                match_date = datetime.fromtimestamp(game_creation / 1000, tz=timezone.utc)
+                                # Check Past Season
+                                if past_season_start <= match_date <= past_season_end:
+                                    queue_past_season_games += 1
+                                # Check Past 365 Days
+                                if match_date >= past_365_days_start:
+                                    queue_past_365_games += 1
+                
+                pack["past_season_games"] = queue_past_season_games
+                pack["past_365_days_games"] = queue_past_365_games
+                
+                packs.append(pack)
 
         print(f"     ⏱️  Aggregation calculation + Pack generation: {time.time()-t2:.3f}s")
 
