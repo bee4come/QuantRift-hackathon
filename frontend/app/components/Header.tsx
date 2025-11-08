@@ -130,7 +130,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
       }}
       transition={{ duration: 0.8, ease: 'easeOut' }}
       className={`w-full px-4 transition-all duration-500 ${
-        (isSearched && pathname === '/') ? 'pt-4 pb-2' : 'pt-12 pb-6'
+        (isSearched && pathname === '/') ? 'pt-4 pb-2' : hideServerAndEsports ? 'pt-4 pb-4' : 'pt-12 pb-6'
       }`}
       style={{ zIndex: 1000 }}
     >
@@ -270,7 +270,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
               isModalOpen ? 'blur-sm pointer-events-none opacity-50' : ''
             }`}
           >
-            <span className="text-base font-medium" style={{ color: colors.textSecondary }}>Season 2025</span>
+            <span className="text-base font-medium" style={{ color: colors.textSecondary }}>Season 2024</span>
             <div className="w-px h-4" style={{ backgroundColor: colors.borderColor }}></div>
             <a 
               href="https://www.leagueoflegends.com/en-us/news/game-updates/patch-25-22-notes/" 

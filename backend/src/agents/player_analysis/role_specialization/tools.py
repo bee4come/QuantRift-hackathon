@@ -14,7 +14,7 @@ from src.core.statistical_utils import wilson_ci_tuple as wilson_confidence_inte
 from src.utils.id_mappings import get_champion_name
 
 
-def load_role_data(packs_dir: str, role: str, all_packs_data: List[Dict] = None) -> Dict[str, Any]:
+def load_role_data(packs_dir: str, role: str, all_packs_data: List[Dict] = None, time_range: str = None) -> Dict[str, Any]:
     """
     从所有pack文件中提取指定位置的数据
 
@@ -22,11 +22,24 @@ def load_role_data(packs_dir: str, role: str, all_packs_data: List[Dict] = None)
         packs_dir: Pack文件目录
         role: 位置 (TOP/JUNGLE/MIDDLE/BOTTOM/SUPPORT)
         all_packs_data: 预加载的所有pack数据（可选，来自AgentContext缓存）
+        time_range: Time range filter
+            - "2024-01-01": Load data from 2024-01-01 to today
+            - "past-365": Load data from past 365 days
+            - None: Load all available data
 
     Returns:
         按patch组织的位置数据
     """
+    from datetime import datetime, timedelta
+    
     role_data = {}
+
+    # Calculate time filter if needed
+    cutoff_timestamp = None
+    if time_range == "2024-01-01":
+        cutoff_timestamp = datetime(2024, 1, 1).timestamp()
+    elif time_range == "past-365":
+        cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
 
     # 如果提供了缓存数据，直接使用
     if all_packs_data is not None:
@@ -38,7 +51,20 @@ def load_role_data(packs_dir: str, role: str, all_packs_data: List[Dict] = None)
         packs = []
         for pack_file in pack_files:
             with open(pack_file, 'r', encoding='utf-8') as f:
-                packs.append(json.load(f))
+                pack_data = json.load(f)
+                
+                # Apply time range filter if specified
+                if cutoff_timestamp and "generation_timestamp" in pack_data:
+                    pack_timestamp = pack_data["generation_timestamp"]
+                    # If timestamp is string, convert to timestamp
+                    if isinstance(pack_timestamp, str):
+                        pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
+                    
+                    # Skip if before cutoff
+                    if pack_timestamp < cutoff_timestamp:
+                        continue
+                
+                packs.append(pack_data)
 
     # 处理pack数据
     for pack in packs:
@@ -343,7 +369,8 @@ def calculate_role_mastery_score(
 def generate_comprehensive_role_analysis(
     role: str,
     packs_dir: str,
-    all_packs_data: List[Dict] = None
+    all_packs_data: List[Dict] = None,
+    time_range: str = None
 ) -> Dict[str, Any]:
     """
     生成全面的位置专精分析
@@ -352,12 +379,13 @@ def generate_comprehensive_role_analysis(
         role: 位置
         packs_dir: Pack文件目录
         all_packs_data: 预加载的所有pack数据（可选，来自AgentContext缓存）
+        time_range: Time range filter
 
     Returns:
         完整的分析数据
     """
     # 1. 加载位置数据（优先使用缓存）
-    role_data = load_role_data(packs_dir, role, all_packs_data)
+    role_data = load_role_data(packs_dir, role, all_packs_data, time_range=time_range)
 
     if not role_data:
         raise ValueError(f"No data found for role {role}")

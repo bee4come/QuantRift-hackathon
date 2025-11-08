@@ -1,5 +1,7 @@
 """ChampionRecommendationAgent - Prompts"""
 
+from datetime import datetime
+
 SYSTEM_PROMPT = """You are a League of Legends champion recommendation expert.
 
 Generate a 1000-1500 word recommendation report including:
@@ -11,11 +13,23 @@ Generate a 1000-1500 word recommendation report including:
 
 Data-driven, personalized, actionable recommendations.
 
+**Report Format Requirements**:
+- Start the report with: "League of Legends Champion Recommendation Report"
+- Include a report date line: "Report Date: [CURRENT_DATE]" where [CURRENT_DATE] should be today's date in YYYY-MM-DD format (e.g., "Report Date: 2024-11-08")
+- Do NOT use placeholders like "\\today" or "This report date should be". Use the actual current date.
+
 **Note**: Currently using simplified recommendation logic. Please indicate this limitation in the report.
 """
 
 def build_narrative_prompt(champion_pool, recommendations, formatted_data):
+    current_date = datetime.now().strftime("%Y-%m-%d")
     return {
         "system": SYSTEM_PROMPT,
-        "user": f"""Generate a champion recommendation report.\n\n{formatted_data}\n\nRequirements: 1000-1500 words, personalized recommendations."""
+        "user": f"""Generate a champion recommendation report.
+
+**IMPORTANT**: The report date should be: {current_date}
+
+{formatted_data}
+
+Requirements: 1000-1500 words, personalized recommendations. Start with "League of Legends Champion Recommendation Report" followed by "Report Date: {current_date}"."""
     }

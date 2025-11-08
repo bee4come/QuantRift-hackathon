@@ -289,7 +289,16 @@ export default function DetailedAnalysisModal({
 
   useEffect(() => {
     setIsModalOpen(isOpen);
+    // Ensure state is reset when component unmounts
+    return () => {
+      setIsModalOpen(false);
+    };
   }, [isOpen, setIsModalOpen]);
+
+  const handleClose = () => {
+    setIsModalOpen(false);
+    onClose();
+  };
 
   const handleDownload = () => {
     const blob = new Blob([detailedReport], { type: 'text/markdown' });
@@ -312,7 +321,7 @@ export default function DetailedAnalysisModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             className="fixed inset-0 bg-black/80 backdrop-blur-md z-50"
           />
 
@@ -349,7 +358,7 @@ export default function DetailedAnalysisModal({
 
                 {/* Close Button */}
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="absolute top-6 right-6 p-2 rounded-lg border transition-all backdrop-blur-sm hover:opacity-80"
                   style={{
                     backgroundColor: 'rgba(255, 69, 58, 0.15)',

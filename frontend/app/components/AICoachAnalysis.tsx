@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Trophy,
@@ -13,7 +13,8 @@ import {
   Zap,
   FileText,
   UserPlus,
-  TrendingUp
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react';
 import AgentCard, { AgentStatus } from './AgentCard';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
@@ -48,6 +49,7 @@ interface AgentState {
   selectedTimeRange?: string;
   analysisData?: any; // For widgets (Annual Summary, Progress Tracker)
   subOptions?: SubOption[];
+  reportsByTimeRange?: Record<string, { detailedReport?: string; analysisData?: any; status: AgentStatus }>; // Store reports by time range
 }
 
 interface AICoachAnalysisProps {
@@ -78,6 +80,164 @@ export default function AICoachAnalysis({
   const [selectedAgent, setSelectedAgent] = useState<AgentState | null>(null);
   const [dataReady, setDataReady] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [insufficientData, setInsufficientData] = useState(false);
+  const [dataStatus, setDataStatus] = useState<any>(null);
+
+  // Helper function to get patch release date
+  const getPatchDate = (patch: string): Date | null => {
+    if (!patch) return null;
+    
+    // Patch date mapping (from patch_manager.py)
+    const patchDates: Record<string, string> = {
+      // 2024 Season patches (14.1 - 14.24)
+      '14.1': '2024-01-10',
+      '14.2': '2024-01-24',
+      '14.3': '2024-02-07',
+      '14.4': '2024-02-21',
+      '14.5': '2024-03-06',
+      '14.6': '2024-03-20',
+      '14.7': '2024-04-03',
+      '14.8': '2024-04-17',
+      '14.9': '2024-05-01',
+      '14.10': '2024-05-15',
+      '14.11': '2024-05-29',
+      '14.12': '2024-06-12',
+      '14.13': '2024-06-26',
+      '14.14': '2024-07-17',
+      '14.15': '2024-07-31',
+      '14.16': '2024-08-14',
+      '14.17': '2024-08-28',
+      '14.18': '2024-09-11',
+      '14.19': '2024-09-24',
+      '14.20': '2024-10-08',
+      '14.21': '2024-10-22',
+      '14.22': '2024-11-05',
+      '14.23': '2024-11-19',
+      '14.24': '2024-12-10',
+      // 2025 Season patches
+      '25.S1.1': '2025-01-07',
+      '25.S1.2': '2025-01-22',
+      '2025.S1.3': '2025-02-05',
+      '25.04': '2025-02-19',
+      '25.05': '2025-03-04',
+      '25.06': '2025-03-18',
+      '25.07': '2025-04-01',
+      '25.08': '2025-04-15',
+      '25.09': '2025-04-29',
+      '25.10': '2025-05-13',
+      '25.11': '2025-05-27',
+      '25.12': '2025-06-10',
+      '25.13': '2025-06-24',
+      '25.14': '2025-07-15',
+      '25.15': '2025-07-29',
+      '25.16': '2025-08-12',
+      '25.17': '2025-08-26',
+      '25.18': '2025-09-10',
+      '25.19': '2025-09-23',
+      '25.20': '2025-10-07',
+    };
+    
+    // Try exact match first
+    if (patchDates[patch]) {
+      return new Date(patchDates[patch]);
+    }
+    
+    // Try to match Data Dragon format (e.g., "14.1.1" -> "14.1")
+    const parts = patch.split('.');
+    if (parts.length >= 2) {
+      const basePatch = `${parts[0]}.${parts[1]}`;
+      if (patchDates[basePatch]) {
+        return new Date(patchDates[basePatch]);
+      }
+    }
+    
+    return null;
+  };
+
+  // Helper function to compare patch versions
+  const comparePatchVersion = (patch1: string, patch2: string): number => {
+    const parsePatch = (patch: string): number[] => {
+      // Handle formats like "14.24", "15.22", "13.24", "25.04" -> [14, 24], [15, 22], etc.
+      const parts = patch.split('.');
+      const major = parseInt(parts[0]) || 0;
+      const minor = parseInt(parts[1]) || 0;
+      return [major, minor];
+    };
+    
+    const [major1, minor1] = parsePatch(patch1);
+    const [major2, minor2] = parsePatch(patch2);
+    
+    if (major1 !== major2) return major1 - major2;
+    return minor1 - minor2;
+  };
+
+  // Check if patch is in Season 2024 range (14.1 - 14.24)
+  const isSeason2024Patch = (patch: string): boolean => {
+    if (!patch) return false;
+    
+    // Check if patch starts with 14.
+    if (!patch.startsWith('14.')) return false;
+    
+    // Extract minor version
+    const parts = patch.split('.');
+    if (parts.length < 2) return false;
+    
+    const minor = parseInt(parts[1]) || 0;
+    // Season 2024 is patches 14.1 to 14.24
+    return minor >= 1 && minor <= 24;
+  };
+
+  // Check if patch is within past 365 days from today
+  const isPatchWithinPast365Days = (patch: string): boolean => {
+    if (!patch) return false;
+    
+    const patchDate = getPatchDate(patch);
+    if (!patchDate) return false;
+    
+    const today = new Date();
+    const daysDiff = Math.floor((today.getTime() - patchDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    return daysDiff >= 0 && daysDiff <= 365;
+  };
+
+  // Initial data check on mount
+  useEffect(() => {
+    const checkInitialDataStatus = async () => {
+      try {
+        const response = await fetch(`/api/player/${gameName}/${tagLine}/data-status`);
+        if (response.ok) {
+          const status = await response.json();
+          setDataStatus(status);
+          
+          // Check if data is sufficient
+          const hasEnoughGames = status.has_data && status.total_games >= 10;
+          
+          // Check if there's data from Season 2024 (patch 14.1 - 14.24)
+          const hasSeason2024Data = status.patches?.some((p: any) => {
+            return isSeason2024Patch(p.patch);
+          }) || false;
+          
+          // Check if latest patch is within past 365 days from today
+          const hasPast365DaysData = status.latest_patch && isPatchWithinPast365Days(status.latest_patch);
+          
+          // Data is sufficient only if:
+          // 1. Has enough games (>=10)
+          // 2. Has Season 2024 data (14.1-14.24) OR has data within past 365 days from today
+          if (hasEnoughGames && (hasSeason2024Data || hasPast365DaysData)) {
+            setDataReady(true);
+            setInsufficientData(false);
+          } else {
+            setInsufficientData(true);
+            setDataReady(false);
+          }
+        }
+      } catch (err) {
+        console.error('Error checking initial data status:', err);
+      }
+    };
+    
+    checkInitialDataStatus();
+  }, [gameName, tagLine]);
 
   // Modal states for parameter selection
   const [championModalOpen, setChampionModalOpen] = useState(false);
@@ -173,7 +333,20 @@ export default function AICoachAnalysis({
       description: 'Cross-patch performance analysis',
       icon: Zap,
       endpoint: '/v1/agents/multi-version', // Merges multi-version + version-comparison
-      status: 'idle'
+      status: 'idle',
+      timeRangeOptions: [
+        {
+          id: '2024-full-year',
+          label: 'Season 2024',
+          value: '2024-01-01'
+        },
+        {
+          id: 'past-365-days',
+          label: 'Past 365 Days',
+          value: 'past-365'
+        }
+      ],
+      selectedTimeRange: '2024-01-01' // Default to 2024 full year
     },
     {
       id: 'champion-recommendation',
@@ -181,7 +354,20 @@ export default function AICoachAnalysis({
       description: 'Best champions for your playstyle',
       icon: Lightbulb,
       endpoint: '/v1/agents/champion-recommendation',
-      status: 'idle'
+      status: 'idle',
+      timeRangeOptions: [
+        {
+          id: '2024-full-year',
+          label: 'Season 2024',
+          value: '2024-01-01'
+        },
+        {
+          id: 'past-365-days',
+          label: 'Past 365 Days',
+          value: 'past-365'
+        }
+      ],
+      selectedTimeRange: '2024-01-01' // Default to 2024 full year
     },
 
     // Row 3
@@ -191,7 +377,20 @@ export default function AICoachAnalysis({
       description: 'Role-specific performance insights',
       icon: Target,
       endpoint: '/v1/agents/role-specialization',
-      status: 'idle'
+      status: 'idle',
+      timeRangeOptions: [
+        {
+          id: '2024-full-year',
+          label: 'Season 2024',
+          value: '2024-01-01'
+        },
+        {
+          id: 'past-365-days',
+          label: 'Past 365 Days',
+          value: 'past-365'
+        }
+      ],
+      selectedTimeRange: '2024-01-01' // Default to 2024 full year
     },
     {
       id: 'champion-mastery',
@@ -199,7 +398,20 @@ export default function AICoachAnalysis({
       description: 'Deep dive into champion performance',
       icon: Trophy,
       endpoint: '/v1/agents/champion-mastery',
-      status: 'idle'
+      status: 'idle',
+      timeRangeOptions: [
+        {
+          id: '2024-full-year',
+          label: 'Season 2024',
+          value: '2024-01-01'
+        },
+        {
+          id: 'past-365-days',
+          label: 'Past 365 Days',
+          value: 'past-365'
+        }
+      ],
+      selectedTimeRange: '2024-01-01' // Default to 2024 full year
     },
     {
       id: 'build-simulator',
@@ -207,7 +419,20 @@ export default function AICoachAnalysis({
       description: 'Optimize builds and itemization',
       icon: Boxes,
       endpoint: '/v1/agents/build-simulator',
-      status: 'idle'
+      status: 'idle',
+      timeRangeOptions: [
+        {
+          id: '2024-full-year',
+          label: 'Season 2024',
+          value: '2024-01-01'
+        },
+        {
+          id: 'past-365-days',
+          label: 'Past 365 Days',
+          value: 'past-365'
+        }
+      ],
+      selectedTimeRange: '2024-01-01' // Default to 2024 full year
     }
   ]);
 
@@ -218,15 +443,71 @@ export default function AICoachAnalysis({
   };
 
   const handleTimeRangeChange = (agentId: string, timeRange: string) => {
-    updateAgentStatus(agentId, { selectedTimeRange: timeRange });
+    setAgents((prev) =>
+      prev.map((agent) => {
+        if (agent.id === agentId) {
+          const previousTimeRange = agent.selectedTimeRange;
+          
+          // If switching to a different time range, reset status and load existing report if available
+          if (previousTimeRange && previousTimeRange !== timeRange) {
+            const reportsByTimeRange = agent.reportsByTimeRange || {};
+            const existingReport = reportsByTimeRange[timeRange];
+            
+            if (existingReport) {
+              // Load existing report for this time range
+              return {
+                ...agent,
+                selectedTimeRange: timeRange,
+                status: existingReport.status,
+                detailedReport: existingReport.detailedReport,
+                analysisData: existingReport.analysisData,
+                error: undefined
+              };
+            } else {
+              // Reset to idle if no report exists for this time range
+              return {
+                ...agent,
+                selectedTimeRange: timeRange,
+                status: 'idle',
+                detailedReport: undefined,
+                analysisData: undefined,
+                error: undefined
+              };
+            }
+          }
+          
+          return { ...agent, selectedTimeRange: timeRange };
+        }
+        return agent;
+      })
+    );
   };
 
   const handleGenerate = async (agent: AgentState) => {
     console.log(`🔵 handleGenerate called for agent: ${agent.id}`);
 
-    // If already generated, just show the report
-    if (agent.status === 'ready' && agent.detailedReport) {
-      setSelectedAgent(agent);
+    // Check if puuid is available
+    if (!puuid) {
+      console.error('❌ PUUID is not available');
+      updateAgentStatus(agent.id, {
+        status: 'error',
+        error: 'Player data not available'
+      });
+      return;
+    }
+
+    // Check if report exists for current time range
+    const reportsByTimeRange = agent.reportsByTimeRange || {};
+    const currentTimeRange = agent.selectedTimeRange || 'default';
+    const existingReport = reportsByTimeRange[currentTimeRange];
+    
+    // If already generated for current time range, just show the report
+    if (existingReport && existingReport.status === 'ready' && existingReport.detailedReport) {
+      setSelectedAgent({
+        ...agent,
+        detailedReport: existingReport.detailedReport,
+        analysisData: existingReport.analysisData
+      });
       return;
     }
 
@@ -289,11 +570,21 @@ export default function AICoachAnalysis({
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
       const analysisData = result.analysis; // Extract analysis data for widgets
+      const currentTimeRange = agent.selectedTimeRange || 'default';
+
+      // Store report by time range
+      const reportsByTimeRange = agent.reportsByTimeRange || {};
+      reportsByTimeRange[currentTimeRange] = {
+        detailedReport,
+        analysisData,
+        status: 'ready'
+      };
 
       updateAgentStatus(agent.id, {
         status: 'ready',
         detailedReport: detailedReport,
-        analysisData: analysisData  // Store analysis data
+        analysisData: analysisData,
+        reportsByTimeRange: reportsByTimeRange
       });
 
       // Auto-open modal with report and analysis data
@@ -312,6 +603,11 @@ export default function AICoachAnalysis({
 
   // Handler for champion selection
   const handleChampionSelect = async (championId: number, championName: string) => {
+    if (!puuid) {
+      console.error('❌ PUUID is not available');
+      return;
+    }
+
     const agentId = 'champion-mastery';
     updateAgentStatus(agentId, { status: 'generating', error: undefined });
 
@@ -319,13 +615,19 @@ export default function AICoachAnalysis({
       const { fetchAgentStream } = await import('@/app/lib/streamUtils');
 
       const url = `/api/agents/${agentId}`;
-      const body = {
+      const body: any = {
         puuid,
         region,
         recent_count: 20,
         model: 'sonnet',
         champion_id: championId
       };
+
+      // Add time range parameter if agent has time range options
+      const agent = agents.find((a) => a.id === agentId);
+      if (agent?.selectedTimeRange) {
+        body.time_range = agent.selectedTimeRange;
+      }
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
@@ -337,8 +639,7 @@ export default function AICoachAnalysis({
         analysisData: analysisData  // Store analysis data
       });
 
-      // Auto-open modal
-      const agent = agents.find((a) => a.id === agentId);
+      // Auto-open modal (reuse agent variable from above)
       if (agent) {
         setSelectedAgent({ ...agent, detailedReport, analysisData });
       }
@@ -353,6 +654,11 @@ export default function AICoachAnalysis({
 
   // Handler for friend comparison or rank comparison (now part of comparison-hub)
   const handleFriendSelect = async (friendGameName: string, friendTagLine: string, rank?: string) => {
+    if (!puuid) {
+      console.error('❌ PUUID is not available');
+      return;
+    }
+
     const agentId = 'comparison-hub';
     updateAgentStatus(agentId, { status: 'generating', error: undefined });
 
@@ -403,6 +709,11 @@ export default function AICoachAnalysis({
 
   // Handler for role selection
   const handleRoleSelect = async (role: string) => {
+    if (!puuid) {
+      console.error('❌ PUUID is not available');
+      return;
+    }
+
     const agentId = 'role-specialization';
     updateAgentStatus(agentId, { status: 'generating', error: undefined });
 
@@ -410,13 +721,19 @@ export default function AICoachAnalysis({
       const { fetchAgentStream } = await import('@/app/lib/streamUtils');
 
       const url = `/api/agents/${agentId}`;
-      const body = {
+      const body: any = {
         puuid,
         region,
         recent_count: 20,
         model: 'sonnet',
         role: role
       };
+
+      // Add time range parameter if agent has time range options
+      const agent = agents.find((a) => a.id === agentId);
+      if (agent?.selectedTimeRange) {
+        body.time_range = agent.selectedTimeRange;
+      }
 
       const result = await fetchAgentStream(url, body);
       const detailedReport = result.detailed || '';
@@ -428,8 +745,7 @@ export default function AICoachAnalysis({
         analysisData: analysisData  // Store analysis data
       });
 
-      // Auto-open modal
-      const agent = agents.find((a) => a.id === agentId);
+      // Auto-open modal (reuse agent variable from above)
       if (agent) {
         setSelectedAgent({ ...agent, detailedReport, analysisData });
       }
@@ -490,6 +806,11 @@ export default function AICoachAnalysis({
 
   // Handler for match selection
   const handleMatchSelect = async (matchId: string) => {
+    if (!puuid) {
+      console.error('❌ PUUID is not available');
+      return;
+    }
+
     const agentId = currentMatchAgent;  // Use the tracked agent ID
     updateAgentStatus(agentId, { status: 'generating', error: undefined });
 
@@ -564,14 +885,78 @@ export default function AICoachAnalysis({
       </div>
 
       {/* Data Status Checker */}
-      {!dataReady && (
+      {!dataReady && !insufficientData && (
         <div className="mb-6 p-6 rounded-lg border border-gray-700 bg-gray-800/50">
           <DataStatusChecker
             gameName={gameName}
             tagLine={tagLine}
-            onDataReady={() => setDataReady(true)}
+            onDataReady={async () => {
+              // Check if data is actually sufficient
+              try {
+                const response = await fetch(`/api/player/${gameName}/${tagLine}/data-status`);
+                if (response.ok) {
+                  const status = await response.json();
+                  setDataStatus(status);
+                  
+                  // Check if data is sufficient
+                  const hasEnoughGames = status.has_data && status.total_games >= 10;
+                  
+                  // Check if there's data from Season 2024 (patch 14.1 - 14.24)
+                  const hasSeason2024Data = status.patches?.some((p: any) => {
+                    return isSeason2024Patch(p.patch);
+                  }) || false;
+                  
+                  // Check if latest patch is within past 365 days from today
+                  const hasPast365DaysData = status.latest_patch && isPatchWithinPast365Days(status.latest_patch);
+                  
+                  // Data is sufficient only if:
+                  // 1. Has enough games (>=10)
+                  // 2. Has Season 2024 data (14.1-14.24) OR has data within past 365 days from today
+                  if (hasEnoughGames && (hasSeason2024Data || hasPast365DaysData)) {
+                    setDataReady(true);
+                    setInsufficientData(false);
+                  } else {
+                    setInsufficientData(true);
+                    setDataReady(false);
+                  }
+                } else {
+                  setDataReady(true);
+                }
+              } catch (err) {
+                setDataReady(true);
+              }
+            }}
             onError={(error) => setDataError(error)}
           />
+        </div>
+      )}
+
+      {/* Show insufficient data message */}
+      {insufficientData && (
+        <div className="mb-6 p-6 rounded-lg border border-yellow-500/50 bg-yellow-900/20">
+          <div className="flex items-center gap-4">
+            <AlertCircle className="w-8 h-8 text-yellow-400 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-lg font-semibold text-yellow-400 mb-2">
+                Not Enough Data for Analysis
+              </p>
+              <p className="text-sm text-gray-300 mb-2">
+                This player doesn't have sufficient match history data. AI analysis requires:
+              </p>
+              <ul className="text-sm text-gray-300 mb-2 list-disc list-inside space-y-1">
+                <li>At least 10 games played</li>
+                <li>Matches from Season 2024 (patch 14.1-14.24) OR within past 365 days from today</li>
+              </ul>
+              {dataStatus && (
+                <div className="text-xs text-gray-400 space-y-1">
+                  <p>Current data: {dataStatus.total_games || 0} games across {dataStatus.total_patches || 0} patches</p>
+                  {dataStatus.earliest_patch && dataStatus.latest_patch && (
+                    <p>Patch range: {dataStatus.earliest_patch} → {dataStatus.latest_patch}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -584,8 +969,8 @@ export default function AICoachAnalysis({
         </div>
       )}
 
-      {/* Only show agents if data is ready or if there was an error (allow retry) */}
-      {(dataReady || dataError) && (
+      {/* Only show agents if data is ready and sufficient */}
+      {dataReady && !insufficientData && (
         <div className="max-w-6xl mx-auto">
       {/* Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">

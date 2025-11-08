@@ -1041,7 +1041,8 @@ async def champion_mastery(request: AgentRequest):
 
             analysis = generate_comprehensive_mastery_analysis(
                 champion_id=request.champion_id,
-                packs_dir=packs_dir
+                packs_dir=packs_dir,
+                time_range=getattr(request, 'time_range', None)
             )
             formatted_data = format_analysis_for_prompt(analysis)
             prompts = build_narrative_prompt(analysis, formatted_data)
@@ -1389,7 +1390,11 @@ async def role_specialization(request: AgentRequest):
             # Map ADC → BOTTOM for backend compatibility
             if role == 'ADC':
                 role = 'BOTTOM'
-            analysis = generate_comprehensive_role_analysis(role, packs_dir)
+            analysis = generate_comprehensive_role_analysis(
+                role=role,
+                packs_dir=packs_dir,
+                time_range=getattr(request, 'time_range', None)
+            )
             formatted_data = format_analysis_for_prompt(analysis)
             prompts = build_narrative_prompt(analysis, formatted_data)
 
@@ -1451,7 +1456,7 @@ async def champion_recommendation(request: AgentRequest):
             )
             from src.agents.player_analysis.champion_recommendation.prompts import build_narrative_prompt
 
-            champion_pool = analyze_champion_pool(packs_dir)
+            champion_pool = analyze_champion_pool(packs_dir, time_range=getattr(request, 'time_range', None))
             recommendations = generate_recommendations(champion_pool)
             formatted_data = format_analysis_for_prompt(champion_pool, recommendations)
             prompts = build_narrative_prompt(champion_pool, recommendations, formatted_data)
@@ -2224,7 +2229,11 @@ async def version_trends(request: AgentRequest):
             )
             from src.agents.player_analysis.multi_version.prompts import build_multi_version_prompt
 
-            all_packs = load_all_packs(packs_dir)
+            # Load packs with optional time range filter
+            time_range = getattr(request, 'time_range', None)
+            all_packs = load_all_packs(packs_dir, time_range=time_range)
+            print(f"📊 Loaded {len(all_packs)} patches" + (f" (time_range: {time_range})" if time_range else ""))
+            
             trends = analyze_trends(all_packs)
             transitions = identify_key_transitions(trends)
             analysis = generate_comprehensive_analysis(trends, transitions)
@@ -2326,6 +2335,52 @@ Ensure the analysis is comprehensive and actionable."""
 # Player Data Endpoints (from combatpower)
 # ============================================================================
 
+def infer_platform_and_region(tag_line: str):
+    """
+    Infer platform and routing region from tag_line
+    
+    Args:
+        tag_line: Tag line (e.g., "KR1", "NA1", "EUW1")
+    
+    Returns:
+        tuple: (platform, routing_region)
+    """
+    tag_lower = tag_line.upper()
+    
+    # Platform to region mapping
+    platform_to_region = {
+        "NA1": ("na1", "americas"),
+        "BR1": ("br1", "americas"),
+        "LA1": ("la1", "americas"),
+        "LA2": ("la2", "americas"),
+        "KR": ("kr", "asia"),
+        "KR1": ("kr", "asia"),
+        "JP1": ("jp1", "asia"),
+        "EUW1": ("euw1", "europe"),
+        "EUN1": ("eun1", "europe"),
+        "TR1": ("tr1", "europe"),
+        "RU": ("ru", "europe"),
+        "OC1": ("oc1", "sea"),
+        "PH2": ("ph2", "sea"),
+        "SG2": ("sg2", "sea"),
+        "TH2": ("th2", "sea"),
+        "TW2": ("tw2", "sea"),
+        "VN2": ("vn2", "sea"),
+    }
+    
+    # Try exact match first
+    if tag_lower in platform_to_region:
+        return platform_to_region[tag_lower]
+    
+    # Try prefix match (e.g., "KR1" -> "KR")
+    for prefix, (platform, region) in platform_to_region.items():
+        if tag_lower.startswith(prefix):
+            return (platform, region)
+    
+    # Default to NA/Americas
+    return ("na1", "americas")
+
+
 @app.get("/api/player/{game_name}/{tag_line}/summary")
 async def get_player_summary(
     game_name: str,
@@ -2392,27 +2447,58 @@ async def get_player_summary(
         print(f"⏱️  Start time: {time.strftime('%H:%M:%S')}")
         print(f"{'='*60}\n")
 
-        # Step 1: Get account info
+        # Step 1: Infer platform and region from tag_line
+        platform, routing_region = infer_platform_and_region(tag_line)
+        print(f"📍 Inferred platform: {platform}, routing region: {routing_region}")
+
+        # Step 2: Get account info - try inferred region first, then try other regions if needed
         step_start = time.time()
-        account = await riot_client.get_account_by_riot_id(game_name=game_name, tag_line=tag_line, region='americas')
+        account = await riot_client.get_account_by_riot_id(game_name=game_name, tag_line=tag_line, region=routing_region)
+        
+        # If not found in inferred region, try other regions
         if not account:
-            raise HTTPException(status_code=404, detail="Account not found")
+            print(f"⚠️  Account not found in {routing_region}, trying other regions...")
+            fallback_regions = ['americas', 'asia', 'europe', 'sea']
+            for region in fallback_regions:
+                if region != routing_region:
+                    print(f"🔍 Trying region: {region}")
+                    account = await riot_client.get_account_by_riot_id(game_name=game_name, tag_line=tag_line, region=region)
+                    if account:
+                        print(f"✅ Found account in {region}")
+                        break
+        
+        if not account:
+            raise HTTPException(status_code=404, detail=f"Account not found for {game_name}#{tag_line}")
 
         puuid = account['puuid']
         print(f"✅ [1/2] Got PUUID ({time.time()-step_start:.2f}s): {puuid[:20]}...")
 
-        # Step 2: Get summoner info
+        # Step 3: Get summoner info - try inferred platform first, then try other platforms if needed
         step_start = time.time()
-        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform='na1')
+        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=platform)
+        
+        # If not found on inferred platform, try other platforms
         if not summoner:
-            raise HTTPException(status_code=404, detail="Summoner not found")
+            print(f"⚠️  Summoner not found on {platform}, trying other platforms...")
+            fallback_platforms = ['kr', 'na1', 'euw1', 'eun1', 'br1', 'jp1']
+            for plat in fallback_platforms:
+                if plat != platform:
+                    print(f"🔍 Trying platform: {plat}")
+                    summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=plat)
+                    if summoner:
+                        print(f"✅ Found summoner on {plat}")
+                        platform = plat  # Update platform to the one that worked
+                        break
+        
+        if not summoner:
+            raise HTTPException(status_code=404, detail="Summoner not found on any platform")
         print(f"✅ [2/2] Got summoner info ({time.time()-step_start:.2f}s)")
 
-        # Step 3: Start background data preparation (non-blocking)
+        # Step 4: Start background data preparation (non-blocking)
         print(f"\n🔄 Starting background data preparation for past {days} days...")
         job = await player_data_manager.prepare_player_data(
             puuid=puuid,
-            region='na1',
+            region=platform,
             game_name=game_name,
             tag_line=tag_line,
             days=days
@@ -2457,8 +2543,17 @@ async def get_player_summary(
         step_start = time.time()
         opgg_profile = None
         try:
-            print(f"🔍 Fetching OP.GG profile data...")
-            opgg_profile = opgg_mcp_service.get_summoner_profile(game_name, tag_line, region='na')
+            # Map platform to OP.GG region format
+            platform_to_opgg_region = {
+                'na1': 'na', 'br1': 'br', 'la1': 'lan', 'la2': 'las',
+                'kr': 'kr', 'jp1': 'jp',
+                'euw1': 'euw', 'eun1': 'eune', 'tr1': 'tr', 'ru': 'ru',
+                'oc1': 'oce', 'ph2': 'ph', 'sg2': 'sg', 'th2': 'th', 'tw2': 'tw', 'vn2': 'vn'
+            }
+            opgg_region = platform_to_opgg_region.get(platform, 'na')
+            
+            print(f"🔍 Fetching OP.GG profile data (region: {opgg_region})...")
+            opgg_profile = opgg_mcp_service.get_summoner_profile(game_name, tag_line, region=opgg_region)
             if opgg_profile:
                 print(f"✅ Got OP.GG profile ({time.time()-step_start:.2f}s)")
             else:
@@ -2477,7 +2572,7 @@ async def get_player_summary(
                 'name': summoner.get('name'),
                 'profileIconId': summoner.get('profileIconId'),
                 'summonerLevel': summoner.get('summonerLevel'),
-                'region': 'na1'
+                'region': platform
             },
             'analysis': analysis,  # Add analysis summary data
             'role_stats': role_stats,  # Add role statistics data

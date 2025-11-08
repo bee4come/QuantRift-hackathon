@@ -7,17 +7,39 @@ from src.analytics import ChampionSimilarityCalculator, MetaTierClassifier
 from src.utils.id_mappings import get_champion_name
 
 
-def analyze_champion_pool(packs_dir: str) -> Dict[str, Any]:
+def analyze_champion_pool(packs_dir: str, time_range: str = None) -> Dict[str, Any]:
     """分析玩家英雄池特征"""
+    from datetime import datetime, timedelta
+    
     packs_dir = Path(packs_dir)
+    
+    # Calculate time filter if needed
+    cutoff_timestamp = None
+    if time_range == "2024-01-01":
+        cutoff_timestamp = datetime(2024, 1, 1).timestamp()
+    elif time_range == "past-365":
+        cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
+    
     pack_files = sorted(packs_dir.glob("pack_*.json"))
 
     # 聚合所有英雄数据
     champion_stats = {}
     for pack_file in pack_files:
         with open(pack_file, 'r') as f:
-            pack = json.load(f)
-            for cr in pack.get("by_cr", []):
+            pack_data = json.load(f)
+            
+            # Apply time range filter if specified
+            if cutoff_timestamp and "generation_timestamp" in pack_data:
+                pack_timestamp = pack_data["generation_timestamp"]
+                # If timestamp is string, convert to timestamp
+                if isinstance(pack_timestamp, str):
+                    pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
+                
+                # Skip if before cutoff
+                if pack_timestamp < cutoff_timestamp:
+                    continue
+            
+            for cr in pack_data.get("by_cr", []):
                 champ_id = cr["champ_id"]
                 if champ_id not in champion_stats:
                     champion_stats[champ_id] = {"games": 0, "wins": 0, "roles": set()}

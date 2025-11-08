@@ -63,7 +63,8 @@ const StyledWrapper = styled.div<{ $isSearched: boolean; $isModalOpen: boolean }
    border-radius: 8px;
    transform: skewX(15deg);
    transition: 0.5s;
-   filter: blur(30px);
+   filter: blur(10px);
+   opacity: 0.6;
   }
 
   .box:hover:before,
@@ -86,7 +87,7 @@ const StyledWrapper = styled.div<{ $isSearched: boolean; $isModalOpen: boolean }
    height: ${props => props.$isSearched ? '80px' : '150px'};
    padding: 20px 40px;
    background: rgba(255, 255, 255, 0.05);
-   backdrop-filter: blur(10px);
+   backdrop-filter: blur(2px);
    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
    border-radius: 8px;
    z-index: 1;

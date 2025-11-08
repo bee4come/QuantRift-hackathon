@@ -57,6 +57,17 @@ export default function ChampionSelectorModal({
       .sort((a, b) => b.games_played - a.games_played);
   }, [playerChampions, searchQuery]);
 
+  // Convert champion display name to Data Dragon image filename format
+  // e.g., "Kai'Sa" -> "Kaisa", "Lee Sin" -> "LeeSin", "Dr. Mundo" -> "DrMundo"
+  const getChampionImageName = (championName: string): string => {
+    return championName
+      .replace(/'/g, '')  // Remove apostrophes
+      .replace(/\./g, '')  // Remove periods
+      .replace(/\s+/g, '') // Remove spaces
+      .replace(/&/g, '')   // Remove ampersands
+      .replace(/-/g, '');  // Remove hyphens
+  };
+
   const handleConfirm = () => {
     if (selectedChampion) {
       onSelect(selectedChampion.champion_id, selectedChampion.champion_name);
@@ -166,11 +177,14 @@ export default function ChampionSelectorModal({
                         <motion.div
                           whileHover={{ scale: 1.02 }}
                           onClick={() => setSelectedChampion(champ)}
-                          className={`fluid-glass-dark p-4 rounded-xl cursor-pointer transition-all border-2`}
+                          className={`p-4 rounded-xl cursor-pointer transition-all border-2`}
                           style={{
+                            backgroundColor: 'rgba(28, 28, 30, 0.9)',
                             borderColor: selectedChampion?.champion_id === champ.champion_id
                               ? colors.accentBlue
-                              : 'transparent'
+                              : 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: '1px',
+                            borderStyle: 'solid'
                           }}
                         >
                           <div className="flex items-center justify-between">
@@ -179,7 +193,7 @@ export default function ChampionSelectorModal({
                               <div
                                 className="w-12 h-12 rounded-lg bg-cover bg-center"
                                 style={{
-                                  backgroundImage: `url(https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/${champ.champion_name}.png)`,
+                                  backgroundImage: `url(https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/${getChampionImageName(champ.champion_name)}.png)`,
                                   boxShadow: '0 0 10px rgba(0,0,0,0.5)'
                                 }}
                               />

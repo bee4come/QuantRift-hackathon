@@ -70,12 +70,129 @@ export default function DataStatusChecker({
       console.log('[DataStatusChecker] Data received:', data);
       setStatus(data);
 
+      // Helper function to get patch release date
+      const getPatchDate = (patch: string): Date | null => {
+        if (!patch) return null;
+        
+        // Patch date mapping (from patch_manager.py)
+        const patchDates: Record<string, string> = {
+          // 2024 Season patches (14.1 - 14.24)
+          '14.1': '2024-01-10',
+          '14.2': '2024-01-24',
+          '14.3': '2024-02-07',
+          '14.4': '2024-02-21',
+          '14.5': '2024-03-06',
+          '14.6': '2024-03-20',
+          '14.7': '2024-04-03',
+          '14.8': '2024-04-17',
+          '14.9': '2024-05-01',
+          '14.10': '2024-05-15',
+          '14.11': '2024-05-29',
+          '14.12': '2024-06-12',
+          '14.13': '2024-06-26',
+          '14.14': '2024-07-17',
+          '14.15': '2024-07-31',
+          '14.16': '2024-08-14',
+          '14.17': '2024-08-28',
+          '14.18': '2024-09-11',
+          '14.19': '2024-09-24',
+          '14.20': '2024-10-08',
+          '14.21': '2024-10-22',
+          '14.22': '2024-11-05',
+          '14.23': '2024-11-19',
+          '14.24': '2024-12-10',
+          // 2025 Season patches
+          '25.S1.1': '2025-01-07',
+          '25.S1.2': '2025-01-22',
+          '2025.S1.3': '2025-02-05',
+          '25.04': '2025-02-19',
+          '25.05': '2025-03-04',
+          '25.06': '2025-03-18',
+          '25.07': '2025-04-01',
+          '25.08': '2025-04-15',
+          '25.09': '2025-04-29',
+          '25.10': '2025-05-13',
+          '25.11': '2025-05-27',
+          '25.12': '2025-06-10',
+          '25.13': '2025-06-24',
+          '25.14': '2025-07-15',
+          '25.15': '2025-07-29',
+          '25.16': '2025-08-12',
+          '25.17': '2025-08-26',
+          '25.18': '2025-09-10',
+          '25.19': '2025-09-23',
+          '25.20': '2025-10-07',
+        };
+        
+        // Try exact match first
+        if (patchDates[patch]) {
+          return new Date(patchDates[patch]);
+        }
+        
+        // Try to match Data Dragon format (e.g., "14.1.1" -> "14.1")
+        const parts = patch.split('.');
+        if (parts.length >= 2) {
+          const basePatch = `${parts[0]}.${parts[1]}`;
+          if (patchDates[basePatch]) {
+            return new Date(patchDates[basePatch]);
+          }
+        }
+        
+        return null;
+      };
+
+      // Check if patch is in Season 2024 range (14.1 - 14.24)
+      const isSeason2024Patch = (patch: string): boolean => {
+        if (!patch) return false;
+        
+        // Check if patch starts with 14.
+        if (!patch.startsWith('14.')) return false;
+        
+        // Extract minor version
+        const parts = patch.split('.');
+        if (parts.length < 2) return false;
+        
+        const minor = parseInt(parts[1]) || 0;
+        // Season 2024 is patches 14.1 to 14.24
+        return minor >= 1 && minor <= 24;
+      };
+
+      // Check if patch is within past 365 days from today
+      const isPatchWithinPast365Days = (patch: string): boolean => {
+        if (!patch) return false;
+        
+        const patchDate = getPatchDate(patch);
+        if (!patchDate) return false;
+        
+        const today = new Date();
+        const daysDiff = Math.floor((today.getTime() - patchDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return daysDiff >= 0 && daysDiff <= 365;
+      };
+
       // Check if data is sufficient
-      if (!data.has_data || data.total_games < 10) {
+      const hasEnoughGames = data.has_data && data.total_games >= 10;
+      
+      // Check if there's data from Season 2024 (patch 14.1 - 14.24)
+      const hasSeason2024Data = data.patches?.some((p: any) => {
+        return isSeason2024Patch(p.patch);
+      }) || false;
+      
+      // Check if latest patch is within past 365 days from today
+      const hasPast365DaysData = data.latest_patch && isPatchWithinPast365Days(data.latest_patch);
+      
+      // Data is sufficient only if:
+      // 1. Has enough games (>=10)
+      // 2. Has Season 2024 data (14.1-14.24) OR has data within past 365 days from today
+      if (hasEnoughGames && (hasSeason2024Data || hasPast365DaysData)) {
+        // Data is ready
+        onDataReady();
+      } else if (!data.has_data || data.total_games < 10) {
         // Insufficient data, trigger fetch
         await triggerDataFetch();
       } else {
-        // Data is ready
+        // Has games but no 2024/recent data - don't trigger fetch, just mark as insufficient
+        // This will be handled by parent component
         onDataReady();
       }
     } catch (err) {
@@ -261,33 +378,146 @@ export default function DataStatusChecker({
   }
 
   if (status?.has_data) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center justify-center p-8 space-y-4"
-      >
-        <CheckCircle2 className="w-12 h-12 text-green-500" />
-        <div className="text-center space-y-2">
-          <p className="text-xl font-semibold text-green-400">Data Ready!</p>
-          <div className="text-sm text-gray-400 space-y-1">
-            <p>
-              <span className="text-blue-400">{status.total_patches}</span>{' '}
-              patches analyzed
-            </p>
-            <p>
-              <span className="text-blue-400">{status.total_games}</span> total
-              games
-            </p>
-            {status.earliest_patch && status.latest_patch && (
-              <p className="text-xs text-gray-500">
-                {status.earliest_patch} → {status.latest_patch}
+    // Helper function to get patch release date
+    const getPatchDate = (patch: string): Date | null => {
+      if (!patch) return null;
+      
+      // Patch date mapping (from patch_manager.py)
+      const patchDates: Record<string, string> = {
+        // 2024 Season patches (14.1 - 14.24)
+        '14.1': '2024-01-10',
+        '14.2': '2024-01-24',
+        '14.3': '2024-02-07',
+        '14.4': '2024-02-21',
+        '14.5': '2024-03-06',
+        '14.6': '2024-03-20',
+        '14.7': '2024-04-03',
+        '14.8': '2024-04-17',
+        '14.9': '2024-05-01',
+        '14.10': '2024-05-15',
+        '14.11': '2024-05-29',
+        '14.12': '2024-06-12',
+        '14.13': '2024-06-26',
+        '14.14': '2024-07-17',
+        '14.15': '2024-07-31',
+        '14.16': '2024-08-14',
+        '14.17': '2024-08-28',
+        '14.18': '2024-09-11',
+        '14.19': '2024-09-24',
+        '14.20': '2024-10-08',
+        '14.21': '2024-10-22',
+        '14.22': '2024-11-05',
+        '14.23': '2024-11-19',
+        '14.24': '2024-12-10',
+        // 2025 Season patches
+        '25.S1.1': '2025-01-07',
+        '25.S1.2': '2025-01-22',
+        '2025.S1.3': '2025-02-05',
+        '25.04': '2025-02-19',
+        '25.05': '2025-03-04',
+        '25.06': '2025-03-18',
+        '25.07': '2025-04-01',
+        '25.08': '2025-04-15',
+        '25.09': '2025-04-29',
+        '25.10': '2025-05-13',
+        '25.11': '2025-05-27',
+        '25.12': '2025-06-10',
+        '25.13': '2025-06-24',
+        '25.14': '2025-07-15',
+        '25.15': '2025-07-29',
+        '25.16': '2025-08-12',
+        '25.17': '2025-08-26',
+        '25.18': '2025-09-10',
+        '25.19': '2025-09-23',
+        '25.20': '2025-10-07',
+      };
+      
+      // Try exact match first
+      if (patchDates[patch]) {
+        return new Date(patchDates[patch]);
+      }
+      
+      // Try to match Data Dragon format (e.g., "14.1.1" -> "14.1")
+      const parts = patch.split('.');
+      if (parts.length >= 2) {
+        const basePatch = `${parts[0]}.${parts[1]}`;
+        if (patchDates[basePatch]) {
+          return new Date(patchDates[basePatch]);
+        }
+      }
+      
+      return null;
+    };
+
+    // Check if patch is in Season 2024 range (14.1 - 14.24)
+    const isSeason2024Patch = (patch: string): boolean => {
+      if (!patch) return false;
+      
+      // Check if patch starts with 14.
+      if (!patch.startsWith('14.')) return false;
+      
+      // Extract minor version
+      const parts = patch.split('.');
+      if (parts.length < 2) return false;
+      
+      const minor = parseInt(parts[1]) || 0;
+      // Season 2024 is patches 14.1 to 14.24
+      return minor >= 1 && minor <= 24;
+    };
+
+    // Check if patch is within past 365 days from today
+    const isPatchWithinPast365Days = (patch: string): boolean => {
+      if (!patch) return false;
+      
+      const patchDate = getPatchDate(patch);
+      if (!patchDate) return false;
+      
+      const today = new Date();
+      const daysDiff = Math.floor((today.getTime() - patchDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      return daysDiff >= 0 && daysDiff <= 365;
+    };
+
+    // Check if data is sufficient (has Season 2024 data or past 365 days data)
+    const hasEnoughGames = status.total_games >= 10;
+    const hasSeason2024Data = status.patches?.some((p: any) => {
+      return isSeason2024Patch(p.patch);
+    }) || false;
+    const hasPast365DaysData = status.latest_patch && isPatchWithinPast365Days(status.latest_patch);
+    const isSufficient = hasEnoughGames && (hasSeason2024Data || hasPast365DaysData);
+    
+    // Only show "Data Ready!" if data is sufficient
+    if (isSufficient) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center justify-center p-8 space-y-4"
+        >
+          <CheckCircle2 className="w-12 h-12 text-green-500" />
+          <div className="text-center space-y-2">
+            <p className="text-xl font-semibold text-green-400">Data Ready!</p>
+            <div className="text-sm text-gray-400 space-y-1">
+              <p>
+                <span className="text-blue-400">{status.total_patches}</span>{' '}
+                patches analyzed
               </p>
-            )}
+              <p>
+                <span className="text-blue-400">{status.total_games}</span> total
+                games
+              </p>
+              {status.earliest_patch && status.latest_patch && (
+                <p className="text-xs text-gray-500">
+                  {status.earliest_patch} → {status.latest_patch}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-      </motion.div>
-    );
+        </motion.div>
+      );
+    }
+    // If data exists but is insufficient, return null (parent will show insufficient message)
+    return null;
   }
 
   return null;

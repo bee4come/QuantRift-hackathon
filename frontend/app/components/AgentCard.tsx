@@ -106,7 +106,7 @@ export default function AgentCard({
         animate={{ opacity: 1, y: 0 }}
         className="card"
         style={{
-          borderColor: status === 'ready' ? '#32D74B' : status === 'error' ? '#FF453A' : status === 'generating' ? colors.accentBlue : 'rgba(255, 255, 255, 0.1)'
+          borderColor: status === 'ready' ? '#32D74B' : status === 'error' ? '#FF453A' : status === 'generating' ? '#FFD60A' : 'rgba(255, 255, 255, 0.1)'
         }}
       >
         <div className="card-details">
@@ -177,12 +177,12 @@ export default function AgentCard({
           )}
         </div>
 
-        {/* Main Action Button - appears only on hover */}
-        {!subOptions && (
+        {/* Main Action Button - appears only on hover, hidden when generating */}
+        {!subOptions && !isLoading && (
           <button
             className="card-button"
             onClick={onGenerate}
-            disabled={isLoading || (!canGenerate && !canView)}
+            disabled={!canGenerate && !canView}
             style={{
               backgroundColor: canView ? '#32D74B' : colors.accentBlue
             }}
@@ -227,9 +227,10 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
   .card-details {
     color: #F5F5F7;
     height: 100%;
-    gap: 0.5em;
-    display: grid;
-    place-content: start;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
     text-align: left;
     width: 100%;
     box-sizing: border-box;
@@ -241,6 +242,7 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     justify-content: flex-start;
     gap: 0.75rem;
     margin-bottom: 0.5rem;
+    width: 100%;
   }
 
   .card-icon {
@@ -288,7 +290,10 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     color: rgba(255, 255, 255, 0.6);
     font-size: 0.875rem;
     margin-top: 0.25rem;
+    margin-bottom: 0;
     text-align: left;
+    width: 100%;
+    flex-shrink: 0;
   }
 
   .text-title {
@@ -308,12 +313,18 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
   }
 
   .time-range-wrapper {
-    margin-top: 0.75rem;
+    margin-top: auto;
+    margin-bottom: 0.5rem;
     width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    transform: translateY(-0.5rem);
   }
 
   .time-range-select {
-    width: 100%;
+    width: 200px;
     padding: 0.5rem;
     border-radius: 0.5rem;
     background: ${props => props.$isLight 
@@ -327,6 +338,8 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     text-align: center;
     text-align-last: center;
     box-sizing: border-box;
+    margin: 0 auto;
+    display: block;
   }
 
   .time-range-select option {
@@ -342,10 +355,13 @@ const StyledWrapper = styled.div<{ $isLight: boolean }>`
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
-    margin-top: 0.75rem;
+    margin-top: auto;
+    margin-bottom: 0.5rem;
     width: 100%;
     box-sizing: border-box;
     padding: 0;
+    flex-shrink: 0;
+    transform: translateY(-0.5rem);
   }
 
   .sub-option-button {

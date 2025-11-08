@@ -1,0 +1,56 @@
+{
+  "puuid": "tEnZn7Uf7KXdCKOnu3ZGf4XM5NQSrBSa8LTIer4tnz9-EdKrgKDz1DbiPWJsuWdX2nkdLAHjHCNedw",
+  "patch": "15.18",
+  "generation_timestamp": "2025-11-08T04:17:53.116465",
+  "total_games": 2,
+  "by_cr": [
+    {
+      "champ_id": 13,
+      "role": "MIDDLE",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 0.55,
+      "obj_rate": 0.0,
+      "cp_25": 9142.4,
+      "build_core": [
+        6657,
+        3040,
+        4632
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8230,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    },
+    {
+      "champ_id": 3,
+      "role": "MIDDLE",
+      "games": 1,
+      "wins": 0,
+      "losses": 1,
+      "p_hat": 0.0,
+      "p_hat_ci": [
+        0.0,
+        0.7935
+      ],
+      "kda_adj": 0.89,
+      "obj_rate": 0.0,
+      "cp_25": 8920.7,
+      "build_core": [
+        1058,
+        6664,
+        2421
+      ],
+      "avg_time_to_core": 30.0,
+      "rune_keystone": 8230,
+      "effective_n": 1,
+      "governance_tag": "CONTEXT"
+    }
+  ]
+}

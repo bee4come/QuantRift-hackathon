@@ -343,7 +343,7 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
                       <img
                         src={profileIconUrl}
                         alt="Profile Icon"
-                        className="w-16 h-16 rounded-full border-4"
+                        className="w-24 h-24 rounded-full border-4"
                         style={{
                           borderColor: colors.accentBlue,
                           boxShadow: `0 0 20px ${colors.accentBlue}40`
@@ -375,9 +375,12 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
                   </div>
 
                   {/* 2. Rank Tier */}
-                  {playerData.opgg?.data?.summoner?.league_stats && (
-                    <div className="flex items-center gap-4">
-                      {playerData.opgg.data.summoner.league_stats
+                  <div className="flex items-center gap-4">
+                    {playerData.opgg?.data?.summoner?.league_stats && 
+                     playerData.opgg.data.summoner.league_stats
+                       .filter(stat => stat.tier_info.tier && stat.game_type === 'SOLORANKED')
+                       .length > 0 ? (
+                      playerData.opgg.data.summoner.league_stats
                         .filter(stat => stat.tier_info.tier && stat.game_type === 'SOLORANKED')
                         .slice(0, 1)
                         .map((stat, index) => (
@@ -385,10 +388,10 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
                             <img
                               src={stat.tier_info.tier_image_url}
                               alt={stat.tier_info.tier}
-                              className="w-20 h-20"
+                              className="w-32 h-32"
                             />
                             <div>
-                              <div className="text-3xl font-bold" style={{ color: colors.textPrimary }}>
+                              <div className="text-3xl font-bold whitespace-nowrap" style={{ color: colors.textPrimary }}>
                                 {stat.tier_info.tier} {stat.tier_info.division}
                               </div>
                               <p style={{ color: colors.textSecondary }} className="text-base mt-1">
@@ -402,94 +405,151 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
                               </p>
                             </div>
                           </div>
-                        ))}
-                    </div>
-                  )}
-
-                  {/* 3. Win Rate */}
-                  <div className="text-center">
-                    <p style={{ color: colors.textSecondary }} className="text-sm mb-2">Win Rate</p>
-                    <div className="text-3xl font-bold" style={{ color: colors.accentBlue }}>
-                      {analysis.win_rate.toFixed(1)}%
-                    </div>
-                    <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
-                      {analysis.total_wins}W {analysis.total_losses}L
-                    </p>
-                  </div>
-
-                  {/* 4. Avg KDA */}
-                  <div className="text-center">
-                    <p style={{ color: colors.textSecondary }} className="text-sm mb-2">Avg KDA</p>
-                    <div className="text-3xl font-bold" style={{ color: colors.accentGreen }}>
-                      {analysis.avg_kda.toFixed(2)}
-                    </div>
-                    <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
-                      {analysis.total_games} games
-                    </p>
-                  </div>
-
-                  {/* 5. Ladder Ranking */}
-                  {playerData.opgg?.data?.summoner?.ladder_rank && (
-                    <div className="flex items-center gap-3">
-                      <div className="text-center">
-                        <p style={{ color: colors.textSecondary }} className="text-sm mb-2">Global Ladder</p>
-                        <div className="text-3xl font-bold" style={{ color: colors.accentYellow }}>
-                          #{playerData.opgg.data.summoner.ladder_rank.rank.toLocaleString()}
+                        ))
+                    ) : (
+                      <div className="flex items-center gap-4">
+                        <div className="w-32 h-32 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+                          <span style={{ color: colors.textSecondary }} className="text-sm">N/A</span>
                         </div>
-                        <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
-                          Top {((playerData.opgg.data.summoner.ladder_rank.rank / playerData.opgg.data.summoner.ladder_rank.total) * 100).toFixed(2)}%
-                        </p>
+                        <div>
+                          <div className="text-3xl font-bold whitespace-nowrap" style={{ color: colors.textSecondary }}>
+                            N/A
+                          </div>
+                          <p style={{ color: colors.textSecondary }} className="text-base mt-1">
+                            N/A LP
+                          </p>
+                          <p style={{ color: colors.textSecondary }} className="text-sm">
+                            N/A
+                          </p>
+                        </div>
                       </div>
-                      <ClickSpark inline={true}>
-                        <a
-                          href={`https://www.op.gg/summoners/${player.region}/${encodeURIComponent(gameName)}-${encodeURIComponent(tagLine)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all hover:scale-105 font-semibold text-sm"
-                          style={{
-                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                            borderWidth: '1px',
-                            borderStyle: 'solid',
-                            borderColor: 'rgba(16, 185, 129, 0.5)',
-                            color: colors.accentGreen
-                          }}
-                          title="View on OP.GG"
-                        >
-                          OP.GG
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            style={{ color: colors.accentGreen }}
+                    )}
+                  </div>
+
+                  {/* 3. Ladder Ranking */}
+                  <div className="flex items-center gap-3">
+                    {playerData.opgg?.data?.summoner?.ladder_rank ? (
+                      <>
+                        <div className="text-center">
+                          <p style={{ color: colors.textSecondary }} className="text-sm mb-2 whitespace-nowrap">Recently Global Ladder</p>
+                          <div className="text-3xl font-bold" style={{ color: colors.accentYellow }}>
+                            #{playerData.opgg.data.summoner.ladder_rank.rank.toLocaleString()}
+                          </div>
+                          <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
+                            Top {((playerData.opgg.data.summoner.ladder_rank.rank / playerData.opgg.data.summoner.ladder_rank.total) * 100).toFixed(2)}%
+                          </p>
+                        </div>
+                        <ClickSpark inline={true}>
+                          <a
+                            href={`https://www.op.gg/summoners/${player.region}/${encodeURIComponent(gameName)}-${encodeURIComponent(tagLine)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all hover:scale-105 font-semibold text-sm"
+                            style={{
+                              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                              borderWidth: '1px',
+                              borderStyle: 'solid',
+                              borderColor: 'rgba(16, 185, 129, 0.5)',
+                              color: colors.accentGreen
+                            }}
+                            title="View on OP.GG"
                           >
-                            <path
-                              d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M15 3h6v6"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M10 14L21 3"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </a>
-                      </ClickSpark>
-                    </div>
-                  )}
+                            OP.GG
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                              style={{ color: colors.accentGreen }}
+                            >
+                              <path
+                                d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M15 3h6v6"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M10 14L21 3"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </a>
+                        </ClickSpark>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-center">
+                          <p style={{ color: colors.textSecondary }} className="text-sm mb-2 whitespace-nowrap">Recently Global Ladder</p>
+                          <div className="text-3xl font-bold" style={{ color: colors.textSecondary }}>
+                            N/A
+                          </div>
+                          <p style={{ color: colors.textSecondary }} className="text-sm mt-2">
+                            N/A
+                          </p>
+                        </div>
+                        <ClickSpark inline={true}>
+                          <a
+                            href={`https://www.op.gg/summoners/${player.region}/${encodeURIComponent(gameName)}-${encodeURIComponent(tagLine)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all hover:scale-105 font-semibold text-sm"
+                            style={{
+                              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                              borderWidth: '1px',
+                              borderStyle: 'solid',
+                              borderColor: 'rgba(16, 185, 129, 0.5)',
+                              color: colors.accentGreen
+                            }}
+                            title="View on OP.GG"
+                          >
+                            OP.GG
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                              style={{ color: colors.accentGreen }}
+                            >
+                              <path
+                                d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M15 3h6v6"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M10 14L21 3"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </a>
+                        </ClickSpark>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </GlareHover>

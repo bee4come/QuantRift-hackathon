@@ -50,12 +50,21 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
       );
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData: any = {};
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // If response is not JSON, use status text
+          errorData = { error: response.statusText };
+        }
+        
         console.error(`Failed to fetch data for ${display}:`, response.status, errorData);
         
         // Handle 404 - player not found
         if (response.status === 404) {
-          throw new Error(`Invalid ID, please double check: ${display}`);
+          // Use error message from backend if available, otherwise use default
+          const errorMsg = errorData.error || errorData.detail || `Invalid ID, please double check: ${display}`;
+          throw new Error(errorMsg);
         }
         
         // Bubble up helpful backend messages
@@ -63,12 +72,9 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
           throw new Error('Riot API Unauthorized. Please set RIOT_API_KEY in combatpower/.env and restart the backend.');
         }
         
-        if ((response.status === 500 || response.status === 400) && errorData?.error) {
-          throw new Error(errorData.error);
-        }
-
-        if (response.status === 503 && errorData.error) {
-          throw new Error(errorData.error);
+        // Use error message from backend if available
+        if (errorData?.error || errorData?.detail) {
+          throw new Error(errorData.error || errorData.detail);
         }
         
         throw new Error('Failed to fetch player data');

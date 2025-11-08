@@ -29,24 +29,50 @@ def version_sort_key(patch: str) -> tuple:
         return (0, 0)
 
 
-def load_all_packs(packs_dir: str) -> Dict[str, Any]:
+def load_all_packs(packs_dir: str, time_range: str = None) -> Dict[str, Any]:
     """
     加载所有 Player-Pack 数据
 
     Args:
         packs_dir: player-pack 目录路径
+        time_range: Time range filter
+            - "2024-01-01": Load data from 2024-01-01 to today
+            - "past-365": Load data from past 365 days
+            - None: Load all available data
 
     Returns:
         dict: {patch: pack_data}
     """
+    from datetime import datetime, timedelta
+    
     packs_path = Path(packs_dir)
     all_packs = {}
+
+    # Calculate time filter if needed
+    cutoff_timestamp = None
+    if time_range == "2024-01-01":
+        cutoff_timestamp = datetime(2024, 1, 1).timestamp()
+    elif time_range == "past-365":
+        cutoff_timestamp = (datetime.now() - timedelta(days=365)).timestamp()
 
     pack_files = sorted(packs_path.glob("pack_*.json"))
     for pack_file in pack_files:
         patch = pack_file.stem.replace("pack_", "")
         with open(pack_file, 'r', encoding='utf-8') as f:
-            all_packs[patch] = json.load(f)
+            pack_data = json.load(f)
+            
+            # Apply time range filter if specified
+            if cutoff_timestamp and "generation_timestamp" in pack_data:
+                pack_timestamp = pack_data["generation_timestamp"]
+                # If timestamp is string, convert to timestamp
+                if isinstance(pack_timestamp, str):
+                    pack_timestamp = datetime.fromisoformat(pack_timestamp.replace('Z', '+00:00')).timestamp()
+                
+                # Skip if before cutoff
+                if pack_timestamp < cutoff_timestamp:
+                    continue
+            
+            all_packs[patch] = pack_data
 
     return all_packs
 

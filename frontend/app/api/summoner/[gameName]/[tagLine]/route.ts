@@ -52,13 +52,43 @@ export async function GET(
       console.log('Backend response status:', response.status);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Backend error:', response.status, errorText);
+        let errorData: any = {};
+        const contentType = response.headers.get('content-type');
+        
+        // Clone response to safely read body
+        const clonedResponse = response.clone();
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            errorData = await clonedResponse.json();
+          } catch (e) {
+            // Fallback if JSON parsing fails - read as text
+            try {
+              const errorText = await response.text();
+              errorData = { detail: errorText || response.statusText };
+            } catch (textError) {
+              errorData = { detail: response.statusText };
+            }
+          }
+        } else {
+          try {
+            const errorText = await response.text();
+            errorData = { detail: errorText || response.statusText };
+          } catch (textError) {
+            errorData = { detail: response.statusText };
+          }
+        }
+        
+        console.error('Backend error:', response.status, errorData);
+        
+        // Extract error message from FastAPI format (detail field) or custom format (error field)
+        const errorMessage = errorData.detail || errorData.error || `Backend returned ${response.status}: ${response.statusText}`;
+        
         return NextResponse.json(
           { 
             success: false, 
-            error: `Backend returned ${response.status}: ${response.statusText}`,
-            details: errorText,
+            error: errorMessage,
+            details: errorData,
             backendUrl: url
           },
           { status: response.status }
