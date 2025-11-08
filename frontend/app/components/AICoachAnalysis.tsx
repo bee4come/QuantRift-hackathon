@@ -805,17 +805,11 @@ export default function AICoachAnalysis({
     {
       id: 'build-simulator',
       name: 'Build Simulator',
-      description: 'Optimize builds and itemization',
+      description: 'Optimize recent builds and itemization',
       icon: Boxes,
       endpoint: '/v1/agents/build-simulator',
       status: 'idle',
-      rankTypeOptions: [
-        { id: 'total', label: 'Total', value: null },
-        { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
-        { id: 'flex', label: 'Rank Flex', value: 440 },
-        { id: 'normal', label: 'Normal', value: 400 }
-      ],
-      selectedRankType: null, // Default to Total
+      // No rankTypeOptions - uses all game modes by default
       // No timeRangeOptions - uses recent games by default
     }
   ]);
@@ -986,12 +980,12 @@ export default function AICoachAnalysis({
     }
 
     // Check if report exists for current filter combination (time_range + queue_id)
-    // Champion Mastery uses all game modes, so only use time_range as key
+    // Champion Mastery and Build Simulator use all game modes and recent games, so use 'default' as key
     // Role Specialization reports are stored with role in the key, so skip check here (will be checked in handleRoleSelect)
     const reportsByTimeRange = agent.reportsByTimeRange || {};
     
     // Skip report check for Role Specialization since it requires role selection first
-    if (agent.id !== 'role-specialization' && agent.id !== 'champion-mastery') {
+    if (agent.id !== 'role-specialization' && agent.id !== 'champion-mastery' && agent.id !== 'build-simulator') {
       const reportKey = getReportKey(agent);
       const existingReport = reportsByTimeRange[reportKey];
     
@@ -1004,8 +998,8 @@ export default function AICoachAnalysis({
       });
       return;
       }
-    } else if (agent.id === 'champion-mastery') {
-      const reportKey = agent.selectedTimeRange || 'default';
+    } else if (agent.id === 'champion-mastery' || agent.id === 'build-simulator') {
+      const reportKey = agent.id === 'champion-mastery' ? (agent.selectedTimeRange || 'default') : 'default';
       const existingReport = reportsByTimeRange[reportKey];
       
       // If already generated for current filter combination, just show the report
@@ -1094,16 +1088,16 @@ export default function AICoachAnalysis({
         console.log(`[${agent.id}] No time_range (agent uses recent games by default)`);
       }
 
-      // Champion Mastery uses all game modes, so don't add queue_id parameter
+      // Champion Mastery and Build Simulator use all game modes, so don't add queue_id parameter
       // For other agents, add queue_id if they have rankTypeOptions and selectedRankType is not null
-      if (agent.id !== 'champion-mastery' && latestAgent?.selectedRankType !== undefined && latestAgent.selectedRankType !== null) {
+      if (agent.id !== 'champion-mastery' && agent.id !== 'build-simulator' && latestAgent?.selectedRankType !== undefined && latestAgent.selectedRankType !== null) {
         body.queue_id = latestAgent.selectedRankType;
         const queueNames: Record<number, string> = { 420: 'Solo/Duo', 440: 'Flex', 400: 'Normal' };
         console.log(`[${agent.id}] Using queue_id: ${latestAgent.selectedRankType} (${queueNames[latestAgent.selectedRankType] || 'Unknown'})`);
-      } else if (agent.id !== 'champion-mastery' && latestAgent?.selectedRankType === null) {
+      } else if (agent.id !== 'champion-mastery' && agent.id !== 'build-simulator' && latestAgent?.selectedRankType === null) {
         console.log(`[${agent.id}] Using Total (all queue types)`);
-      } else if (agent.id === 'champion-mastery') {
-        console.log(`[${agent.id}] Using all game modes (Champion Mastery)`);
+      } else if (agent.id === 'champion-mastery' || agent.id === 'build-simulator') {
+        console.log(`[${agent.id}] Using all game modes (uses recent games by default)`);
       }
 
       const result = await fetchAgentStream(url, body, abortControllerRef.current);
@@ -1117,10 +1111,10 @@ export default function AICoachAnalysis({
         return prev; // Don't modify, just read
       });
       
-      // Champion Mastery uses all game modes, so use time_range only as key
+      // Champion Mastery and Build Simulator use all game modes and recent games, so use 'default' as key
       // Other agents use combined key (time_range + queue_id)
-      const reportKey = finalAgent && finalAgent.id === 'champion-mastery'
-        ? (finalAgent.selectedTimeRange || 'default')
+      const reportKey = (finalAgent && (finalAgent.id === 'champion-mastery' || finalAgent.id === 'build-simulator'))
+        ? 'default'
         : (finalAgent ? getReportKey(finalAgent) : getReportKey(agent));
       
       console.log(`[${agent.id}] Storing report for filter combination: ${reportKey}`);

@@ -373,38 +373,38 @@ class PlayerDataManager:
 
         for queue_id, queue_name in queue_types:
             print(f"   📥 Fetching {queue_name} matches...")
-        start_index = 0
-        batch_size = 100  # Riot API单次最多返回100场
+            start_index = 0
+            batch_size = 100  # Riot API单次最多返回100场
             queue_match_ids = []
 
             while True:
                 print(f"      Fetching {queue_name} matches {start_index}-{start_index + batch_size}...")
 
                 # Fetch with time filter: from patch 14.1 to today
-            batch = await riot_client.get_match_history(
-                puuid=puuid,
-                platform=platform,
+                batch = await riot_client.get_match_history(
+                    puuid=puuid,
+                    platform=platform,
                     count=batch_size,
-                start=start_index,
+                    start=start_index,
                     start_time=start_timestamp,
                     end_time=end_timestamp,
                     queue_id=queue_id
-            )
+                )
 
-            if not batch or len(batch) == 0:
+                if not batch or len(batch) == 0:
                     # No more matches available for this queue type
                     print(f"      ✅ All {queue_name} matches fetched: {len(queue_match_ids)} matches")
-                break
+                    break
 
                 queue_match_ids.extend(batch)
                 print(f"      ✅ Batch retrieved {len(batch)} {queue_name} matches, total {len(queue_match_ids)} matches")
 
-            # If returned less than requested, we've reached the end
+                # If returned less than requested, we've reached the end
                 if len(batch) < batch_size:
                     print(f"      ℹ️  Reached end of {queue_name} match history")
-                break
+                    break
 
-            start_index += len(batch)
+                start_index += len(batch)
 
             all_match_ids.extend(queue_match_ids)
             print(f"   ✅ Total {queue_name} matches: {len(queue_match_ids)}")
@@ -979,10 +979,10 @@ class PlayerDataManager:
             print(f"🔍 [get_role_stats] Looking for packs with pattern: {pack_pattern}, found {len(pack_files)} files")
             print(f"🔍 [get_role_stats] Filter params: queue_id={queue_id}, time_range={time_range}")
             
-                by_cr_data = []
-                for pack_file in pack_files:
-                    with open(pack_file, 'r', encoding='utf-8') as f:
-                        pack = json.load(f)
+            by_cr_data = []
+            for pack_file in pack_files:
+                with open(pack_file, 'r', encoding='utf-8') as f:
+                    pack = json.load(f)
                 
                 # Verify queue_id matches if specified
                 if queue_id is not None:

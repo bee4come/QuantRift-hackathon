@@ -2771,7 +2771,7 @@ async def get_player_summary(
         summoner_error = None
         
         try:
-        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=platform)
+            summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=platform)
         except Exception as e:
             error_msg = str(e)
             # Check if it's a decrypt error (API key issue)
@@ -2792,11 +2792,11 @@ async def get_player_summary(
                 if plat != platform:
                     print(f"🔍 Trying platform: {plat}")
                     try:
-                    summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=plat)
-                    if summoner:
-                        print(f"✅ Found summoner on {plat}")
-                        platform = plat  # Update platform to the one that worked
-                        break
+                        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=plat)
+                        if summoner:
+                            print(f"✅ Found summoner on {plat}")
+                            platform = plat  # Update platform to the one that worked
+                            break
                     except Exception as e:
                         error_msg = str(e)
                         if "decrypting" in error_msg.lower():
@@ -2912,8 +2912,8 @@ async def get_player_summary(
             best_champions = best_champions[:5]
         else:
             # Use existing pack files (for time_range or days-based requests)
-        role_stats = player_data_manager.get_role_stats(puuid)
-        best_champions = player_data_manager.get_best_champions(puuid, limit=5)
+            role_stats = player_data_manager.get_role_stats(puuid)
+            best_champions = player_data_manager.get_best_champions(puuid, limit=5)
 
         # Step 5: Calculate analysis summary from role_stats
         analysis = {
