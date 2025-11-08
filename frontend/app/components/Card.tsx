@@ -3,11 +3,12 @@ import styled from 'styled-components';
 
 interface CardProps {
   isSearched?: boolean;
+  isModalOpen?: boolean;
 }
 
-const Card = ({ isSearched = false }: CardProps) => {
+const Card = ({ isSearched = false, isModalOpen = false }: CardProps) => {
   return (
-    <StyledWrapper $isSearched={isSearched}>
+    <StyledWrapper $isSearched={isSearched} $isModalOpen={isModalOpen}>
       <div className="box">
         <span />
         <div className="content">
@@ -18,7 +19,12 @@ const Card = ({ isSearched = false }: CardProps) => {
   );
 }
 
-const StyledWrapper = styled.div<{ $isSearched: boolean }>`
+const StyledWrapper = styled.div<{ $isSearched: boolean; $isModalOpen: boolean }>`
+  filter: ${props => props.$isModalOpen ? 'blur(4px)' : 'none'};
+  opacity: ${props => props.$isModalOpen ? 0.5 : 1};
+  transition: filter 0.3s ease, opacity 0.3s ease;
+  pointer-events: ${props => props.$isModalOpen ? 'none' : 'auto'};
+  
   .box {
    position: relative;
    width: ${props => props.$isSearched ? '400px' : '800px'};

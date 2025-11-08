@@ -244,12 +244,12 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                 onClick={handleTitleClick}
                 className={`hover:opacity-80 transition-opacity duration-300 ${isModalOpen ? 'pointer-events-none' : ''}`}
               >
-                <Card isSearched={true} />
+                <Card isSearched={true} isModalOpen={isModalOpen} />
               </button>
             </ClickSpark>
           ) : (
             <Link href="/" className={`hover:opacity-80 transition-opacity duration-300 ${isModalOpen ? 'pointer-events-none' : ''}`}>
-              <Card isSearched={false} />
+              <Card isSearched={false} isModalOpen={isModalOpen} />
             </Link>
           )}
         </motion.div>
