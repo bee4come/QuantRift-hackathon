@@ -1,8 +1,6 @@
-<div align="center">
+<div align="center" style="color: black;">
 
-<img src="frontend/public/quantrift-logo.svg" alt="QuantRift" width="700"/>
-
-AI-Powered League of Legends Analytics Platform
+<img src="frontend/public/quantrift-logo.svg" alt="QuantRift" width="700" style="filter: brightness(0);"/>
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -217,4 +215,3 @@ This is an open source project developed for [Rift Rewind Hackathon](https://rif
 - **Anthropic** for Claude AI models
 - **[Jayde Garrow](https://jaydegarrow.wixsite.com/jaydefonts)** for the PaybAck font used in titles
 - The League of Legends community for inspiration and feedback
-
