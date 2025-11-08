@@ -1,31 +1,53 @@
 'use client';
 
-import { useTimeOfDay, isLightBackground } from './useTimeOfDay';
-import { useServerContext } from '../context/ServerContext';
+import { useState, useEffect } from 'react';
 
 export function useAdaptiveColors() {
-  const { currentTimezone } = useServerContext();
-  const timeOfDay = useTimeOfDay(currentTimezone);
+  const [isLight, setIsLight] = useState(() => {
+    // Initialize with proper theme check
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('light');
+    }
+    return false;
+  });
   
-  const isLight = isLightBackground[timeOfDay];
+  useEffect(() => {
+    // Check current theme
+    const checkTheme = () => {
+      const isLightMode = document.documentElement.classList.contains('light');
+      setIsLight(isLightMode);
+    };
+    
+    // Initial check
+    checkTheme();
+    
+    // Watch for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
   
   return {
-    // Text colors
-    textPrimary: isLight ? '#0f172a' : '#f8fafc',
-    textSecondary: isLight ? '#475569' : '#cbd5e1',
-    textMuted: isLight ? '#64748b' : '#94a3b8',
+    // Text colors - white for both modes
+    textPrimary: '#F5F5F7',
+    textSecondary: '#E8E8ED',
+    textMuted: '#AEAEB2',
     
     // Accent colors
-    accentBlue: isLight ? '#0ea5e9' : '#38bdf8',
-    accentGreen: isLight ? '#10b981' : '#34d399',
-    accentRed: isLight ? '#ef4444' : '#f87171',
-    accentYellow: isLight ? '#f59e0b' : '#fbbf24',
-    accentPurple: isLight ? '#8b5cf6' : '#a78bfa',
+    accentBlue: isLight ? '#007AFF' : '#0A84FF',
+    accentGreen: isLight ? '#34C759' : '#32D74B',
+    accentRed: isLight ? '#FF3B30' : '#FF453A',
+    accentYellow: isLight ? '#FFCC00' : '#FFD60A',
+    accentPurple: isLight ? '#AF52DE' : '#BF5AF2',
     
     // UI elements
-    borderColor: isLight ? 'rgba(15, 23, 42, 0.1)' : 'rgba(248, 250, 252, 0.1)',
-    glassBg: isLight ? 'rgba(255, 255, 255, 0.7)' : 'rgba(15, 23, 42, 0.7)',
-    glassBorder: isLight ? 'rgba(15, 23, 42, 0.15)' : 'rgba(248, 250, 252, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    glassBg: isLight ? 'rgba(255, 255, 255, 0.1)' : 'rgba(28, 28, 30, 0.7)',
+    glassBorder: 'rgba(255, 255, 255, 0.15)',
     
     // Status
     isLight,

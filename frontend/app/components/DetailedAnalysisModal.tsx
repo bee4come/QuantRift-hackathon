@@ -313,24 +313,30 @@ export default function DetailedAnalysisModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50"
           />
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
-          >
+              {/* Modal */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
+                style={{ zIndex: 9999 }}
+              >
             <div
-              className="fluid-glass rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] flex flex-col pointer-events-auto overflow-hidden"
+              className="rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] flex flex-col pointer-events-auto overflow-hidden"
               onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: 'rgba(28, 28, 30, 0.98)',
+                backdropFilter: 'blur(40px)',
+                border: '1px solid rgba(255, 255, 255, 0.15)'
+              }}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div>
+              <div className="relative p-6 border-b border-white/10 z-10">
+                <div className="text-center pointer-events-none">
                   <ShinyText
                     text={agentName}
                     speed={3}
@@ -341,65 +347,20 @@ export default function DetailedAnalysisModal({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Download Button */}
-                  <ClickSpark
-                    sparkColor={colors.accentBlue}
-                    sparkSize={6}
-                    sparkRadius={10}
-                    sparkCount={4}
-                    duration={250}
-                    inline={true}
-                  >
-                    <button
-                      onClick={handleDownload}
-                      className="p-2 rounded-lg border transition-all backdrop-blur-sm"
-                      style={{
-                        backgroundColor: 'rgba(10, 132, 255, 0.15)',
-                        borderColor: 'rgba(10, 132, 255, 0.3)',
-                        color: '#5AC8FA'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.25)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.15)';
-                      }}
-                      title="Download Report"
-                    >
-                      <Download className="w-5 h-5" />
-                    </button>
-                  </ClickSpark>
-
-                  {/* Close Button */}
-                  <ClickSpark
-                    sparkColor="#FF453A"
-                    sparkSize={6}
-                    sparkRadius={10}
-                    sparkCount={4}
-                    duration={250}
-                    inline={true}
-                  >
-                    <button
-                      onClick={onClose}
-                      className="p-2 rounded-lg border transition-all backdrop-blur-sm"
-                      style={{
-                        backgroundColor: 'rgba(255, 69, 58, 0.15)',
-                        borderColor: 'rgba(255, 69, 58, 0.3)',
-                        color: '#FF453A'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(255, 69, 58, 0.25)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(255, 69, 58, 0.15)';
-                      }}
-                      title="Close"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </ClickSpark>
-                </div>
+                {/* Close Button */}
+                <button
+                  onClick={onClose}
+                  className="absolute top-6 right-6 p-2 rounded-lg border transition-all backdrop-blur-sm hover:opacity-80"
+                  style={{
+                    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+                    borderColor: 'rgba(255, 69, 58, 0.3)',
+                    color: '#FF453A',
+                    zIndex: 20
+                  }}
+                  title="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
               {/* Content */}
@@ -483,34 +444,6 @@ export default function DetailedAnalysisModal({
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10">
-                <ClickSpark
-                  sparkColor="#FF453A"
-                  sparkSize={8}
-                  sparkRadius={12}
-                  sparkCount={6}
-                  duration={300}
-                >
-                  <button
-                    onClick={onClose}
-                    className="px-6 py-2.5 rounded-lg border font-medium transition-all backdrop-blur-sm"
-                    style={{
-                      backgroundColor: 'rgba(255, 69, 58, 0.15)',
-                      borderColor: 'rgba(255, 69, 58, 0.3)',
-                      color: '#FF453A'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(255, 69, 58, 0.25)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(255, 69, 58, 0.15)';
-                    }}
-                  >
-                    <ShinyText text="Close" speed={2} className="text-sm font-medium" />
-                  </button>
-                </ClickSpark>
-              </div>
             </div>
           </motion.div>
         </>

@@ -1,8 +1,8 @@
 {
   "puuid": "OkHv4J5JcbqQSx9I5Fda7L9rpz4wQcaDVpgDyjtlhEcpdZIM9ExEyrfTpjS6EdsYcZjKX9i5ctKC9A",
   "patch": "15.19",
-  "generation_timestamp": "2025-11-07T04:24:51.762319",
-  "total_games": 10,
+  "generation_timestamp": "2025-11-07T06:58:41.561088",
+  "total_games": 11,
   "by_cr": [
     {
       "champ_id": 119,
@@ -79,25 +79,25 @@
     {
       "champ_id": 202,
       "role": "BOTTOM",
-      "games": 2,
-      "wins": 1,
+      "games": 3,
+      "wins": 2,
       "losses": 1,
-      "p_hat": 0.5,
+      "p_hat": 0.6667,
       "p_hat_ci": [
-        0.0945,
-        0.9055
+        0.2077,
+        0.9385
       ],
-      "kda_adj": 4.98,
-      "obj_rate": 1.0,
-      "cp_25": 10224.2,
+      "kda_adj": 4.8,
+      "obj_rate": 1.333,
+      "cp_25": 10752.0,
       "build_core": [
         6676,
         3094,
-        3009
+        3031
       ],
       "avg_time_to_core": 30.0,
       "rune_keystone": 8021,
-      "effective_n": 2,
+      "effective_n": 3,
       "governance_tag": "CONTEXT"
     },
     {

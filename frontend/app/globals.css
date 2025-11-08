@@ -34,6 +34,12 @@
 }
 
 :root {
+  --font-arial: Arial, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+}
+
+/* Dark Theme (Default) - Pure Black */
+:root,
+html.dark {
   --background: #000000;
   --foreground: #F5F5F7;
   --system-blue: #0A84FF;
@@ -46,24 +52,50 @@
   --elevated-1: #1C1C1E;
   --elevated-2: #2C2C2E;
   --elevated-3: #3A3A3C;
-  --font-zen-serif: "OA Font Zen Serif", -apple-system, BlinkMacSystemFont, "SF Pro Display", serif;
+}
+
+/* Light Theme - Daybreak Gradient */
+html.light {
+  --background: linear-gradient(135deg, #334155 0%, #475569 40%, #64748b 70%, #94a3b8 100%);
+  --foreground: #F5F5F7;
+  --system-blue: #007AFF;
+  --system-green: #34C759;
+  --system-red: #FF3B30;
+  --system-orange: #FF9500;
+  --system-yellow: #FFCC00;
+  --system-purple: #AF52DE;
+  --system-pink: #FF2D55;
+  --elevated-1: rgba(255, 255, 255, 0.1);
+  --elevated-2: rgba(255, 255, 255, 0.15);
+  --elevated-3: rgba(255, 255, 255, 0.2);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-zen-serif);
+  --font-sans: var(--font-arial);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
+  background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-zen-serif);
+  font-family: var(--font-arial);
   min-height: 100vh;
   overflow-x: hidden;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+html.light body {
+  background: linear-gradient(135deg, #334155 0%, #475569 40%, #64748b 70%, #94a3b8 100%);
+  background-attachment: fixed;
+}
+
+html.dark body {
+  background: #000000;
 }
 
 /* Smooth Page Transitions */

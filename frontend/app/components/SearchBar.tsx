@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Search } from 'lucide-react';
 import { useSearch } from '../context/SearchContext';
-import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import GlareHover from './ui/GlareHover';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
@@ -20,7 +18,6 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { addPlayers, startProcessing } = useSearch();
-  const colors = useAdaptiveColors();
 
   const handleSearch = async () => {
     const trimmedValue = inputValue.trim();
@@ -137,7 +134,7 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
         stiffness: 300,
         damping: 30,
       }}
-      className="w-full max-w-2xl mx-auto px-4"
+      className="w-full max-w-xl mx-auto px-4"
     >
       <GlareHover
         width="100%"
@@ -153,42 +150,31 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
       >
         <motion.div
           layout
-          className="fluid-glass rounded-2xl p-6 shadow-2xl overflow-hidden"
+          className="fluid-glass rounded-2xl p-4 shadow-2xl overflow-hidden"
         >
-        <div className="flex items-center gap-3 mb-4 relative z-10">
-          <Search className="w-6 h-6" style={{ color: colors.accentBlue }} />
-          <ShinyText 
-            text="Search Players" 
-            speed={4}
-            className="text-2xl font-bold"
-          />
-        </div>
-
-        {/* Search Input with Button */}
+        {/* Search Input with Button Beside */}
         <div className="flex gap-3 relative z-10">
-          <div className="flex-[4] relative">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Enter Riot ID (e.g., Hide on bush#KR1)"
-              className="w-full px-6 py-4 rounded-xl border focus:outline-none transition-all backdrop-blur-sm"
-              style={{
-                backgroundColor: 'rgba(44, 44, 46, 0.6)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: '#F5F5F7'
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(10, 132, 255, 0.5)';
-                e.currentTarget.style.backgroundColor = 'rgba(44, 44, 46, 0.7)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                e.currentTarget.style.backgroundColor = 'rgba(44, 44, 46, 0.6)';
-              }}
-            />
-          </div>
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Enter Riot ID (e.g., Hide on bush#KR1)"
+            className="flex-1 px-5 py-3 rounded-xl border focus:outline-none transition-all backdrop-blur-sm"
+            style={{
+              backgroundColor: 'rgba(44, 44, 46, 0.6)',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              color: '#F5F5F7'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(10, 132, 255, 0.5)';
+              e.currentTarget.style.backgroundColor = 'rgba(44, 44, 46, 0.7)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.backgroundColor = 'rgba(44, 44, 46, 0.6)';
+            }}
+          />
           <ClickSpark
             sparkColor="#FFFFFF"
             sparkSize={12}
@@ -200,7 +186,7 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
             <button
               onClick={handleSearch}
               disabled={!inputValue.trim() || isLoading}
-              className="flex-1 px-6 py-4 rounded-xl font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg backdrop-blur-sm border"
+              className="px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg backdrop-blur-sm border"
               style={{
                 background: 'linear-gradient(90deg, rgba(10, 132, 255, 0.9) 0%, rgba(191, 90, 242, 0.9) 100%)',
                 borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -212,7 +198,7 @@ export default function SearchBar({ isSearched }: SearchBarProps) {
               <ShinyText 
                 text={isLoading ? 'Searching...' : 'Search'} 
                 speed={3} 
-                className="font-semibold"
+                className="font-semibold text-sm"
               />
             </button>
           </ClickSpark>

@@ -77,23 +77,29 @@ export default function ChampionSelectorModal({
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
           />
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
-          >
+              {/* Modal */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
+                style={{ zIndex: 9999 }}
+              >
             <div
-              className="fluid-glass rounded-2xl shadow-2xl max-w-3xl w-full max-h-[80vh] flex flex-col pointer-events-auto overflow-hidden"
+              className="rounded-2xl shadow-2xl max-w-3xl w-full max-h-[80vh] flex flex-col pointer-events-auto overflow-hidden"
               onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: 'rgba(28, 28, 30, 0.98)',
+                backdropFilter: 'blur(40px)',
+                border: '1px solid rgba(255, 255, 255, 0.15)'
+              }}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div>
+              <div className="relative p-6 border-b border-white/10 z-10">
+                <div className="text-center pointer-events-none">
                   <ShinyText
-                    text="🏆 Champion Mastery Analysis"
+                    text="Champion Mastery Analysis"
                     speed={3}
                     className="text-2xl font-bold"
                   />
@@ -106,19 +112,18 @@ export default function ChampionSelectorModal({
                 </div>
 
                 {/* Close Button */}
-                <ClickSpark inline={true}>
-                  <button
-                    onClick={onClose}
-                    className="p-2 rounded-lg border transition-all"
-                    style={{
-                      backgroundColor: 'rgba(255, 69, 58, 0.15)',
-                      borderColor: 'rgba(255, 69, 58, 0.3)',
-                      color: '#FF453A'
-                    }}
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </ClickSpark>
+                <button
+                  onClick={onClose}
+                  className="absolute top-6 right-6 p-2 rounded-lg border transition-all hover:opacity-80"
+                  style={{
+                    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+                    borderColor: 'rgba(255, 69, 58, 0.3)',
+                    color: '#FF453A',
+                    zIndex: 20
+                  }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
               {/* Search Bar */}
@@ -221,29 +226,15 @@ export default function ChampionSelectorModal({
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between gap-3 p-6 border-t border-white/10">
+              <div className="p-6 border-t border-white/10 space-y-3">
                 <p className="text-sm" style={{ color: '#8E8E93' }}>
                   {selectedChampion
                     ? `Selected: ${selectedChampion.champion_name}`
                     : 'Select a champion to continue'}
                 </p>
 
-                <div className="flex gap-3">
-                  <ClickSpark>
-                    <button
-                      onClick={onClose}
-                      className="px-6 py-2.5 rounded-lg border font-medium transition-all"
-                      style={{
-                        backgroundColor: 'rgba(142, 142, 147, 0.15)',
-                        borderColor: 'rgba(142, 142, 147, 0.3)',
-                        color: '#8E8E93'
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </ClickSpark>
-
-                  <ClickSpark>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <ClickSpark inline={true}>
                     <button
                       onClick={handleConfirm}
                       disabled={!selectedChampion}
@@ -254,7 +245,7 @@ export default function ChampionSelectorModal({
                         color: '#5AC8FA'
                       }}
                     >
-                      <ShinyText text="Analyze Champion →" speed={2} />
+                      <ShinyText text="Analyze" speed={2} />
                     </button>
                   </ClickSpark>
                 </div>

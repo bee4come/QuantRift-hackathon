@@ -15,11 +15,18 @@ export type AgentStatus =
   | 'ready'
   | 'error';
 
-interface TimeRangeOption {
+export interface TimeRangeOption {
   id: string;
   label: string;
   value: string;
+  description?: string;
+}
+
+interface SubOption {
+  id: string;
+  label: string;
   description: string;
+  icon: LucideIcon;
 }
 
 interface AgentCardProps {
@@ -34,6 +41,8 @@ interface AgentCardProps {
   timeRangeOptions?: TimeRangeOption[];
   selectedTimeRange?: string;
   onTimeRangeChange?: (timeRange: string) => void;
+  subOptions?: SubOption[];
+  onSubOptionClick?: (subOptionId: string) => void;
 }
 
 export default function AgentCard({
@@ -47,7 +56,9 @@ export default function AgentCard({
   onGenerate,
   timeRangeOptions,
   selectedTimeRange,
-  onTimeRangeChange
+  onTimeRangeChange,
+  subOptions,
+  onSubOptionClick
 }: AgentCardProps) {
   const colors = useAdaptiveColors();
 
@@ -191,71 +202,112 @@ export default function AgentCard({
         )}
 
         {/* Action Buttons */}
-        <div className="space-y-2 relative z-10">
+        <div className="relative z-10">
 
-          {/* Generate/View Analysis Button */}
-          {canGenerate && (
-            <ClickSpark
-              sparkColor={colors.accentBlue}
-              sparkSize={8}
-              sparkRadius={12}
-              sparkCount={6}
-              duration={300}
-            >
-              <button
-                onClick={onGenerate}
-                disabled={isLoading}
-                className="w-full px-4 py-2.5 rounded-lg border font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed backdrop-blur-sm text-sm"
-                style={{
-                  backgroundColor: 'rgba(10, 132, 255, 0.2)',
-                  borderColor: 'rgba(10, 132, 255, 0.4)',
-                  color: '#5AC8FA'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isLoading) {
-                    e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.3)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.2)';
-                }}
-              >
-                <ShinyText text="Generate Analysis" speed={2} className="text-sm font-medium" />
-              </button>
-            </ClickSpark>
-          )}
+          {/* Sub-Options (e.g., Friend Comparison, Rank Comparison) */}
+          {subOptions && subOptions.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              {subOptions.map((subOption) => (
+                <ClickSpark
+                  key={subOption.id}
+                  sparkColor={colors.accentBlue}
+                  sparkSize={8}
+                  sparkRadius={12}
+                  sparkCount={6}
+                  duration={300}
+                >
+                  <button
+                    onClick={() => onSubOptionClick?.(subOption.id)}
+                    disabled={isLoading}
+                    className="w-full h-full px-3 py-6 rounded-lg border font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed backdrop-blur-sm text-sm flex flex-col items-center justify-center gap-2"
+                    style={{
+                      backgroundColor: 'rgba(10, 132, 255, 0.2)',
+                      borderColor: 'rgba(10, 132, 255, 0.4)',
+                      color: '#5AC8FA',
+                      minHeight: '100px'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isLoading) {
+                        e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.3)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.2)';
+                    }}
+                  >
+                    <subOption.icon className="w-6 h-6" />
+                    <div className="text-sm font-semibold text-center">{subOption.label}</div>
+                  </button>
+                </ClickSpark>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Generate/View Analysis Button */}
+              {canGenerate && (
+                <ClickSpark
+                  sparkColor={colors.accentBlue}
+                  sparkSize={8}
+                  sparkRadius={12}
+                  sparkCount={6}
+                  duration={300}
+                >
+                  <button
+                    onClick={onGenerate}
+                    disabled={isLoading}
+                    className="w-full px-4 py-2.5 rounded-lg border font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed backdrop-blur-sm text-sm"
+                    style={{
+                      backgroundColor: 'rgba(10, 132, 255, 0.2)',
+                      borderColor: 'rgba(10, 132, 255, 0.4)',
+                      color: '#5AC8FA'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isLoading) {
+                        e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.3)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.2)';
+                    }}
+                  >
+                    <ShinyText text="Generate Analysis" speed={2} className="text-sm font-medium" />
+                  </button>
+                </ClickSpark>
+              )}
 
-          {/* View Report Button */}
-          {canView && (
-            <ClickSpark
-              sparkColor="#32D74B"
-              sparkSize={8}
-              sparkRadius={12}
-              sparkCount={6}
-              duration={300}
-            >
-              <button
-                onClick={onGenerate}
-                disabled={isLoading}
-                className="w-full px-4 py-2.5 rounded-lg border font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed backdrop-blur-sm text-sm flex items-center justify-center gap-2"
-                style={{
-                  backgroundColor: 'rgba(50, 215, 75, 0.2)',
-                  borderColor: 'rgba(50, 215, 75, 0.4)',
-                  color: '#32D74B'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isLoading) {
-                    e.currentTarget.style.backgroundColor = 'rgba(50, 215, 75, 0.3)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(50, 215, 75, 0.2)';
-                }}
-              >
-                <ShinyText text="View Report" speed={2} className="text-sm font-medium" />
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </ClickSpark>
+              {/* View Report Button */}
+              {canView && (
+                <ClickSpark
+                  sparkColor="#32D74B"
+                  sparkSize={8}
+                  sparkRadius={12}
+                  sparkCount={6}
+                  duration={300}
+                >
+                  <button
+                    onClick={onGenerate}
+                    disabled={isLoading}
+                    className="w-full px-4 py-2.5 rounded-lg border font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed backdrop-blur-sm text-sm flex items-center justify-center gap-2"
+                    style={{
+                      backgroundColor: 'rgba(50, 215, 75, 0.2)',
+                      borderColor: 'rgba(50, 215, 75, 0.4)',
+                      color: '#32D74B'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isLoading) {
+                        e.currentTarget.style.backgroundColor = 'rgba(50, 215, 75, 0.3)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(50, 215, 75, 0.2)';
+                    }}
+                  >
+                    <ShinyText text="View Report" speed={2} className="text-sm font-medium" />
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </ClickSpark>
+              )}
+            </div>
           )}
         </div>
       </motion.div>

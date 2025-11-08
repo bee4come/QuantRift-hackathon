@@ -2,7 +2,6 @@
 
 import SearchBar from './components/SearchBar';
 import PlayerResults from './components/PlayerResults';
-import DynamicBackground from './components/DynamicBackground';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProcessingStatus from './components/ProcessingStatus';
@@ -13,7 +12,6 @@ import { ServerProvider } from './context/ServerContext';
 function HomeContent() {
   return (
     <>
-      <DynamicBackground />
       <div className="min-h-screen flex flex-col relative" style={{ zIndex: 1 }}>
         {/* Header - always at top */}
         <Header />

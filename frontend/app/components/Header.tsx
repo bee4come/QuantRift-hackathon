@@ -14,6 +14,8 @@ import EsportsAnnouncements from './EsportsAnnouncements';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
 import Link from 'next/link';
+import Card from './Card';
+import DarkModeSwitch from './DarkModeSwitch';
 
 const TIME_LABELS: Record<TimeOfDay, string> = {
   midnight: 'Midnight',
@@ -135,6 +137,19 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
           className="absolute top-6 right-6 flex items-center gap-3"
           style={{ zIndex: 100 }}
         >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+            className={`${isModalOpen ? 'pointer-events-none' : ''}`}
+            style={{
+              filter: isModalOpen ? 'blur(4px)' : 'none',
+              transition: 'filter 0.3s ease'
+            }}
+          >
+            <DarkModeSwitch />
+          </motion.div>
+          
           <motion.a
             href="https://github.com/bee4come/QuantRift-hackathon"
             target="_blank"
@@ -229,52 +244,12 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                 onClick={handleTitleClick}
                 className={`hover:opacity-80 transition-opacity duration-300 ${isModalOpen ? 'pointer-events-none' : ''}`}
               >
-                <h1 style={{ 
-                  fontFamily: '"Hunters K-Pop", sans-serif',
-                  fontSize: '3rem',
-                  fontWeight: 400,
-                  letterSpacing: '0.02em',
-                  backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.15) 25%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.12) 75%, rgba(255, 255, 255, 0.07) 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  color: 'transparent',
-                  filter: isModalOpen 
-                    ? 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1)) blur(4px)' 
-                    : 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1))',
-                  textShadow: '0 1px 2px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.08)',
-                  position: 'relative',
-                  WebkitTextStroke: '0.5px rgba(255, 255, 255, 0.15)',
-                  transition: 'font-size 0.5s ease, filter 0.3s ease',
-                  cursor: 'pointer'
-                }}>
-                  QuantRift
-                </h1>
+                <Card isSearched={true} />
               </button>
             </ClickSpark>
           ) : (
             <Link href="/" className={`hover:opacity-80 transition-opacity duration-300 ${isModalOpen ? 'pointer-events-none' : ''}`}>
-              <h1 style={{ 
-                fontFamily: '"Hunters K-Pop", sans-serif',
-                fontSize: '9rem',
-                fontWeight: 400,
-                letterSpacing: '0.02em',
-                backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.15) 25%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.12) 75%, rgba(255, 255, 255, 0.07) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                color: 'transparent',
-                filter: isModalOpen 
-                  ? 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1)) blur(4px)' 
-                  : 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15)) drop-shadow(0 0 30px rgba(10, 132, 255, 0.1))',
-                textShadow: '0 1px 2px rgba(255, 255, 255, 0.2), 0 0 20px rgba(255, 255, 255, 0.08)',
-                position: 'relative',
-                WebkitTextStroke: '0.5px rgba(255, 255, 255, 0.15)',
-                transition: 'font-size 0.5s ease, filter 0.3s ease',
-                cursor: 'pointer'
-              }}>
-                QuantRift
-              </h1>
+              <Card isSearched={false} />
             </Link>
           )}
         </motion.div>
@@ -289,7 +264,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
               isModalOpen ? 'blur-sm pointer-events-none opacity-50' : ''
             }`}
           >
-            <ShinyText text="Season 2025" speed={3} className="text-base font-medium" />
+            <span className="text-base font-medium" style={{ color: colors.textSecondary }}>Season 2025</span>
             <div className="w-px h-4" style={{ backgroundColor: colors.borderColor }}></div>
             <a 
               href="https://www.leagueoflegends.com/en-us/news/game-updates/patch-25-22-notes/" 
@@ -298,7 +273,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
               className="text-base font-medium hover:opacity-70 transition-opacity"
               style={{ color: colors.textSecondary }}
             >
-              <ShinyText text="Patch 25.22" speed={3} className="text-base font-medium" />
+              Patch 25.22
             </a>
           </motion.div>
         )}
@@ -371,22 +346,6 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                   text={currentTime} 
                   speed={2} 
                   className="text-sm font-mono tabular-nums"
-                />
-              </div>
-              
-              <div className="w-px h-4 relative z-10" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}></div>
-              
-              {/* Day/Night */}
-              <div className="flex items-center gap-2 relative z-10">
-                {IS_DAYTIME[timeOfDay] ? (
-                  <Sun className="w-4 h-4" style={{ color: '#FFD60A' }} />
-                ) : (
-                  <Moon className="w-4 h-4" style={{ color: '#FFD60A' }} />
-                )}
-                <ShinyText 
-                  text={TIME_LABELS[timeOfDay]} 
-                  speed={3} 
-                  className="text-sm font-medium"
                 />
               </div>
             </motion.div>

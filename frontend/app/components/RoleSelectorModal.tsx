@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, TreePine, Swords, Target, Heart } from 'lucide-react';
+import { X } from 'lucide-react';
+import Image from 'next/image';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
 import GlareHover from './ui/GlareHover';
@@ -22,9 +23,7 @@ interface RoleStats {
 interface RoleOption {
   value: Role;
   label: string;
-  emoji: string;
-  icon: any;
-  color: string;
+  imageUrl: string;
   description: string;
 }
 
@@ -32,41 +31,31 @@ const ROLE_OPTIONS: RoleOption[] = [
   {
     value: 'TOP',
     label: 'Top Lane',
-    emoji: '🛡️',
-    icon: Shield,
-    color: '#FF6B6B',
+    imageUrl: 'https://s-lol-web.op.gg/images/icon/icon-position-top.svg',
     description: 'Solo laner, tanks & fighters'
   },
   {
     value: 'JUNGLE',
     label: 'Jungle',
-    emoji: '🌲',
-    icon: TreePine,
-    color: '#51CF66',
+    imageUrl: 'https://s-lol-web.op.gg/images/icon/icon-position-jng.svg',
     description: 'Map control & ganks'
   },
   {
     value: 'MID',
     label: 'Mid Lane',
-    emoji: '⚔️',
-    icon: Swords,
-    color: '#FFD43B',
+    imageUrl: 'https://s-lol-web.op.gg/images/icon/icon-position-mid.svg',
     description: 'Mages & assassins'
   },
   {
     value: 'ADC',
     label: 'Bot Lane (ADC)',
-    emoji: '🏹',
-    icon: Target,
-    color: '#74C0FC',
+    imageUrl: 'https://s-lol-web.op.gg/images/icon/icon-position-bot.svg',
     description: 'Marksman carry'
   },
   {
     value: 'SUPPORT',
     label: 'Support',
-    emoji: '💚',
-    icon: Heart,
-    color: '#B197FC',
+    imageUrl: 'https://s-lol-web.op.gg/images/icon/icon-position-sup.svg',
     description: 'Vision & protection'
   },
 ];
@@ -139,26 +128,32 @@ export default function RoleSelectorModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50"
           />
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
-          >
+              {/* Modal */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
+                style={{ zIndex: 9999 }}
+              >
             <div
-              className="fluid-glass rounded-2xl shadow-2xl max-w-3xl w-full max-h-[80vh] flex flex-col pointer-events-auto overflow-hidden"
+              className="rounded-2xl shadow-2xl max-w-3xl w-full max-h-[80vh] flex flex-col pointer-events-auto overflow-hidden"
               onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: 'rgba(28, 28, 30, 0.98)',
+                backdropFilter: 'blur(40px)',
+                border: '1px solid rgba(255, 255, 255, 0.15)'
+              }}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div>
+              <div className="relative p-6 border-b border-white/10 z-10">
+                <div className="text-center pointer-events-none">
                   <ShinyText
-                    text="🎯 Role Specialization Analysis"
+                    text="Role Specialization Analysis"
                     speed={3}
                     className="text-2xl font-bold"
                   />
@@ -173,26 +168,24 @@ export default function RoleSelectorModal({
                 </div>
 
                 {/* Close Button */}
-                <ClickSpark inline={true}>
-                  <button
-                    onClick={onClose}
-                    className="p-2 rounded-lg border transition-all"
-                    style={{
-                      backgroundColor: 'rgba(255, 69, 58, 0.15)',
-                      borderColor: 'rgba(255, 69, 58, 0.3)',
-                      color: '#FF453A'
-                    }}
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </ClickSpark>
+                <button
+                  onClick={onClose}
+                  className="absolute top-6 right-6 p-2 rounded-lg border transition-all hover:opacity-80"
+                  style={{
+                    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+                    borderColor: 'rgba(255, 69, 58, 0.3)',
+                    color: '#FF453A',
+                    zIndex: 20
+                  }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
               {/* Role Cards */}
               <div className="flex-1 overflow-y-auto p-6 space-y-3">
                 {ROLE_OPTIONS.map((role) => {
                   const stats = getRoleStats(role.value);
-                  const Icon = role.icon;
                   const isMostPlayed = mostPlayedRole?.role === role.value;
 
                   return (
@@ -208,9 +201,11 @@ export default function RoleSelectorModal({
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setSelectedRole(role.value)}
-                          className="fluid-glass-dark p-5 rounded-xl cursor-pointer transition-all border-2"
+                          className="p-5 rounded-xl cursor-pointer transition-all border-2"
                           style={{
-                            borderColor: selectedRole === role.value ? colors.accentBlue : 'transparent'
+                            backgroundColor: 'rgba(48, 48, 52, 0.9)',
+                            backdropFilter: 'blur(20px)',
+                            borderColor: selectedRole === role.value ? colors.accentBlue : 'rgba(255, 255, 255, 0.1)'
                           }}
                         >
                           <div className="flex items-center justify-between">
@@ -219,15 +214,20 @@ export default function RoleSelectorModal({
                               <div
                                 className="w-14 h-14 rounded-xl flex items-center justify-center"
                                 style={{
-                                  backgroundColor: `${role.color}30`,
-                                  border: `2px solid ${role.color}60`
+                                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                  border: '2px solid rgba(255, 255, 255, 0.15)'
                                 }}
                               >
-                                <Icon className="w-7 h-7" style={{ color: role.color }} />
+                                <Image
+                                  src={role.imageUrl}
+                                  alt={role.label}
+                                  width={36}
+                                  height={36}
+                                  className="opacity-90"
+                                />
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-2xl">{role.emoji}</span>
                                   <ShinyText
                                     text={role.label}
                                     speed={2}
@@ -282,29 +282,29 @@ export default function RoleSelectorModal({
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between gap-3 p-6 border-t border-white/10">
-                <p className="text-sm" style={{ color: '#8E8E93' }}>
-                  {selectedRole
-                    ? `Selected: ${ROLE_OPTIONS.find(r => r.value === selectedRole)?.emoji} ${selectedRole}`
-                    : 'Select a role to continue'}
-                </p>
+              <div className="p-6 border-t border-white/10 space-y-3">
+                <div className="flex items-center gap-2">
+                  {selectedRole ? (
+                    <>
+                      <span className="text-sm" style={{ color: '#8E8E93' }}>Selected:</span>
+                      <Image
+                        src={ROLE_OPTIONS.find(r => r.value === selectedRole)?.imageUrl || ''}
+                        alt={selectedRole}
+                        width={20}
+                        height={20}
+                        className="opacity-90"
+                      />
+                      <span className="text-sm font-medium" style={{ color: '#F5F5F7' }}>
+                        {ROLE_OPTIONS.find(r => r.value === selectedRole)?.label}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm" style={{ color: '#8E8E93' }}>Select a role to continue</span>
+                  )}
+                </div>
 
-                <div className="flex gap-3">
-                  <ClickSpark>
-                    <button
-                      onClick={onClose}
-                      className="px-6 py-2.5 rounded-lg border font-medium transition-all"
-                      style={{
-                        backgroundColor: 'rgba(142, 142, 147, 0.15)',
-                        borderColor: 'rgba(142, 142, 147, 0.3)',
-                        color: '#8E8E93'
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </ClickSpark>
-
-                  <ClickSpark>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <ClickSpark inline={true}>
                     <button
                       onClick={handleConfirm}
                       disabled={!selectedRole}
@@ -315,7 +315,7 @@ export default function RoleSelectorModal({
                         color: '#5AC8FA'
                       }}
                     >
-                      <ShinyText text="Analyze Role →" speed={2} />
+                      <ShinyText text="Analyze" speed={2} />
                     </button>
                   </ClickSpark>
                 </div>

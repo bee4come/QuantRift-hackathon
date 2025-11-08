@@ -11,7 +11,9 @@ import {
   Clock,
   BarChart3,
   Zap,
-  FileText
+  FileText,
+  UserPlus,
+  TrendingUp
 } from 'lucide-react';
 import AgentCard, { AgentStatus } from './AgentCard';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
@@ -20,15 +22,17 @@ import DataStatusChecker from './DataStatusChecker';
 import ChampionSelectorModal from './ChampionSelectorModal';
 import FriendInputModal from './FriendInputModal';
 import RoleSelectorModal from './RoleSelectorModal';
+import RankSelectorModal from './RankSelectorModal';
 import MatchSelectorModal from './MatchSelectorModal';
 import ShinyText from './ui/ShinyText';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import type { TimeRangeOption } from './AgentCard';
 
-interface TimeRangeOption {
+interface SubOption {
   id: string;
   label: string;
-  value: string;
   description: string;
+  icon: any;
 }
 
 interface AgentState {
@@ -43,6 +47,7 @@ interface AgentState {
   timeRangeOptions?: TimeRangeOption[];
   selectedTimeRange?: string;
   analysisData?: any; // For widgets (Annual Summary, Progress Tracker)
+  subOptions?: SubOption[];
 }
 
 interface AICoachAnalysisProps {
@@ -72,6 +77,7 @@ export default function AICoachAnalysis({
   const [championModalOpen, setChampionModalOpen] = useState(false);
   const [friendModalOpen, setFriendModalOpen] = useState(false);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [rankModalOpen, setRankModalOpen] = useState(false);
   const [matchModalOpen, setMatchModalOpen] = useState(false);
   const [matchesData, setMatchesData] = useState<any[]>([]);
   const [currentMatchAgent, setCurrentMatchAgent] = useState<string>('match-analysis'); // Track which agent is using match selector
@@ -91,15 +97,13 @@ export default function AICoachAnalysis({
       timeRangeOptions: [
         {
           id: '2024-full-year',
-          label: '2024 Full Year',
-          value: '2024-01-01',
-          description: 'From January 1st, 2024 to today'
+          label: 'Season 2024',
+          value: '2024-01-01'
         },
         {
           id: 'past-365-days',
           label: 'Past 365 Days',
-          value: 'past-365',
-          description: 'Most recent 365 days'
+          value: 'past-365'
         }
       ],
       selectedTimeRange: '2024-01-01' // Default to 2024 full year
@@ -114,15 +118,13 @@ export default function AICoachAnalysis({
       timeRangeOptions: [
         {
           id: '2024-full-year',
-          label: '2024 Full Year',
-          value: '2024-01-01',
-          description: 'From January 1st, 2024 to today'
+          label: 'Season 2024',
+          value: '2024-01-01'
         },
         {
           id: 'past-365-days',
           label: 'Past 365 Days',
-          value: 'past-365',
-          description: 'Most recent 365 days'
+          value: 'past-365'
         }
       ],
       selectedTimeRange: '2024-01-01' // Default to 2024 full year
@@ -133,7 +135,21 @@ export default function AICoachAnalysis({
       description: 'Compare with friends or peers',
       icon: Users,
       endpoint: '/v1/agents/friend-comparison', // Will handle both friend and peer
-      status: 'idle'
+      status: 'idle',
+      subOptions: [
+        {
+          id: 'friend-comparison',
+          label: 'Friend Comparison',
+          description: 'Compare with a specific player',
+          icon: UserPlus
+        },
+        {
+          id: 'rank-comparison',
+          label: 'Rank Comparison',
+          description: 'Compare with rank tier',
+          icon: TrendingUp
+        }
+      ]
     },
 
     // Row 2
@@ -219,10 +235,7 @@ export default function AICoachAnalysis({
       setChampionModalOpen(true);
       return;
     }
-    if (agent.id === 'comparison-hub') {
-      setFriendModalOpen(true);
-      return;
-    }
+    // comparison-hub now uses sub-options, so no direct modal opening here
     if (agent.id === 'role-specialization') {
       setRoleModalOpen(true);
       return;
@@ -423,6 +436,19 @@ export default function AICoachAnalysis({
     }
   };
 
+  // Handler for sub-option clicks (for comparison hub)
+  const handleSubOptionClick = (agentId: string, subOptionId: string) => {
+    console.log(`Sub-option clicked: ${subOptionId} for agent: ${agentId}`);
+    
+    if (agentId === 'comparison-hub') {
+      if (subOptionId === 'friend-comparison') {
+        setFriendModalOpen(true);
+      } else if (subOptionId === 'rank-comparison') {
+        setRankModalOpen(true);
+      }
+    }
+  };
+
   // Fetch matches for timeline analysis
   const fetchMatches = async () => {
     console.log('🔍 fetchMatches called for', gameName, tagLine);
@@ -444,7 +470,7 @@ export default function AICoachAnalysis({
         setMatchesData(data.matches);
 
         if (data.matches.length === 0) {
-          throw new Error('No timeline data available. Please ensure player data has been loaded first.');
+          throw new Error('No recent matches found. Please play some games first or wait for match data to load.');
         }
       } else {
         throw new Error(data.error || 'Failed to fetch matches');
@@ -564,6 +590,7 @@ export default function AICoachAnalysis({
             {...agent}
             onGenerate={() => handleGenerate(agent)}
             onTimeRangeChange={(timeRange) => handleTimeRangeChange(agent.id, timeRange)}
+            onSubOptionClick={(subOptionId) => handleSubOptionClick(agent.id, subOptionId)}
           />
         ))}
       </div>
@@ -576,6 +603,7 @@ export default function AICoachAnalysis({
             {...agent}
             onGenerate={() => handleGenerate(agent)}
             onTimeRangeChange={(timeRange) => handleTimeRangeChange(agent.id, timeRange)}
+            onSubOptionClick={(subOptionId) => handleSubOptionClick(agent.id, subOptionId)}
           />
         ))}
       </div>
@@ -588,6 +616,7 @@ export default function AICoachAnalysis({
             {...agent}
             onGenerate={() => handleGenerate(agent)}
             onTimeRangeChange={(timeRange) => handleTimeRangeChange(agent.id, timeRange)}
+            onSubOptionClick={(subOptionId) => handleSubOptionClick(agent.id, subOptionId)}
           />
         ))}
       </div>
@@ -628,6 +657,15 @@ export default function AICoachAnalysis({
         onClose={() => setRoleModalOpen(false)}
         onSelect={handleRoleSelect}
         roleStats={roleStats}
+        gameName={gameName}
+        tagLine={tagLine}
+      />
+
+      <RankSelectorModal
+        isOpen={rankModalOpen}
+        onClose={() => setRankModalOpen(false)}
+        onSelect={(rank: string) => handleFriendSelect('', '', rank)}
+        currentRank={playerData?.rank || playerData?.tier}
         gameName={gameName}
         tagLine={tagLine}
       />
