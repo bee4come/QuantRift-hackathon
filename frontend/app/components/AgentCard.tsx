@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { LucideIcon, Loader2, AlertCircle, ChevronRight } from 'lucide-react';
-import GlareHover from './ui/GlareHover';
+import styled from 'styled-components';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
 import BriefPopover from './BriefPopover';
@@ -92,225 +92,347 @@ export default function AgentCard({
   const canGenerate = status === 'idle' || status === 'error';
   const canView = status === 'ready';
 
+  const getButtonText = () => {
+    if (isLoading) return 'Generating...';
+    if (canView) return 'View Report';
+    if (canGenerate) return 'Generate Analysis';
+    return 'More info';
+  };
+
   return (
-    <GlareHover
-      width="100%"
-      height="100%"
-      background="rgba(0, 0, 0, 0.2)"
-      borderRadius="16px"
-      borderColor="rgba(255, 255, 255, 0.1)"
-      glareColor="#ffffff"
-      glareOpacity={0.15}
-      glareAngle={-45}
-      glareSize={150}
-      transitionDuration={400}
-    >
+    <StyledWrapper $isLight={colors.isLight}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fluid-glass rounded-2xl p-5 h-full flex flex-col shadow-xl hover:shadow-2xl transition-all duration-300"
+        className="card"
+        style={{
+          borderColor: status === 'ready' ? '#32D74B' : status === 'error' ? '#FF453A' : status === 'generating' ? colors.accentBlue : 'rgba(255, 255, 255, 0.1)'
+        }}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between mb-3 relative z-10">
-          <div className="flex items-center gap-3">
-            <div
-              className="p-2 rounded-lg"
-              style={{
-                backgroundColor: `${getStatusColor()}20`,
-                border: `1px solid ${getStatusColor()}40`
-              }}
-            >
-              <Icon className="w-5 h-5" style={{ color: getStatusColor() }} />
-            </div>
-            <div>
-              <ShinyText
-                text={name}
-                speed={3}
-                className="text-base font-bold"
+        <div className="card-details">
+          <div className="text-title-wrapper">
+            <Icon className="card-icon" style={{ color: getStatusColor() }} />
+            {isLoading && (
+              <Loader2
+                className="card-loading"
+                style={{ color: colors.accentBlue }}
               />
-              <p className="text-xs mt-1" style={{ color: '#8E8E93' }}>
-                {description}
-              </p>
-            </div>
+            )}
+            <p className="text-title">{name}</p>
           </div>
+          <p className="text-body">{description}</p>
 
-          {/* Status indicator */}
-          {isLoading && (
-            <Loader2
-              className="w-4 h-4 animate-spin"
-              style={{ color: colors.accentBlue }}
-            />
+          {/* Error Display */}
+          {error && status === 'error' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="error-display"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <AlertCircle className="w-3 h-3" style={{ color: '#FF453A' }} />
+                <p className="text-xs font-semibold" style={{ color: '#FF453A' }}>
+                  Error
+                </p>
+              </div>
+              <p className="text-xs" style={{ color: '#FF453A' }}>
+                {error}
+              </p>
+            </motion.div>
+          )}
+
+          {/* Time Range Selector */}
+          {timeRangeOptions && timeRangeOptions.length > 0 && (
+            <div className="time-range-wrapper">
+              <select
+                value={selectedTimeRange || ''}
+                onChange={(e) => onTimeRangeChange?.(e.target.value)}
+                disabled={status === 'generating'}
+                className="time-range-select"
+              >
+                {timeRangeOptions.map((option) => (
+                  <option key={option.id} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Sub-Options */}
+          {subOptions && subOptions.length > 0 && (
+            <div className="sub-options-grid">
+              {subOptions.map((subOption) => (
+                <button
+                  key={subOption.id}
+                  onClick={() => onSubOptionClick?.(subOption.id)}
+                  disabled={isLoading}
+                  className="sub-option-button"
+                >
+                  <subOption.icon className="w-5 h-5" />
+                  <span>{subOption.label}</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
-
-        {/* Error Display */}
-        {error && status === 'error' && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="rounded-xl p-3 mb-3 relative z-10"
+        {/* Main Action Button - appears only on hover */}
+        {!subOptions && (
+          <button
+            className="card-button"
+            onClick={onGenerate}
+            disabled={isLoading || (!canGenerate && !canView)}
             style={{
-              backgroundColor: 'rgba(255, 69, 58, 0.15)',
-              border: '1px solid rgba(255, 69, 58, 0.3)'
+              backgroundColor: canView ? '#32D74B' : colors.accentBlue
             }}
           >
-            <div className="flex items-center gap-2 mb-1">
-              <AlertCircle className="w-4 h-4" style={{ color: '#FF453A' }} />
-              <p className="text-xs font-semibold" style={{ color: '#FF453A' }}>
-                Error
-              </p>
-            </div>
-            <p className="text-xs" style={{ color: '#FF453A' }}>
-              {error}
-            </p>
-          </motion.div>
+            {getButtonText()}
+          </button>
         )}
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Time Range Selector */}
-        {timeRangeOptions && timeRangeOptions.length > 0 && (
-          <div className="mb-3 relative z-10">
-            <label className="text-xs font-medium mb-2 block" style={{ color: '#8E8E93' }}>
-              Time Range
-            </label>
-            <select
-              value={selectedTimeRange || ''}
-              onChange={(e) => onTimeRangeChange?.(e.target.value)}
-              disabled={status === 'generating'}
-              className="w-full px-3 py-2 rounded-lg text-sm border backdrop-blur-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: '#FFFFFF'
-              }}
-            >
-              {timeRangeOptions.map((option) => (
-                <option key={option.id} value={option.value} style={{ backgroundColor: '#1C1C1E', color: '#FFFFFF' }}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {selectedTimeRange && timeRangeOptions.find(opt => opt.value === selectedTimeRange) && (
-              <p className="text-xs mt-1" style={{ color: '#8E8E93' }}>
-                {timeRangeOptions.find(opt => opt.value === selectedTimeRange)?.description}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="relative z-10">
-
-          {/* Sub-Options (e.g., Friend Comparison, Rank Comparison) */}
-          {subOptions && subOptions.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2">
-              {subOptions.map((subOption) => (
-                <ClickSpark
-                  key={subOption.id}
-                  sparkColor={colors.accentBlue}
-                  sparkSize={8}
-                  sparkRadius={12}
-                  sparkCount={6}
-                  duration={300}
-                >
-                  <button
-                    onClick={() => onSubOptionClick?.(subOption.id)}
-                    disabled={isLoading}
-                    className="w-full h-full px-3 py-6 rounded-lg border font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed backdrop-blur-sm text-sm flex flex-col items-center justify-center gap-2"
-                    style={{
-                      backgroundColor: 'rgba(10, 132, 255, 0.2)',
-                      borderColor: 'rgba(10, 132, 255, 0.4)',
-                      color: '#5AC8FA',
-                      minHeight: '100px'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isLoading) {
-                        e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.3)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.2)';
-                    }}
-                  >
-                    <subOption.icon className="w-6 h-6" />
-                    <div className="text-sm font-semibold text-center">{subOption.label}</div>
-                  </button>
-                </ClickSpark>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {/* Generate/View Analysis Button */}
-              {canGenerate && (
-                <ClickSpark
-                  sparkColor={colors.accentBlue}
-                  sparkSize={8}
-                  sparkRadius={12}
-                  sparkCount={6}
-                  duration={300}
-                >
-                  <button
-                    onClick={onGenerate}
-                    disabled={isLoading}
-                    className="w-full px-4 py-2.5 rounded-lg border font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed backdrop-blur-sm text-sm"
-                    style={{
-                      backgroundColor: 'rgba(10, 132, 255, 0.2)',
-                      borderColor: 'rgba(10, 132, 255, 0.4)',
-                      color: '#5AC8FA'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isLoading) {
-                        e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.3)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(10, 132, 255, 0.2)';
-                    }}
-                  >
-                    <ShinyText text="Generate Analysis" speed={2} className="text-sm font-medium" />
-                  </button>
-                </ClickSpark>
-              )}
-
-              {/* View Report Button */}
-              {canView && (
-                <ClickSpark
-                  sparkColor="#32D74B"
-                  sparkSize={8}
-                  sparkRadius={12}
-                  sparkCount={6}
-                  duration={300}
-                >
-                  <button
-                    onClick={onGenerate}
-                    disabled={isLoading}
-                    className="w-full px-4 py-2.5 rounded-lg border font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed backdrop-blur-sm text-sm flex items-center justify-center gap-2"
-                    style={{
-                      backgroundColor: 'rgba(50, 215, 75, 0.2)',
-                      borderColor: 'rgba(50, 215, 75, 0.4)',
-                      color: '#32D74B'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isLoading) {
-                        e.currentTarget.style.backgroundColor = 'rgba(50, 215, 75, 0.3)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(50, 215, 75, 0.2)';
-                    }}
-                  >
-                    <ShinyText text="View Report" speed={2} className="text-sm font-medium" />
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </ClickSpark>
-              )}
-            </div>
-          )}
-        </div>
       </motion.div>
-    </GlareHover>
+    </StyledWrapper>
   );
 }
+
+const StyledWrapper = styled.div<{ $isLight: boolean }>`
+  .card {
+    width: 100%;
+    height: 180px;
+    border-radius: 20px;
+    background: ${props => props.$isLight 
+      ? 'rgba(255, 255, 255, 0.15)' 
+      : 'rgba(28, 28, 30, 0.8)'};
+    position: relative;
+    padding: 1.2rem;
+    border: 2px solid ${props => props.$isLight 
+      ? 'rgba(255, 255, 255, 0.2)' 
+      : 'rgba(255, 255, 255, 0.1)'};
+    transition: 0.5s ease-out;
+    overflow: visible;
+    backdrop-filter: blur(10px);
+    box-shadow: ${props => props.$isLight
+      ? `0 20px 60px 0 rgba(0, 0, 0, 0.5),
+         0 4px 12px 0 rgba(0, 0, 0, 0.2),
+         0 2px 0 0 rgba(255, 255, 255, 0.25) inset,
+         0 -2px 0 0 rgba(0, 0, 0, 0.1) inset,
+         0 0 0 1px rgba(255, 255, 255, 0.1) inset`
+      : `0 20px 60px 0 rgba(0, 0, 0, 0.7),
+         0 4px 12px 0 rgba(0, 0, 0, 0.3),
+         0 2px 0 0 rgba(255, 255, 255, 0.15) inset,
+         0 -2px 0 0 rgba(0, 0, 0, 0.2) inset,
+         0 0 0 1px rgba(255, 255, 255, 0.08) inset`};
+  }
+
+  .card-details {
+    color: #F5F5F7;
+    height: 100%;
+    gap: 0.5em;
+    display: grid;
+    place-content: start;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .text-title-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .card-loading {
+    width: 16px;
+    height: 16px;
+    animation: spin 1s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .card-button {
+    transform: translate(-50%, 125%);
+    width: 60%;
+    border-radius: 1rem;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    opacity: 0;
+    transition: 0.3s ease-out;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .card-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .text-body {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    text-align: left;
+  }
+
+  .text-title {
+    font-size: 1.25em;
+    font-weight: bold;
+    color: #F5F5F7;
+    margin: 0;
+    text-align: left;
+  }
+
+  .error-display {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: rgba(255, 69, 58, 0.15);
+    border: 1px solid rgba(255, 69, 58, 0.3);
+  }
+
+  .time-range-wrapper {
+    margin-top: 0.75rem;
+    width: 100%;
+  }
+
+  .time-range-select {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: ${props => props.$isLight 
+      ? 'rgba(255, 255, 255, 0.1)' 
+      : 'rgba(255, 255, 255, 0.05)'};
+    border: 1px solid ${props => props.$isLight 
+      ? 'rgba(255, 255, 255, 0.2)' 
+      : 'rgba(255, 255, 255, 0.1)'};
+    color: #F5F5F7;
+    font-size: 0.875rem;
+    text-align: center;
+    text-align-last: center;
+    box-sizing: border-box;
+  }
+
+  .time-range-select option {
+    text-align: center;
+  }
+
+  .time-range-select:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .sub-options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0;
+  }
+
+  .sub-option-button {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: ${props => props.$isLight 
+      ? 'rgba(0, 122, 255, 0.2)' 
+      : 'rgba(10, 132, 255, 0.2)'};
+    border: 1px solid ${props => props.$isLight 
+      ? 'rgba(0, 122, 255, 0.4)' 
+      : 'rgba(10, 132, 255, 0.4)'};
+    color: #F5F5F7;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-align: center;
+    word-wrap: break-word;
+    white-space: normal;
+  }
+
+  .sub-option-button svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .sub-option-button span {
+    width: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    line-height: 1.2;
+  }
+
+  @media (max-width: 640px) {
+    .sub-option-button {
+      padding: 0.6rem 0.4rem;
+      font-size: 0.65rem;
+      gap: 0.4rem;
+    }
+    
+    .sub-options-grid {
+      gap: 0.4rem;
+    }
+  }
+
+  .sub-option-button:hover:not(:disabled) {
+    background: ${props => props.$isLight 
+      ? 'rgba(0, 122, 255, 0.3)' 
+      : 'rgba(10, 132, 255, 0.3)'};
+  }
+
+  .sub-option-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Hover effects */
+  .card:hover {
+    border-color: ${props => props.$isLight ? '#007AFF' : '#0A84FF'};
+    transform: translateY(-2px);
+    box-shadow: ${props => props.$isLight 
+      ? `0 25px 80px 0 rgba(0, 0, 0, 0.6),
+         0 6px 16px 0 rgba(0, 0, 0, 0.25),
+         0 3px 0 0 rgba(255, 255, 255, 0.3) inset,
+         0 -3px 0 0 rgba(0, 0, 0, 0.15) inset,
+         0 0 0 1px rgba(255, 255, 255, 0.15) inset` 
+      : `0 25px 80px 0 rgba(0, 0, 0, 0.8),
+         0 6px 16px 0 rgba(0, 0, 0, 0.4),
+         0 3px 0 0 rgba(255, 255, 255, 0.2) inset,
+         0 -3px 0 0 rgba(0, 0, 0, 0.25) inset,
+         0 0 0 1px rgba(255, 255, 255, 0.1) inset`};
+  }
+
+  .card:hover .card-button {
+    transform: translate(-50%, 50%);
+    opacity: 1;
+  }
+`;

@@ -139,13 +139,13 @@ export default function AICoachAnalysis({
       subOptions: [
         {
           id: 'friend-comparison',
-          label: 'Friend Comparison',
+          label: 'Friend',
           description: 'Compare with a specific player',
           icon: UserPlus
         },
         {
           id: 'rank-comparison',
-          label: 'Rank Comparison',
+          label: 'Leaderboard',
           description: 'Compare with rank tier',
           icon: TrendingUp
         }
@@ -551,9 +551,9 @@ export default function AICoachAnalysis({
     <div className="mt-8">
       {/* Section Header */}
       <div className="mb-6 text-center">
-        <ShinyText text="HEXTECH AI COACH" speed={4} className="text-3xl font-bold mb-2" />
+        <ShinyText text="AI Analysis Hub" speed={4} className="text-3xl font-bold mb-2" />
         <p className="text-sm" style={{ color: '#8E8E93' }}>
-          Personalized insights powered by advanced AI analysis
+          Personalized insights powered by AWS Bedrock
         </p>
       </div>
 
@@ -580,10 +580,9 @@ export default function AICoachAnalysis({
 
       {/* Only show agents if data is ready or if there was an error (allow retry) */}
       {(dataReady || dataError) && (
-        <>
-
+        <div className="max-w-6xl mx-auto">
       {/* Row 1 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {agents.slice(0, 3).map((agent) => (
           <AgentCard
             key={agent.id}
@@ -596,7 +595,7 @@ export default function AICoachAnalysis({
       </div>
 
       {/* Row 2 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {agents.slice(3, 6).map((agent) => (
           <AgentCard
             key={agent.id}
@@ -620,6 +619,8 @@ export default function AICoachAnalysis({
           />
         ))}
       </div>
+        </div>
+      )}
 
       {/* Detailed Analysis Modal */}
       {selectedAgent && (
@@ -678,8 +679,6 @@ export default function AICoachAnalysis({
         gameName={gameName}
         tagLine={tagLine}
       />
-        </>
-      )}
     </div>
   );
 }
