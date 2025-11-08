@@ -1,6 +1,6 @@
 <div align="center" style="color: black;">
 
-<img src="frontend/public/quantrift-logo.svg" alt="QuantRift" width="700" style="filter: brightness(0);"/>
+<img src="frontend/public/quantrift-logo.png" alt="QuantRift" width="1600"/>
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
