@@ -27,7 +27,7 @@
 /* PaybAck */
 @font-face {
   font-family: 'PaybAck';
-  src: url('/fonts/hunters_k_pop/PaybAck.ttf') format('truetype');
+  src: url('/fonts/PaybAck.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -84,6 +84,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   font-weight: 400;
+  font-size: 18px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.3s ease, color 0.3s ease;
