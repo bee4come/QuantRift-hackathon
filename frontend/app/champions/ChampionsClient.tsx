@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, ArrowLeft, Flame } from 'lucide-react';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
-import DynamicBackground from '../components/DynamicBackground';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import GlareHover from '../components/ui/GlareHover';
@@ -206,7 +205,6 @@ export default function ChampionsClient() {
   if (loading) {
     return (
       <>
-        <DynamicBackground />
         <div className="min-h-screen flex flex-col relative" style={{ zIndex: 1 }}>
           <Header hideServerAndEsports={true} />
           <div className="flex-1 flex items-center justify-center">
@@ -228,7 +226,6 @@ export default function ChampionsClient() {
   if (error) {
     return (
       <>
-        <DynamicBackground />
         <div className="min-h-screen flex flex-col relative" style={{ zIndex: 1 }}>
           <Header hideServerAndEsports={true} />
           <div className="flex-1 flex items-center justify-center">
@@ -249,7 +246,6 @@ export default function ChampionsClient() {
 
   return (
     <>
-      <DynamicBackground />
       <div className="min-h-screen flex flex-col relative" style={{ zIndex: 1 }}>
         <Header hideServerAndEsports={true} />
         

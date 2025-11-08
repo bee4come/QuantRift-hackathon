@@ -8,7 +8,6 @@ import { ArrowLeft, TrendingUp, TrendingDown, Trophy, Target, Zap } from 'lucide
 import ShinyText from '@/app/components/ui/ShinyText';
 import GlareHover from '@/app/components/ui/GlareHover';
 import ClickSpark from '@/app/components/ui/ClickSpark';
-import DynamicBackground from '@/app/components/DynamicBackground';
 import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
 import AICoachAnalysis from '@/app/components/AICoachAnalysis';
@@ -275,7 +274,6 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
   if (loading) {
     return (
       <>
-        <DynamicBackground />
         <div className="min-h-screen flex flex-col relative" style={{ zIndex: 1 }}>
           <Header hideServerAndEsports={true} />
           <div className="flex-1 flex items-center justify-center p-4">
@@ -290,7 +288,6 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
   if (error) {
     return (
       <>
-        <DynamicBackground />
         <div className="min-h-screen flex flex-col relative" style={{ zIndex: 1 }}>
           <Header hideServerAndEsports={true} />
           <div className="flex-1 flex items-center justify-center p-4">
@@ -331,7 +328,6 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
 
   return (
     <>
-      <DynamicBackground />
       <div className="min-h-screen flex flex-col relative" style={{ zIndex: 1 }}>
         <Header hideServerAndEsports={true} />
 
