@@ -496,14 +496,16 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
 
 
         {/* HEXTECH AI COACH - 16 Agent Cards */}
-        <AICoachAnalysis
-          puuid={player.puuid}
-          gameName={gameName}
-          tagLine={tagLine}
-          region={player.region || 'na1'}
-          playerData={playerData}
-          onCustomAgentHandle={handleCustomAgent}
-        />
+        {player.puuid && (
+          <AICoachAnalysis
+            puuid={player.puuid}
+            gameName={gameName}
+            tagLine={tagLine}
+            region={player.region || 'na1'}
+            playerData={playerData}
+            onCustomAgentHandle={handleCustomAgent}
+          />
+        )}
 
         {/* Agent Modal for charts integration */}
         <AgentModal

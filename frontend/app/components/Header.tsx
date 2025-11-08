@@ -14,6 +14,7 @@ import EsportsAnnouncements from './EsportsAnnouncements';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import Card from './Card';
 import DarkModeSwitch from './DarkModeSwitch';
 
@@ -52,6 +53,8 @@ interface HeaderProps {
 }
 
 export default function Header({ hideServerAndEsports = false }: HeaderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { selectedServer, servers, selectServer, currentTimezone, timeDiff, showLocationModal, handleLocationAllow, handleLocationDeny } = useServerContext();
   const { isSearched, clearPlayers } = useSearch();
   const { isModalOpen } = useModal();
@@ -110,8 +113,11 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
   };
 
   const handleTitleClick = () => {
-    if (isSearched) {
-      clearPlayers();
+    // Always refresh to home page
+    if (pathname !== '/') {
+      window.location.href = '/';
+    } else {
+      window.location.reload();
     }
   };
 
@@ -124,7 +130,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
       }}
       transition={{ duration: 0.8, ease: 'easeOut' }}
       className={`w-full px-4 transition-all duration-500 ${
-        isSearched ? 'pt-4 pb-2' : 'pt-12 pb-6'
+        (isSearched && pathname === '/') ? 'pt-4 pb-2' : 'pt-12 pb-6'
       }`}
       style={{ zIndex: 1000 }}
     >
@@ -216,7 +222,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
 
       <div className={`transition-all duration-500 ${
-        isSearched 
+        (isSearched && pathname === '/')
           ? 'max-w-7xl mx-auto flex items-center justify-between' 
           : 'max-w-4xl mx-auto text-center'
       }`}>
@@ -225,14 +231,14 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
           initial={{ scale: 0.9 }}
           animate={{ 
             scale: 1,
-            justifyContent: isSearched ? 'flex-start' : 'center'
+            justifyContent: (isSearched && pathname === '/') ? 'flex-start' : 'center'
           }}
           transition={{ delay: 0.2, duration: 0.5 }}
           className={`flex items-center transition-all duration-500 ${
-            isSearched ? 'mb-0' : 'justify-center mb-3'
+            (isSearched && pathname === '/') ? 'mb-0' : 'justify-center mb-3'
           }`}
         >
-          {isSearched ? (
+          {(isSearched || pathname !== '/') ? (
             <ClickSpark
               sparkColor="#FFFFFF"
               sparkSize={10}
@@ -244,7 +250,7 @@ export default function Header({ hideServerAndEsports = false }: HeaderProps) {
                 onClick={handleTitleClick}
                 className={`hover:opacity-80 transition-opacity duration-300 ${isModalOpen ? 'pointer-events-none' : ''}`}
               >
-                <Card isSearched={true} isModalOpen={isModalOpen} />
+                <Card isSearched={isSearched && pathname === '/'} isModalOpen={isModalOpen} />
               </button>
             </ClickSpark>
           ) : (

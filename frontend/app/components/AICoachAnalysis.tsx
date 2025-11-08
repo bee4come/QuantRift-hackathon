@@ -67,6 +67,12 @@ export default function AICoachAnalysis({
   playerData,
   onCustomAgentHandle
 }: AICoachAnalysisProps) {
+  // Early return if puuid is not defined
+  if (!puuid) {
+    console.error('AICoachAnalysis: puuid is required but not provided');
+    return null;
+  }
+
   const colors = useAdaptiveColors();
   const [comparisonPlayers, setComparisonPlayers] = useState<any[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<AgentState | null>(null);

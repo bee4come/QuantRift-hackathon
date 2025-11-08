@@ -48,7 +48,17 @@ export default function DataStatusChecker({
       const url = `/api/player/${gameName}/${tagLine}/data-status`;
       console.log('[DataStatusChecker] Fetching:', url);
 
-      const response = await fetch(url);
+      // Create a timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out. Backend took too long to respond.')), 60000); // 60 second timeout
+      });
+
+      // Race between fetch and timeout
+      const response = await Promise.race([
+        fetch(url),
+        timeoutPromise
+      ]);
+
       console.log('[DataStatusChecker] Response status:', response.status, response.statusText);
 
       if (!response.ok) {
