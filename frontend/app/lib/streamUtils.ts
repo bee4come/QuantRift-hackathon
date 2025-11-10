@@ -42,11 +42,12 @@ export async function handleSSEStream(
   try {
     console.log('[SSE] Starting stream request:', url);
 
-    // Create timeout Promise (150 seconds, slightly more than backend 120 seconds)
+    // Create timeout Promise (600 seconds = 10 minutes, for long-running agents like Annual Summary)
+    // Annual Summary can take up to 3-5 minutes with Sonnet model
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
-        reject(new Error('Stream timeout after 150 seconds'));
-      }, 150000);
+        reject(new Error('Stream timeout after 600 seconds'));
+      }, 600000);
     });
 
     // Create fetch Promise
