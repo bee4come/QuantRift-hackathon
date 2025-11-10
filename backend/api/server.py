@@ -4208,7 +4208,18 @@ async def get_player_summary_data(puuid: str, packs_dir: str) -> Dict[str, Any]:
         if matches_data_file.exists():
             with open(matches_data_file, 'r') as f:
                 matches_data = json.load(f)
-                all_matches = matches_data.get("matches", [])[:20]  # Last 20 matches
+
+                # Handle both list and dict formats
+                if isinstance(matches_data, list):
+                    # Direct list format: [{match1}, {match2}, ...]
+                    all_matches = matches_data[:20]
+                    total_games = len(matches_data)  # Use actual match count
+                elif isinstance(matches_data, dict):
+                    # Dict format: {"matches": [...]}
+                    all_matches = matches_data.get("matches", [])[:20]
+                    total_games = len(matches_data.get("matches", []))  # Use actual match count
+                else:
+                    all_matches = []
 
         return {
             "total_games": total_games,
