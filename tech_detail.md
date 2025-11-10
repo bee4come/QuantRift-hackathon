@@ -690,7 +690,7 @@ class GovernanceFramework:
     CONFIDENT = "confident"      # n ≥ 100, very reliable
     CAUTION = "caution"          # 20 ≤ n < 100, use carefully
     CONTEXT = "context"          # n < 20, informational only
-    
+
     @staticmethod
     def assign_tier(sample_size, ci_width, point_estimate):
         if sample_size >= 100 and ci_width < 0.15:
@@ -700,6 +700,273 @@ class GovernanceFramework:
         else:
             return "CONTEXT"  # Use as context, not primary recommendation
 ```
+
+## 3.5 Player-Pack Data Compression & Aggregation
+
+**Challenge**: Full-year analysis requires processing 300-500 matches × 40KB raw data = ~20MB per player
+
+**Solution - Multi-Level Data Compression**:
+
+### Level 1: Match-to-Metrics Compression (100:1 ratio)
+```python
+# Raw match data (40KB JSON) → Aggregated metrics (400 bytes)
+def compress_match_to_metrics(match_json):
+    """Extract only quantitative metrics from raw match"""
+    return {
+        'match_id': match_json['metadata']['matchId'],
+        'champion_id': participant['championId'],
+        'role': participant['teamPosition'],
+        'win': participant['win'],
+
+        # 15 core metrics (60 bytes)
+        'kda': (kills + assists) / max(deaths, 1),
+        'damage_dealt': participant['totalDamageDealtToChampions'],
+        'damage_taken': participant['totalDamageTaken'],
+        'gold_earned': participant['goldEarned'],
+        'cs': participant['totalMinionsKilled'],
+        'vision_score': participant['visionScore'],
+        'turret_kills': participant['turretKills'],
+        'baron_kills': participant['baronKills'],
+        'dragon_kills': participant['dragonKills'],
+
+        # Temporal data (12 bytes)
+        'game_duration': match_json['info']['gameDuration'],
+        'patch': match_json['info']['gameVersion'].split('.')[0:2]
+    }
+# Result: 40KB → 400 bytes = 100x compression
+```
+
+### Level 2: Metrics-to-Pack Aggregation (10:1 ratio)
+```python
+# 20 matches × 400 bytes = 8KB → Patch Pack 800 bytes
+def aggregate_to_patch_pack(matches_for_patch):
+    """Group by champion-role, calculate aggregates"""
+    pack = {'patch': '15.10', 'by_cr': []}
+
+    for (champ_id, role), games in group_by_cr(matches_for_patch).items():
+        pack['by_cr'].append({
+            'champ_id': champ_id,
+            'role': role,
+            'games': len(games),
+            'wins': sum(g['win'] for g in games),
+
+            # Aggregated metrics (mean values)
+            'kda': mean([g['kda'] for g in games]),
+            'damage_dealt': mean([g['damage_dealt'] for g in games]),
+            'cs': mean([g['cs'] for g in games]),
+
+            # Statistical bounds
+            'winrate_ci_lo': wilson_ci_lower(wins, games),
+            'winrate_ci_hi': wilson_ci_upper(wins, games),
+            'governance': assign_tier(games, ci_width)
+        })
+
+    return pack
+# Result: 8KB → 800 bytes = 10x compression
+```
+
+### Level 3: Timeline Event Filtering (950:1 ratio)
+```python
+# Timeline data: 2400 frames × 8KB = 19MB → 20KB significant events
+def compress_timeline(timeline_json, target_events=50):
+    """Keep only critical game events"""
+
+    significant_events = []
+
+    for frame in timeline_json['info']['frames']:
+        timestamp = frame['timestamp']
+
+        # Keep only high-impact events
+        for event in frame.get('events', []):
+            if event['type'] in [
+                'CHAMPION_KILL',      # Kills (KDA)
+                'BUILDING_KILL',      # Turrets/Inhibitors
+                'ELITE_MONSTER_KILL', # Baron/Dragon
+                'ITEM_PURCHASED'      # Build timing
+            ]:
+                significant_events.append({
+                    'timestamp': timestamp,
+                    'type': event['type'],
+                    'details': extract_minimal_details(event)
+                })
+
+    # Keep only top N most impactful events
+    return sorted(significant_events, key=impact_score, reverse=True)[:target_events]
+# Result: 19MB → 20KB = 950x compression
+```
+
+**Overall Compression Summary**:
+- **Input**: 500 matches × 40KB raw + 500 timelines × 19MB = 9.5GB
+- **Output**: 50 patch packs × 800 bytes + 50 compressed timelines × 20KB = 1.04MB
+- **Compression ratio**: 9,100:1
+- **Agent processing time**: 9.5GB (5min) → 1MB (0.3s) = 1000x faster
+
+## 3.6 Annual Summary Agent - Technical Highlights
+
+**What Makes It Special**:
+
+1. **Full-Year Data Coverage** (40-50 patches)
+   - Analyzes entire competitive season (Jan-Dec)
+   - Processes 300-500 matches across version changes
+   - Identifies long-term trends vs short-term variance
+
+2. **Three-Tier Narrative Generation**
+   ```python
+   class AnnualSummaryAgent:
+       def run_stream(self, packs_dir, start_date, end_date):
+           # Load all patches in date range
+           all_packs = load_packs_in_range(packs_dir, start_date, end_date)
+
+           # Tier 1: Executive Summary (200-300 words)
+           exec_summary = self._generate_exec_summary(all_packs)
+           # - Total games, overall WR, rank progression
+           # - Top 3 achievements, top 3 weaknesses
+           # - Season trajectory (improving/declining/stable)
+
+           # Tier 2: Detailed Analysis (1000-1500 words)
+           detailed = self._generate_detailed_analysis(all_packs)
+           # - Champion pool evolution (meta adaptation)
+           # - Role performance across patches
+           # - Quarterly performance breakdown
+           # - Statistical trends (KDA, damage, gold efficiency)
+
+           # Tier 3: Forward-Looking Recommendations (500-800 words)
+           recommendations = self._generate_recommendations(all_packs)
+           # - Champions to master
+           # - Roles to focus
+           # - Skill priorities
+           # - 90-day improvement roadmap
+   ```
+
+3. **Cross-Patch Trend Analysis**
+   ```python
+   def analyze_cross_patch_trends(all_packs):
+       """Identify performance patterns across version changes"""
+
+       trends = {
+           'champion_winrate_trends': {},  # Did Yasuo WR improve after patch 15.10?
+           'role_shift_trends': {},        # Switched from Top→Mid in Q2?
+           'meta_adaptation': {},          # Picked S-tier champs? Or off-meta?
+           'learning_curves': {}           # How fast did they improve on new champs?
+       }
+
+       # Example: Champion learning curve
+       for champ_id in get_all_champions(all_packs):
+           games_over_time = []
+           for patch in sorted(all_packs.keys()):
+               champ_data = find_champion(all_packs[patch], champ_id)
+               if champ_data:
+                   games_over_time.append({
+                       'patch': patch,
+                       'winrate': champ_data['wins'] / champ_data['games'],
+                       'games': champ_data['games']
+                   })
+
+           # Fit linear regression: is winrate improving over time?
+           slope, r_squared = fit_trend(games_over_time)
+
+           if slope > 0.05 and r_squared > 0.7:
+               trends['learning_curves'][champ_id] = {
+                   'improvement': 'STRONG',  # +5% WR per 10 games
+                   'consistency': 'HIGH'     # R²=0.7
+               }
+
+       return trends
+   ```
+
+4. **Seasonal Milestone Detection**
+   ```python
+   def detect_milestones(all_packs):
+       """Identify significant achievements"""
+
+       milestones = []
+
+       # Career-high winrate patch
+       best_patch = max(all_packs.items(), key=lambda x: x[1]['overall_wr'])
+       milestones.append({
+           'type': 'PEAK_PERFORMANCE',
+           'patch': best_patch[0],
+           'winrate': best_patch[1]['overall_wr'],
+           'description': f"Career-high {best_patch[1]['overall_wr']:.1%} WR"
+       })
+
+       # First pentakill
+       for patch, pack in all_packs.items():
+           if pack.get('pentakills', 0) > 0:
+               milestones.append({
+                   'type': 'ACHIEVEMENT',
+                   'patch': patch,
+                   'description': 'First pentakill!'
+               })
+               break
+
+       # Rank promotion
+       rank_history = [pack.get('rank') for pack in all_packs.values()]
+       if 'GOLD' in rank_history and 'PLATINUM' in rank_history:
+           promo_patch = find_rank_change(all_packs, 'GOLD', 'PLATINUM')
+           milestones.append({
+               'type': 'RANK_UP',
+               'patch': promo_patch,
+               'description': 'Promoted to Platinum!'
+           })
+
+       return sorted(milestones, key=lambda x: x['patch'])
+   ```
+
+5. **AWS Bedrock Streaming for Long Reports**
+   - Uses **Claude 4.5 Sonnet** (high quality for comprehensive analysis)
+   - Streams 3000-5000 word reports token-by-token
+   - Real-time progress indicators for 30-60s generation time
+   - Structured sections with markdown formatting
+
+**Output Example**:
+```markdown
+# 2024 League of Legends Annual Summary
+
+## Executive Summary
+In 2024, you played **487 ranked games** across **48 patches** (15.1 through 15.23),
+achieving an overall **53.2% win rate** and climbing from **Gold II to Platinum I**.
+
+Your **top 3 achievements**:
+1. 68% win rate on Yasuo (Mid) in Q2 - your signature champion
+2. Consistent objective control: 2.1 dragons/game (top 15% of Platinum)
+3. Strong meta adaptation: picked S-tier champions in 72% of games
+
+**Areas for improvement**:
+1. Support role: 42% WR (15 games) - needs focus
+2. Late-game decision making: -8% WR in games >35min
+3. Champion pool depth: 80% games on top 5 champions
+
+## Quarterly Breakdown
+### Q1 (Patches 15.1-15.12): Foundation Building
+- 120 games, 49% WR (climbing from Gold II)
+- Learning phase: tried 28 different champions
+- Best champion: Ahri (Mid) - 58% WR, 22 games
+
+### Q2 (Patches 15.13-15.18): Performance Peak
+- 145 games, **61% WR** - career high
+- Mastered Yasuo: 68% WR, 45 games
+- Reached Platinum II
+
+### Q3 (Patches 15.19-15.21): Adaptation Struggles
+- 110 games, 48% WR
+- Meta shift affected champion pool
+- Experimented with new roles (Top lane)
+
+### Q4 (Patches 15.22-15.23): Recovery & Growth
+- 112 games, 55% WR
+- Refined champion pool to core 5
+- Promoted to Platinum I
+
+## 2025 Improvement Roadmap
+...
+```
+
+**Why Annual Summary Agent is Unique**:
+- Only agent that processes **full year** of data (others focus on recent 5-20 games)
+- Combines **quantitative trends** (WR, KDA, CS) with **qualitative milestones** (rank ups, achievements)
+- Uses **Sonnet model** for nuanced storytelling (other agents use Haiku for speed)
+- Generates **shareable year-in-review** content (like Spotify Wrapped for League)
 
 ---
 
