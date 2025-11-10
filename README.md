@@ -97,7 +97,6 @@ QuantRift includes **9 specialized AI modules** (powered by AWS Bedrock, Claude 
 |-------------------------------|------------------------------------------------------------------------------------------|-------------------------------|
 | 📅 **Annual Summary**         | Year-in-review performance highlights, with tri-period analysis                          | Past 365 days                 |
 | 💡 **Performance Insights**   | Comprehensive strengths/weaknesses analysis and growth opportunities                     | _Requires meta_dir parameter_ |
-| 📊 **Comparison Hub**         | Compare your performance to friends or players of similar rank                           | Past 365 days                 |
 | 👥 **Friend Comparison**      | Head-to-head stats versus specific friends                                               | Past 365 days                 |
 | 🎮 **Match Analysis**         | Detailed review of a single match timeline and post-game                                 | None (single match analysis)  |
 | 📈 **Version Trends**         | Cross-patch performance analysis and adaptation tracking                                 | Past 365 days                 |
@@ -105,7 +104,6 @@ QuantRift includes **9 specialized AI modules** (powered by AWS Bedrock, Claude 
 | 🎭 **Role Specialization**    | Role-specific performance insights and optimization                                     | Past 365 days                 |
 | 🏆 **Champion Mastery**       | Deep analysis of champion expertise and mechanical skill                                 | Past 365 days (all queues)    |
 | 🔧 **Build Simulator**        | Optimization of item builds and itemization strategies                                   | Past 365 days                 |
-| 📈 **Progress Tracker**       | Track development and progress over time with customizable metrics                       | Past 365 days                 |
 
 **Filter Details:**
 
