@@ -1029,7 +1029,7 @@ export default function AICoachAnalysis({
         puuid,
         region,
         recent_count: 20,
-        model: 'sonnet' // Use Sonnet for detailed analysis
+        model: 'haiku' // Use Haiku for fast analysis
       };
 
       // Add time range parameter if agent has time range options
@@ -1145,7 +1145,7 @@ export default function AICoachAnalysis({
         puuid,
         region,
         recent_count: 20,
-        model: 'sonnet',
+        model: 'haiku',
         champion_id: championId
       };
 
@@ -1259,7 +1259,7 @@ export default function AICoachAnalysis({
         game_name: gameName,
         tag_line: tagLine,
         recent_count: 20,
-        model: 'sonnet'
+        model: 'haiku'
       };
 
       // Add time range parameter if agent has time range options
@@ -1374,7 +1374,7 @@ export default function AICoachAnalysis({
         puuid,
         region,
         recent_count: 20,
-        model: 'sonnet',
+        model: 'haiku',
         role: role
       };
 
@@ -1532,7 +1532,7 @@ export default function AICoachAnalysis({
         puuid,
         region,
         recent_count: 20,
-        model: 'sonnet',
+        model: 'haiku',
         match_id: matchId
       };
 
