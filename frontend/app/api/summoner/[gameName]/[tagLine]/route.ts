@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+// Use server-side BACKEND_URL (internal) if available, otherwise fall back to NEXT_PUBLIC_BACKEND_URL
+// In production, BACKEND_URL should be http://localhost:8000 to avoid external roundtrip
+const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export async function GET(
   request: NextRequest,

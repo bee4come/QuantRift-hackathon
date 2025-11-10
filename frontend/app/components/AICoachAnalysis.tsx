@@ -770,7 +770,7 @@ export default function AICoachAnalysis({
     {
       id: 'build-simulator',
       name: 'Build Simulator',
-      description: 'Optimize recent builds and itemization',
+      description: 'Optimize your recent builds and itemization',
       icon: Boxes,
       endpoint: '/v1/agents/build-simulator',
       status: 'idle',

@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { gameName, tagLine } = await params;
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
     // Call backend API to fetch player progress data
     const response = await fetch(

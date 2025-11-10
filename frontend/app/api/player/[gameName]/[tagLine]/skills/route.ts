@@ -13,7 +13,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const topN = searchParams.get('top_n') || '3';
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
     // Call backend API to fetch player skill data
     const response = await fetch(
