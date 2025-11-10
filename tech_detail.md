@@ -1,8 +1,3 @@
-# QuantRift: AI-Powered League Coaching Platform
-## Hackathon Submission - Technical Deep Dive
-
----
-
 # SECTION 1: COACHING AGENT METHODOLOGY
 
 ## 1.1 Multi-Agent Coaching Architecture
