@@ -1937,7 +1937,19 @@ export default function AICoachAnalysis({
         >
           <a
             href={`/chat?gameName=${encodeURIComponent(gameName)}&tagLine=${encodeURIComponent(tagLine)}`}
-            className="block fluid-glass-dark p-6 rounded-2xl border-2 border-white/10 hover:border-blue-500/50 transition-all group"
+            className="block p-6 rounded-2xl border-2 hover:border-blue-500/50 transition-all group"
+            style={{
+              background: 'rgba(28, 28, 30, 0.8)',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              boxShadow: `
+                0 20px 60px 0 rgba(0, 0, 0, 0.7),
+                0 4px 12px 0 rgba(0, 0, 0, 0.3),
+                0 2px 0 0 rgba(255, 255, 255, 0.15) inset,
+                0 -2px 0 0 rgba(0, 0, 0, 0.2) inset,
+                0 0 0 1px rgba(255, 255, 255, 0.08) inset
+              `
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
