@@ -9,6 +9,7 @@ import json
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from src.agents.shared.bedrock_adapter import BedrockLLM
+from src.agents.router.schema import METRICS_DICTIONARY
 
 
 # Sub-agent tool schemas
@@ -140,6 +141,7 @@ class ChatMasterAgent:
         """
         self.llm = BedrockLLM(model=model)
         self.subagents = ANALYSIS_SUBAGENTS
+        self.metrics = METRICS_DICTIONARY
 
     def process_message(
         self,
@@ -221,6 +223,12 @@ class ChatMasterAgent:
 - Patches played: {', '.join(player_data.get('patches', []))}
 """
 
+        # Format metrics dictionary (complete list for constraint)
+        metrics_text = "\n".join([
+            f"  • {metric}: {description}"
+            for metric, description in self.metrics.items()
+        ])
+
         # Build full prompt
         prompt = f"""You are an AI assistant for a League of Legends analytics system. Your job is to understand user queries and decide the best action.
 
@@ -229,6 +237,13 @@ class ChatMasterAgent:
 **Current User Message**: {user_message}
 
 {player_context}
+
+**CRITICAL CONSTRAINT - Available Metrics Only**:
+All analysis must ONLY use these pre-calculated metrics. DO NOT fabricate or invent new metrics:
+
+{metrics_text}
+
+If a user asks about data not covered by these metrics, explain what's available instead.
 
 **Available Sub-Agents**:
 {subagents_text}
@@ -285,6 +300,71 @@ class ChatMasterAgent:
 - Role: top/jungle/mid/adc/support/bot → TOP/JUNGLE/MID/ADC/SUPPORT
 - Champion names: convert to champion_id (or ask if unsure)
 - Match references: "match 3", "last game", "recent game" → extract match_id from context
+
+**Few-Shot Examples**:
+
+Example 1 - Simple Role Analysis:
+User: "How is my recent jungle performance?" (or "我最近打野怎么样？")
+```json
+{{
+  "action": "call_subagent",
+  "subagent_id": "role-specialization",
+  "params": {{"role": "JUNGLE"}},
+  "reason": "User asks about specific role (jungle) performance"
+}}
+```
+
+Example 2 - Weakness Identification:
+User: "Analyze my weaknesses" (or "帮我分析一下我的弱点")
+```json
+{{
+  "action": "call_subagent",
+  "subagent_id": "weakness-analysis",
+  "params": {{}},
+  "reason": "User explicitly asks for weakness analysis"
+}}
+```
+
+Example 3 - Champion Recommendation:
+User: "Recommend some champions for me" (or "推荐几个适合我的英雄")
+```json
+{{
+  "action": "call_subagent",
+  "subagent_id": "champion-recommendation",
+  "params": {{}},
+  "reason": "User asks for champion suggestions"
+}}
+```
+
+Example 4 - Need Clarification:
+User: "Analyze my performance" (or "分析一下我的表现")
+```json
+{{
+  "action": "ask_user",
+  "content": "I can analyze your performance from multiple perspectives. What would you like to focus on?",
+  "options": ["Overall weakness analysis", "Specific role performance", "Champion mastery", "Season summary"],
+  "reason": "Query too broad, need clarification"
+}}
+```
+
+Example 5 - Comparative Analysis:
+User: "Compare my last 30 days vs previous 30 days" (or "对比我最近30天和之前30天的表现")
+```json
+{{
+  "action": "custom_analysis",
+  "reason": "Time period comparison requires custom analysis"
+}}
+```
+
+Example 6 - Simple Data Question:
+User: "How many games have I played?" (or "我一共打了多少场比赛？")
+```json
+{{
+  "action": "answer_directly",
+  "content": "According to the data, you have played {{total_games}} games total.",
+  "reason": "Simple factual question from player context"
+}}
+```
 
 Now analyze the user's message and respond with JSON:"""
 
