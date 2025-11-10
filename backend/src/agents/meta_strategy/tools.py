@@ -182,7 +182,7 @@ def execute_agent_workflow(
     workflow: Dict[str, Any],
     agent_registry: Dict[str, Any],
     context: AgentContext,
-    model: str = "sonnet"
+    model: str = "haiku"
 ) -> Dict[str, Any]:
     """
     执行Agent工作流（支持上下文传递）

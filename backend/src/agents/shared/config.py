@@ -19,7 +19,7 @@ class AgentConfig:
     aws_secret_access_key: Optional[str] = None
 
     # Bedrock 模型配置
-    default_model: str = "sonnet"  # sonnet 或 haiku
+    default_model: str = "haiku"  # sonnet 或 haiku
     read_timeout: int = 600
     connect_timeout: int = 60
     max_retries: int = 3

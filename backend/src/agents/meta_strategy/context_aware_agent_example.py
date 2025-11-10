@@ -26,7 +26,7 @@ class ContextAwareAgentExample:
     - 智能决策（根据上下文调整策略）
     """
 
-    def __init__(self, model: str = "sonnet"):
+    def __init__(self, model: str = "haiku"):
         self.config = get_config()
         self.llm = BedrockLLM(model=model)
 

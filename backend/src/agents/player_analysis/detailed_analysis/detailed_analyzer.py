@@ -353,7 +353,7 @@ class DetailedAnalyzer:
 
         return metrics
 
-    def generate_detailed_report(self, data_package: Dict[str, Any], model_name: str = "sonnet") -> str:
+    def generate_detailed_report(self, data_package: Dict[str, Any], model_name: str = "haiku") -> str:
         """使用Bedrock Claude生成超详细报告"""
 
         # 选择模型
@@ -497,7 +497,7 @@ class DetailedAnalyzer:
 
         return prompt
 
-    def run(self, output_dir: Path, model_name: str = "sonnet"):
+    def run(self, output_dir: Path, model_name: str = "haiku"):
         """运行完整流程"""
         print("=" * 60)
         print("🎯 超详细深度分析系统")

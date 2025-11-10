@@ -64,7 +64,7 @@ class MetaStrategyAgent:
         user_request: str,
         packs_dir: str,
         output_dir: Optional[str] = None,
-        agent_model: str = "sonnet"
+        agent_model: str = "haiku"
     ) -> Tuple[Dict[str, Any], str]:
         """
         运行元策略分析
@@ -210,7 +210,7 @@ class MetaStrategyAgent:
         )
 
         # 使用Sonnet进行高质量综合
-        synthesis_llm = BedrockLLM(model="sonnet")
+        synthesis_llm = BedrockLLM(model="haiku")
 
         result = synthesis_llm.generate_sync(
             prompt=prompts["user"],

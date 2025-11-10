@@ -39,7 +39,7 @@ def main():
     parser.add_argument("--packs-dir", type=str, required=True)
     parser.add_argument("--meta-dir", type=str, required=True)
     parser.add_argument("--output-dir", type=str, required=True)
-    parser.add_argument("--model", type=str, default="sonnet", choices=["haiku", "sonnet"])
+    parser.add_argument("--model", type=str, default="haiku", choices=["haiku", "sonnet"])
 
     args = parser.parse_args()
 

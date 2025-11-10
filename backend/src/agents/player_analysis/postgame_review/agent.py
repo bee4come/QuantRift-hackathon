@@ -99,7 +99,7 @@ def main():
     parser.add_argument("--timeline-features", required=True, help="时间线特征JSON文件路径")
     parser.add_argument("--output-dir", default="output/postgame_review", help="输出目录")
     parser.add_argument("--use-llm", action="store_true", help="使用LLM生成增强报告")
-    parser.add_argument("--model", default="sonnet", choices=["sonnet", "haiku"], help="LLM模型")
+    parser.add_argument("--model", default="haiku", choices=["sonnet", "haiku"], help="LLM模型")
 
     args = parser.parse_args()
 
