@@ -238,7 +238,7 @@ class AnnualSummaryAgent(DataAutoFetcher):
         # Load all annual packs
         all_packs = load_all_annual_packs(packs_dir, time_range=time_range, queue_id=queue_id)
 
-        if not all_packs or len(all_packs.get('packs', {})) == 0:
+        if not all_packs or len(all_packs) == 0:
             yield f"data: {{\"error\": \"No annual data found\"}}\n\n"
             return
 
