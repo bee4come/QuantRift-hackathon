@@ -1,0 +1,16 @@
+{
+  "share_id": "f898b110",
+  "agent_type": "test",
+  "player": {
+    "gameName": "test",
+    "tagLine": "test",
+    "region": "na1"
+  },
+  "created_at": "2025-11-10T08:47:58.056054+00:00",
+  "report_content": "test",
+  "metadata": {
+    "total_games": null,
+    "time_range": null,
+    "model": "haiku"
+  }
+}

@@ -36,6 +36,7 @@ from src.combatpower.services.build_tracker import build_tracker
 from src.combatpower.custom_build_manager import custom_build_manager
 from services.player_data_manager import player_data_manager, DataStatus
 from services.opgg_mcp_service import opgg_mcp_service
+from services.report_cache import report_cache
 import requests
 import os
 import time as time_module
