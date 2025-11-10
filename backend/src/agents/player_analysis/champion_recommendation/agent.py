@@ -126,6 +126,7 @@ class ChampionRecommendationAgent:
     def run_stream(
         self,
         packs_dir: str,
+        recent_count: Optional[int] = None,
         time_range: Optional[str] = None,
         queue_id: Optional[int] = None
     ):
@@ -136,6 +137,7 @@ class ChampionRecommendationAgent:
 
         Args:
             packs_dir: Player-Pack directory path
+            recent_count: Not used for champion recommendation (exists for interface consistency)
             time_range: Time range filter (e.g., "2024-01-01", "past-365", None)
             queue_id: Queue ID filter (420=Solo/Duo, 440=Flex, 400=Normal, None=All)
 
