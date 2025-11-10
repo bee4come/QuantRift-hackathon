@@ -602,17 +602,12 @@ export default function AICoachAnalysis({
       selectedRankType: null, // Default to Total
       timeRangeOptions: [
         {
-          id: '2024-full-year',
-          label: 'Season 2024',
-          value: '2024-01-01'
-        },
-        {
           id: 'past-365-days',
           label: 'Past 365 Days',
           value: 'past-365'
         }
       ],
-      selectedTimeRange: '2024-01-01' // Default to 2024 full year
+      selectedTimeRange: 'past-365' // Default to past 365 days
     },
     {
       id: 'performance-insights',
@@ -630,17 +625,12 @@ export default function AICoachAnalysis({
       selectedRankType: null, // Default to Total
       timeRangeOptions: [
         {
-          id: '2024-full-year',
-          label: 'Season 2024',
-          value: '2024-01-01'
-        },
-        {
           id: 'past-365-days',
           label: 'Past 365 Days',
           value: 'past-365'
         }
       ],
-      selectedTimeRange: '2024-01-01' // Default to 2024 full year
+      selectedTimeRange: 'past-365' // Default to past 365 days
     },
     {
       id: 'comparison-hub',
@@ -651,17 +641,12 @@ export default function AICoachAnalysis({
       status: 'idle',
       timeRangeOptions: [
         {
-          id: '2024-full-year',
-          label: 'Season 2024',
-          value: '2024-01-01'
-        },
-        {
           id: 'past-365-days',
           label: 'Past 365 Days',
           value: 'past-365'
         }
       ],
-      selectedTimeRange: '2024-01-01', // Default to 2024 full year
+      selectedTimeRange: 'past-365', // Default to past 365 days
       rankTypeOptions: [
         { id: 'total', label: 'Total', value: null },
         { id: 'solo-duo', label: 'Rank Solo/Duo', value: 420 },
@@ -710,17 +695,12 @@ export default function AICoachAnalysis({
       selectedRankType: null, // Default to Total
       timeRangeOptions: [
         {
-          id: '2024-full-year',
-          label: 'Season 2024',
-          value: '2024-01-01'
-        },
-        {
           id: 'past-365-days',
           label: 'Past 365 Days',
           value: 'past-365'
         }
       ],
-      selectedTimeRange: '2024-01-01' // Default to 2024 full year
+      selectedTimeRange: 'past-365' // Default to past 365 days
     },
     {
       id: 'champion-recommendation',
@@ -738,17 +718,12 @@ export default function AICoachAnalysis({
       selectedRankType: null, // Default to Total
       timeRangeOptions: [
         {
-          id: '2024-full-year',
-          label: 'Season 2024',
-          value: '2024-01-01'
-        },
-        {
           id: 'past-365-days',
           label: 'Past 365 Days',
           value: 'past-365'
         }
       ],
-      selectedTimeRange: '2024-01-01' // Default to 2024 full year
+      selectedTimeRange: 'past-365' // Default to past 365 days
     },
 
     // Row 3
@@ -768,17 +743,12 @@ export default function AICoachAnalysis({
       selectedRankType: null, // Default to Total
       timeRangeOptions: [
         {
-          id: '2024-full-year',
-          label: 'Season 2024',
-          value: '2024-01-01'
-        },
-        {
           id: 'past-365-days',
           label: 'Past 365 Days',
           value: 'past-365'
         }
       ],
-      selectedTimeRange: '2024-01-01' // Default to 2024 full year
+      selectedTimeRange: 'past-365' // Default to past 365 days
     },
     {
       id: 'champion-mastery',
@@ -789,17 +759,12 @@ export default function AICoachAnalysis({
       status: 'idle',
       timeRangeOptions: [
         {
-          id: '2024-full-year',
-          label: 'Season 2024',
-          value: '2024-01-01'
-        },
-        {
           id: 'past-365-days',
           label: 'Past 365 Days',
           value: 'past-365'
         }
       ],
-      selectedTimeRange: '2024-01-01', // Default to 2024 full year
+      selectedTimeRange: 'past-365', // Default to past 365 days
       // No rankTypeOptions - uses all game modes by default
     },
     {
@@ -1532,7 +1497,7 @@ export default function AICoachAnalysis({
         setMatchesData(data.matches);
 
         if (data.matches.length === 0) {
-          throw new Error('No recent matches found. Please play some games first or wait for match data to load.');
+          throw new Error('Timeline data is being prepared in the background. Please wait a few minutes and try again, or use other analysis features first.');
         }
       } else {
         throw new Error(data.error || 'Failed to fetch matches');

@@ -1,12 +1,13 @@
 """
-玩家数据管理器 - 异步准备和缓存Player-Pack数据
+Player Data Manager - Asynchronously prepare and cache Player-Pack data
 
-架构:
-1. 用户搜索玩家后，后台立即开始拉取和计算所有agent需要的数据
-2. 点击Agent卡片时，检查数据状态，等待准备完成后调用agent
+Architecture:
+1. After user searches player, background immediately starts fetching and calculating all agent-required data
+2. When Agent card is clicked, check data status and wait for preparation completion before calling agent
 """
 import asyncio
 import json
+import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta, timezone
@@ -20,7 +21,7 @@ from src.utils.id_mappings import get_champion_name
 
 
 class DataStatus(str, Enum):
-    """数据准备状态"""
+    """Data preparation status"""
     NOT_STARTED = "not_started"
     FETCHING_MATCHES = "fetching_matches"
     FETCHING_TIMELINES = "fetching_timelines"
@@ -30,29 +31,29 @@ class DataStatus(str, Enum):
 
 
 class PlayerDataJob:
-    """玩家数据准备任务"""
+    """Player data preparation task"""
 
     def __init__(self, puuid: str, region: str, game_name: str, tag_line: str, days: int = 365):
         self.puuid = puuid
         self.region = region
         self.game_name = game_name
         self.tag_line = tag_line
-        self.days = days  # 改为days而不是count
+        self.days = days  # Changed to days instead of count
         self.status = DataStatus.NOT_STARTED
         self.progress = 0.0  # 0.0 - 1.0
         self.error: Optional[str] = None
         self.started_at = datetime.utcnow()
         self.completed_at: Optional[datetime] = None
         self.player_pack: Optional[Dict[str, Any]] = None
-        self.matches_data: List[Dict[str, Any]] = []  # 保存原始match数据
-        self.timelines_data: List[Dict[str, Any]] = []  # 保存timeline数据供timeline_deep_dive使用
+        self.matches_data: List[Dict[str, Any]] = []  # Store raw match data
+        self.timelines_data: List[Dict[str, Any]] = []  # Store timeline data for timeline_deep_dive
 
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """Convert to dictionary"""
         return {
             "puuid": self.puuid,
             "region": self.region,
-            "days": self.days,  # 改为days
+            "days": self.days,  # Changed to days
             "status": self.status,
             "progress": self.progress,
             "error": self.error,
@@ -64,28 +65,28 @@ class PlayerDataJob:
 
 class PlayerDataManager:
     """
-    玩家数据管理器
+    Player data manager
 
-    职责:
-    1. 异步拉取Riot API数据 (match + timeline)
-    2. 计算metrics并生成Player-Pack格式数据
-    3. 缓存结果供agent使用
-    4. 提供数据状态查询接口
+    Responsibilities:
+    1. Asynchronously fetch Riot API data (match + timeline)
+    2. Calculate metrics and generate Player-Pack format data
+    3. Cache results for agent usage
+    4. Provide data status query interface
     """
 
     def __init__(self, cache_dir: Path = None):
         self.jobs: Dict[str, PlayerDataJob] = {}  # {puuid: PlayerDataJob}
-        # 使用agent期望的目录结构
+        # Use directory structure expected by agents
         self.cache_dir = cache_dir or Path("data/player_packs")
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Boots item IDs (for time_to_core calculation)
         self.boots_ids = {1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158}
 
-        # ⚡ 并发控制：限制同时进行的API请求数量
-        # 5个API key × 1800 req/10s = 9000 req/10s 理论上限
-        # 但要考虑网络延迟，设置200并发比较合理
-        self.semaphore = asyncio.Semaphore(200)
+        # Concurrency control: limit number of concurrent API requests
+        # 5 API keys × 1800 req/10s = 9000 req/10s theoretical limit
+        # But considering network latency, 200 concurrent is reasonable
+        self.semaphore = asyncio.Semaphore(20)  # Reduced to 20 for timeline fetching (avoid slow request pile-up)
 
     async def prepare_player_data(
         self,
@@ -93,20 +94,23 @@ class PlayerDataManager:
         region: str,
         game_name: str,
         tag_line: str,
-        days: int = 365
+        max_matches: int = 500
     ) -> PlayerDataJob:
         """
-        异步准备玩家数据
+        Asynchronously prepare player data
 
         Args:
-            puuid: 玩家PUUID
-            region: 服务器区域
-            game_name: 游戏名称
-            tag_line: 标签
-            days: 拉取过去多少天的数据（默认365天）
+            puuid: Player PUUID
+            region: Server region
+            game_name: Game name
+            tag_line: Tag line
+            max_matches: Max matches to fetch per queue (default 500 to ensure full 2024 coverage)
+                        - 100: Quick test
+                        - 200: Deep analysis
+                        - 500: Full 2024 data (recommended)
 
         Returns:
-            PlayerDataJob对象（后台继续处理）
+            PlayerDataJob object (continues processing in background)
         """
         # Check if there's an existing task for this player
         if puuid in self.jobs:
@@ -115,17 +119,38 @@ class PlayerDataManager:
             if job.status not in [DataStatus.COMPLETED, DataStatus.FAILED]:
                 print(f"🔄 Task already in progress for {game_name}#{tag_line}, status: {job.status.value}")
                 return job
-            # If task completed with same time range within 1 minute, reuse cache
+            # If task completed with same time range within 5 minutes, reuse cache
             elif (job.status == DataStatus.COMPLETED and
-                  job.days == days and
+                  job.days == max_matches and
                   job.completed_at and
-                  (datetime.utcnow() - job.completed_at) < timedelta(minutes=1)):
+                  (datetime.utcnow() - job.completed_at) < timedelta(minutes=5)):
                 print(f"✅ Reusing recent cache for {game_name}#{tag_line} (completed {(datetime.utcnow() - job.completed_at).seconds}s ago)")
                 return job
 
+        # Check disk cache before creating new task
+        player_dir = self.cache_dir / puuid
+        if player_dir.exists():
+            pack_files = list(player_dir.glob("pack_*.json"))
+            if len(pack_files) > 0:
+                # Use cache permanently (no time limit, only size limit 20GB)
+                latest_mtime = max(f.stat().st_mtime for f in pack_files)
+                cache_age = time.time() - latest_mtime
+                print(f"📦 Using disk cache for {game_name}#{tag_line} (cache age: {int(cache_age/60)}min)")
+
+                # Create completed job from disk cache
+                job = PlayerDataJob(puuid, region, game_name, tag_line, max_matches)
+                job.status = DataStatus.COMPLETED
+                job.completed_at = datetime.utcfromtimestamp(latest_mtime)
+                self.jobs[puuid] = job
+
+                # Check total cache size and cleanup if needed
+                self._cleanup_cache_if_needed()
+
+                return job
+
         # Create new task (always fetch latest match list from Riot API)
-        print(f"🆕 Creating new data fetch task for {game_name}#{tag_line} (past {days} days)")
-        job = PlayerDataJob(puuid, region, game_name, tag_line, days)
+        print(f"🆕 Creating new data fetch task for {game_name}#{tag_line} (max {max_matches} matches per queue)")
+        job = PlayerDataJob(puuid, region, game_name, tag_line, max_matches)
         self.jobs[puuid] = job
 
         # Start background task
@@ -135,20 +160,21 @@ class PlayerDataManager:
 
     async def _fetch_and_calculate(self, job: PlayerDataJob, game_name: str, tag_line: str):
         """
-        后台任务：拉取数据并计算metrics
+        Background task: Fetch data and calculate metrics
         """
         try:
             print(f"\n🔄 Starting player data preparation: {game_name}#{tag_line}")
             print(f"   PUUID: {job.puuid[:30]}...")
             print(f"   Time range: Patch 14.1 (2024-01-09) to today")
 
-            # 阶段1: 拉取match list (基于时间范围自动检测)
+            # Phase 1: Fetch match list (count-based limit, no time filtering)
             job.status = DataStatus.FETCHING_MATCHES
             job.progress = 0.1
 
             match_ids = await self._fetch_all_match_ids(
                 puuid=job.puuid,
-                platform=job.region
+                platform=job.region,
+                max_matches=job.days  # job.days now stores max_matches count
             )
 
             if not match_ids:
@@ -157,13 +183,15 @@ class PlayerDataManager:
             print(f"✅ Retrieved {len(match_ids)} matches")
             job.progress = 0.3
 
-            # ⚡ 阶段2-A: 只拉取match details (pipeline优化第一阶段)
+            # Phase 2-A: Fetch match details and filter by time
             job.status = DataStatus.FETCHING_MATCHES
-            print(f"⚡ Pipeline optimization: Fetching matches first, timelines in background")
+            print(f"⚡ Pipeline: Fetch matches + filter by date (2024-02-01 onwards)")
 
             matches_data = []
+            matches_before_2024 = 0
+            YEAR_2024_START_MS = 1706745600000  # 2024-02-01 00:00:00 UTC in milliseconds
 
-            # 🚀 分批并行处理matches
+            # Batch parallel processing of matches
             batch_size = 50
             total_batches = (len(match_ids) + batch_size - 1) // batch_size
 
@@ -176,31 +204,45 @@ class PlayerDataManager:
                 batch_start = time.time()
                 print(f"   📦 Batch {batch_idx + 1}/{total_batches}: Fetching {len(batch_match_ids)} matches...")
 
-                # 并行拉取本批次的matches
+                # Fetch matches in this batch in parallel
                 batch_tasks = [self._fetch_match(match_id, job.region) for match_id in batch_match_ids]
                 batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
                 batch_duration = time.time() - batch_start
 
-                # 收集结果
+                # Collect results, filter by gameCreation timestamp
                 batch_success = 0
+                batch_filtered = 0
                 for result in batch_results:
                     if isinstance(result, Exception):
                         print(f"      ⚠️  Skipping failed match: {result}")
                         continue
                     if result:
-                        matches_data.append(result)
-                        batch_success += 1
+                        # Check gameCreation timestamp (milliseconds)
+                        game_creation = result.get('info', {}).get('gameCreation', 0)
+                        if game_creation >= YEAR_2024_START_MS:
+                            # 2024 and later data, keep
+                            matches_data.append(result)
+                            batch_success += 1
+                        else:
+                            # Pre-2024 data, filter out
+                            batch_filtered += 1
+                            matches_before_2024 += 1
 
-                print(f"      ✅ Batch successful {batch_success}/{len(batch_match_ids)} matches (took: {batch_duration:.1f}s)")
+                if batch_filtered > 0:
+                    print(f"      ✅ Batch: {batch_success} kept, {batch_filtered} filtered (before 2024) | {batch_duration:.1f}s")
+                else:
+                    print(f"      ✅ Batch: {batch_success}/{len(batch_match_ids)} kept | {batch_duration:.1f}s")
 
-                # 更新进度（0.3-0.7区间）
+                # Update progress (0.3-0.7 range)
                 progress = 0.3 + (0.4 * (batch_idx + 1) / total_batches)
                 job.progress = progress
 
-            print(f"✅ Match fetch complete: {len(matches_data)} matches")
+            if matches_before_2024 > 0:
+                print(f"📅 Filtered out {matches_before_2024} matches before 2024-02-01")
+            print(f"✅ Match fetch complete: {len(matches_data)} matches (2024-02-01 onwards)")
             job.progress = 0.7
 
-            # 阶段3: 计算metrics并生成Player-Pack (使用默认time_to_core)
+            # Phase 3: Calculate metrics and generate Player-Pack (using default time_to_core)
             job.status = DataStatus.CALCULATING_METRICS
 
             import time
@@ -212,21 +254,22 @@ class PlayerDataManager:
                 game_name=job.game_name,
                 tag_line=job.tag_line,
                 matches_data=matches_data,
-                timelines_data=[]  # ⚡ 第一阶段不使用timeline
+                timelines_data=[]  # Phase 1 doesn't use timeline
             )
 
             calc_duration = time.time() - calc_start
             print(f"⏱️  Calculation complete, took: {calc_duration:.2f} seconds")
 
-            # ✅ 保存最新的pack到job.player_pack (用于前端显示)
+            # Save latest pack to job.player_pack (for frontend display)
             job.player_pack = player_packs[-1] if player_packs else {}
-            job.matches_data = matches_data  # 💾 保存matches数据供timeline分析使用
+            job.matches_data = matches_data  # Save matches data for timeline analysis
             job.progress = 1.0
             job.status = DataStatus.COMPLETED
             job.completed_at = datetime.utcnow()
 
-            # ✅ 保存到磁盘缓存 (agent期望的格式: packs_dir/{puuid}/pack_{patch}.json)
-            player_dir = self.cache_dir / job.puuid
+            # Save to disk cache (agent expected format: packs_dir/{puuid}/pack_{patch}.json)
+            puuid = job.puuid  # Define puuid variable for later use
+            player_dir = self.cache_dir / puuid
             player_dir.mkdir(parents=True, exist_ok=True)
 
             total_patches = len(player_packs)
@@ -235,7 +278,7 @@ class PlayerDataManager:
             # ✅ Save pack files for each patch and queue_id combination
             # File naming: pack_{patch}_{queue_id}.json (e.g., pack_15.1_420.json for Solo/Duo)
             queue_id_names = {420: 'solo', 440: 'flex', 400: 'normal'}
-            
+
             for pack in player_packs:
                 patch = pack['patch']
                 queue_id = pack.get('queue_id', 420)  # Default to Solo/Duo if not specified
@@ -329,8 +372,10 @@ class PlayerDataManager:
             print(f"   Cache location: {player_dir}")
             print(f"   ⚡ 65% of agents can now use the data")
 
-            # ⚡ 阶段2-B: 后台拉取timelines并更新time_to_core
-            print(f"\n🔄 Starting background task: Fetching timelines...")
+            # Phase 2-B: Timeline fetching (background async)
+            # After fixing 429 rate limit retry losing use_primary_key bug, timeline fetch can be safely enabled
+            # Timeline API uses match_id (globally unique), no PUUID decryption issues
+            print(f"\n✅ Starting background timeline fetching for {len(match_ids)} matches")
             asyncio.create_task(
                 self._fetch_timelines_background(
                     match_ids=match_ids,
@@ -346,23 +391,30 @@ class PlayerDataManager:
             job.error = str(e)
             job.completed_at = datetime.utcnow()
 
-    async def _fetch_all_match_ids(self, puuid: str, platform: str, days: int = None) -> List[str]:
-        """从patch 14.1开始获取到今天的所有比赛数据（包括所有queue类型）
+    async def _fetch_all_match_ids(self, puuid: str, platform: str, max_matches: int = None) -> List[str]:
+        """Fetch recent match data for player (supports multiple queue types)
+
+        Two-step filtering approach for 2024 data:
+        1. Pull enough match IDs (ensure coverage back to 2024-02-01)
+        2. Later filter by gameCreation timestamp when fetching match details
+
+        Why not filter here:
+        - Riot API's startTime/endTime parameters don't work
+        - Match IDs themselves contain no time information
+        - Must fetch match details first to get gameCreation timestamp
 
         Args:
             puuid: Player PUUID
             platform: Platform code (e.g., 'na1')
-            days: 已弃用，保留以兼容旧代码
+            max_matches: Max matches to fetch per queue (default 500 to ensure full 2024 coverage)
 
         Returns:
-            List of match IDs (包含所有queue类型: 420=Solo/Duo, 440=Flex, 400=Normal)
+            List of match IDs (includes all queue types: 420=Solo/Duo, 440=Flex, 400=Normal)
         """
-        # Patch 14.1 start date: 2024-01-09
-        patch_14_1_start = datetime(2024, 1, 9, tzinfo=timezone.utc)
-        start_timestamp = int(patch_14_1_start.timestamp() * 1000)  # Riot API uses milliseconds
-        end_timestamp = int(datetime.now(timezone.utc).timestamp() * 1000)  # Today
-
-        print(f"   📊 Fetching all matches from patch 14.1 (2024-01-09) to today (all queue types)")
+        # Pull enough match IDs to ensure coverage back to 2024-02-01
+        # Active players: 450 matches covers ~9 months (Feb to Oct)
+        max_matches_per_queue = max_matches if max_matches else 450
+        print(f"   📊 Fetching match IDs (max {max_matches_per_queue} per queue, will filter by date later)")
 
         all_match_ids = []
         queue_types = [
@@ -372,35 +424,40 @@ class PlayerDataManager:
         ]
 
         for queue_id, queue_name in queue_types:
-            print(f"   📥 Fetching {queue_name} matches...")
+            print(f"   📥 Fetching {queue_name} matches (max {max_matches_per_queue})...")
             start_index = 0
-            batch_size = 100  # Riot API单次最多返回100场
+            batch_size = 100  # Riot API max 100 matches per request
             queue_match_ids = []
 
-            while True:
-                print(f"      Fetching {queue_name} matches {start_index}-{start_index + batch_size}...")
+            while len(queue_match_ids) < max_matches_per_queue:
+                # Calculate actual count to fetch in this batch
+                remaining = max_matches_per_queue - len(queue_match_ids)
+                current_batch_size = min(batch_size, remaining)
 
-                # Fetch with time filter: from patch 14.1 to today
+                print(f"      Fetching {queue_name} matches {start_index}-{start_index + current_batch_size}...")
+
+                # Don't use time filtering (Riot API's startTime/endTime parameters unreliable)
+                # Use old successful pattern: count limit only, no time filtering
                 batch = await riot_client.get_match_history(
                     puuid=puuid,
                     platform=platform,
-                    count=batch_size,
+                    count=current_batch_size,
                     start=start_index,
-                    start_time=start_timestamp,
-                    end_time=end_timestamp,
+                    start_time=None,  # Don't use time filtering
+                    end_time=None,    # Don't use time filtering
                     queue_id=queue_id
                 )
 
                 if not batch or len(batch) == 0:
                     # No more matches available for this queue type
-                    print(f"      ✅ All {queue_name} matches fetched: {len(queue_match_ids)} matches")
+                    print(f"      ✅ {queue_name} matches fetched: {len(queue_match_ids)} matches (reached end)")
                     break
 
                 queue_match_ids.extend(batch)
-                print(f"      ✅ Batch retrieved {len(batch)} {queue_name} matches, total {len(queue_match_ids)} matches")
+                print(f"      ✅ Batch retrieved {len(batch)} {queue_name} matches, total {len(queue_match_ids)}")
 
                 # If returned less than requested, we've reached the end
-                if len(batch) < batch_size:
+                if len(batch) < current_batch_size:
                     print(f"      ℹ️  Reached end of {queue_name} match history")
                     break
 
@@ -413,7 +470,9 @@ class PlayerDataManager:
         return all_match_ids
 
     async def _fetch_match(self, match_id: str, platform: str):
-        """只拉取单场match details (pipeline优化第一阶段)
+        """Fetch single match details only (pipeline optimization phase 1)
+
+        Added timeout protection to prevent single match from blocking entire pipeline
 
         Args:
             match_id: Match ID
@@ -429,17 +488,35 @@ class PlayerDataManager:
             }
             region = PLATFORM_TO_REGION.get(platform.lower(), "americas")
 
-            # ⚡ 使用信号量控制并发
-            async with self.semaphore:
-                match_data = await riot_client.get_match_details(match_id=match_id, region=region)
-                return match_data
+            # Debug logging to identify problematic matches
+            print(f"         🔍 Fetching match: {match_id}")
+
+            # Use semaphore to control concurrency + timeout protection (max 10s per match)
+            try:
+                async with self.semaphore:
+                    try:
+                        match_data = await asyncio.wait_for(
+                            riot_client.get_match_details(match_id=match_id, region=region),
+                            timeout=10.0  # 10s timeout - skip slow matches
+                        )
+                        print(f"         ✅ Got match: {match_id}")
+                        return match_data
+                    except asyncio.TimeoutError:
+                        print(f"         ⏱️  Timeout {match_id} (>10s), skipping...")
+                        return None
+                    except Exception as inner_e:
+                        print(f"         ⚠️  Error inside semaphore for {match_id}: {inner_e}")
+                        return None
+            except Exception as outer_e:
+                print(f"         ❌ Semaphore error for {match_id}: {outer_e}")
+                return None
 
         except Exception as e:
             print(f"⚠️  Failed to fetch match {match_id}: {e}")
             return None
 
     async def _fetch_timeline(self, match_id: str, platform: str):
-        """只拉取单场timeline (pipeline优化第二阶段)
+        """Fetch single timeline only (pipeline optimization phase 2)
 
         Args:
             match_id: Match ID
@@ -455,10 +532,17 @@ class PlayerDataManager:
             }
             region = PLATFORM_TO_REGION.get(platform.lower(), "americas")
 
-            # ⚡ 使用信号量控制并发
+            # Use semaphore to control concurrency + 30s timeout for cold storage
             async with self.semaphore:
-                timeline_data = await riot_client.get_match_timeline(match_id=match_id, region=region)
-                return timeline_data
+                try:
+                    timeline_data = await asyncio.wait_for(
+                        riot_client.get_match_timeline(match_id=match_id, region=region),
+                        timeout=30.0  # 30s timeout - handle Riot API cold storage (>90 days old matches)
+                    )
+                    return timeline_data
+                except asyncio.TimeoutError:
+                    print(f"         ⏱️  Timeout timeline {match_id} (>30s), skipping...")
+                    return None
 
         except Exception as e:
             print(f"⚠️  Failed to fetch timeline {match_id}: {e}")
@@ -473,7 +557,7 @@ class PlayerDataManager:
         timelines_data: List[Dict]
     ) -> List[Dict[str, Any]]:
         """
-        从match和timeline数据生成Player-Pack
+        Generate Player-Pack from match and timeline data
 
         Returns:
             {
@@ -504,15 +588,15 @@ class PlayerDataManager:
         import time
         t0 = time.time()
 
-        # 创建timeline映射
+        # Create timeline mapping
         timelines_map = {t['metadata']['matchId']: t for t in timelines_data}
         print(f"     ⏱️  Creating timeline mapping: {time.time()-t0:.3f}s")
 
-        # ✅ 按(patch, queue_id, champ_id, role)聚合数据
-        # Structure: patch_cr_data[patch][queue_id][(champ_id, role)] = [game_stats]
-        patch_cr_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        # Aggregate data by (patch, champ_id, role, queue_id)
+        # Structure: patch_cr_data[patch][(champ_id, role, queue_id)] = [game_stats]
+        patch_cr_data = defaultdict(lambda: defaultdict(list))
 
-        # 📊 添加过滤统计
+        # Add filter statistics
         filter_stats = {
             'total_matches': len(matches_data),
             'player_not_found': 0,
@@ -520,7 +604,7 @@ class PlayerDataManager:
             'processed': 0
         }
 
-        # 🔍 记录前3个被过滤的match（用于调试）
+        # Record first 3 filtered matches (for debugging)
         filtered_matches_debug = []
 
         t1 = time.time()
@@ -555,14 +639,14 @@ class PlayerDataManager:
                 if latest_match_date is None or match_date > latest_match_date:
                     latest_match_date = match_date
 
-            # ✅ 提取patch版本
+            # Extract patch version
             game_version = match['info'].get('gameVersion', '0.0.0.0')
             patch = '.'.join(game_version.split('.')[:2])  # "15.1.123.456" → "15.1"
 
-            # 🔄 改用gameName#tagLine匹配（更可靠）
+            # Use gameName#tagLine matching (more reliable)
             player_data = None
             for p in match['info']['participants']:
-                # 同时支持PUUID和gameName#tagLine匹配
+                # Support both PUUID and gameName#tagLine matching
                 puuid_match = p.get('puuid') == puuid
                 # Case-insensitive name matching (Riot API may return different casing)
                 name_match = (p.get('riotIdGameName', '').lower() == game_name.lower() and
@@ -574,7 +658,7 @@ class PlayerDataManager:
 
             if not player_data:
                 filter_stats['player_not_found'] += 1
-                # 🔍 记录前3个被过滤的match用于调试
+                # Record first 3 filtered matches for debugging
                 if len(filtered_matches_debug) < 3:
                     filtered_matches_debug.append({
                         'match_id': match_id,
@@ -603,14 +687,14 @@ class PlayerDataManager:
                 if match_date >= past_365_days_start:
                     patch_past_365_games[patch] += 1
 
-            # 提取单场统计
+            # Extract single game statistics
             game_stats = self._extract_game_stats(
                 player_data=player_data,
                 match_data=match,
                 timeline_data=timeline
             )
 
-            # ✅ 按(patch, queue_id, champ_id, role)聚合数据
+            # Aggregate data by (patch, queue_id, champ_id, role)
             key = (champ_id, role, queue_id)
             patch_cr_data[patch][key].append(game_stats)
             filter_stats['processed'] += 1
@@ -622,7 +706,7 @@ class PlayerDataManager:
         print(f"        - Invalid role: {filter_stats['invalid_role']}")
         print(f"        - ✅ Successfully processed: {filter_stats['processed']}")
 
-        # 🔍 输出玩家匹配调试信息
+        # Output player matching debug info
         if filtered_matches_debug:
             print(f"     🔍 Debug: First {len(filtered_matches_debug)} filtered matches player name comparison:")
             print(f"        Target player: {game_name}#{tag_line}")
@@ -630,7 +714,7 @@ class PlayerDataManager:
                 print(f"        Match {i} (ID: {fm['match_id'][:20]}..., QueueID: {fm['queue_id']}):")
                 print(f"          Participant sample: {fm['participants_names']}")
 
-        # ✅ 为每个patch生成一个pack
+        # Generate one pack for each patch
         t2 = time.time()
         packs = []
         
@@ -649,114 +733,119 @@ class PlayerDataManager:
 
         # Generate packs for each patch and queue_id combination
         for patch in sorted(patch_cr_data.keys()):
-            patch_queue_data = patch_cr_data[patch]
-            
+            patch_data = patch_cr_data[patch]
+
+            # Group by queue_id first
+            queue_grouped_data = defaultdict(dict)
+            for (champ_id, role, queue_id), games_stats in patch_data.items():
+                queue_grouped_data[queue_id][(champ_id, role)] = games_stats
+
             # Generate a pack for each queue_id
-            for queue_id in sorted(patch_queue_data.keys()):
-                cr_data = patch_queue_data[queue_id]
-                
+            for queue_id in sorted(queue_grouped_data.keys()):
+                cr_data = queue_grouped_data[queue_id]
+
                 # Calculate aggregated metrics for each (champ_id, role)
-            by_cr = []
+                by_cr = []
 
-            for (champ_id, role), games_stats in cr_data.items():
-                if not games_stats:
-                    continue
+                for (champ_id, role), games_stats in cr_data.items():
+                    if not games_stats:
+                        continue
 
-                games = len(games_stats)
-                wins = sum(1 for g in games_stats if g['win'])
-                losses = games - wins
+                    games = len(games_stats)
+                    wins = sum(1 for g in games_stats if g['win'])
+                    losses = games - wins
 
-                # Win rate with Wilson CI
-                p_hat = wins / games if games > 0 else 0.0
-                _, ci_lower, ci_upper = wilson_confidence_interval(wins, games)
+                    # Win rate with Wilson CI
+                    p_hat = wins / games if games > 0 else 0.0
+                    _, ci_lower, ci_upper = wilson_confidence_interval(wins, games)
 
-                # KDA adjusted (winsorized)
-                kda_values = [g['kda_adj'] for g in games_stats]
-                kda_winsorized = winsorize(kda_values)
-                kda_adj = np.mean(kda_winsorized) if kda_winsorized else 0.0
+                    # KDA adjusted (winsorized)
+                    kda_values = [g['kda_adj'] for g in games_stats]
+                    kda_winsorized = winsorize(kda_values)
+                    kda_adj = np.mean(kda_winsorized) if kda_winsorized else 0.0
 
-                # Objective rate
-                obj_rate = np.mean([g['obj_rate'] for g in games_stats])
+                    # Objective rate
+                    obj_rate = np.mean([g['obj_rate'] for g in games_stats])
 
-                # Combat power at 25min
-                cp_25 = np.mean([g['cp_25'] for g in games_stats])
+                    # Combat power at 25min
+                    cp_25 = np.mean([g['cp_25'] for g in games_stats])
 
-                # Build core: most common items
-                item_counts = defaultdict(int)
-                for g in games_stats:
-                    for item_id in g['items_at_25']:
-                        item_counts[item_id] += 1
-                build_core = sorted(item_counts.keys(), key=lambda x: item_counts[x], reverse=True)[:3]
+                    # Build core: most common items
+                    item_counts = defaultdict(int)
+                    for g in games_stats:
+                        for item_id in g['items_at_25']:
+                            item_counts[item_id] += 1
+                    build_core = sorted(item_counts.keys(), key=lambda x: item_counts[x], reverse=True)[:3]
 
-                # Average time to core
-                avg_time_to_core = np.mean([g['time_to_core'] for g in games_stats])
+                    # Average time to core
+                    avg_time_to_core = np.mean([g['time_to_core'] for g in games_stats])
 
-                # Most common rune keystone
-                rune_counts = defaultdict(int)
-                for g in games_stats:
-                    rune_counts[g['rune_keystone']] += 1
-                rune_keystone = max(rune_counts.keys(), key=lambda x: rune_counts[x]) if rune_counts else 0
+                    # Most common rune keystone
+                    rune_counts = defaultdict(int)
+                    for g in games_stats:
+                        rune_counts[g['rune_keystone']] += 1
+                    rune_keystone = max(rune_counts.keys(), key=lambda x: rune_counts[x]) if rune_counts else 0
 
-                # Governance tag
-                if games >= 100:
-                    governance_tag = "CONFIDENT"
-                elif games >= 30:
-                    governance_tag = "CAUTION"
-                else:
-                    governance_tag = "CONTEXT"
+                    # Governance tag
+                    if games >= 100:
+                        governance_tag = "CONFIDENT"
+                    elif games >= 30:
+                        governance_tag = "CAUTION"
+                    else:
+                        governance_tag = "CONTEXT"
 
-                by_cr.append({
-                    "champ_id": champ_id,
-                    "role": role,
-                    "games": games,
-                    "wins": wins,
-                    "losses": losses,
-                    "p_hat": round(p_hat, 4),
-                    "p_hat_ci": [round(ci_lower, 4), round(ci_upper, 4)],
-                    "kda_adj": round(kda_adj, 2),
-                    "obj_rate": round(obj_rate, 3),
-                    "cp_25": round(cp_25, 1),
-                    "build_core": build_core,
-                    "avg_time_to_core": round(avg_time_to_core, 2),
-                    "rune_keystone": rune_keystone,
-                    "effective_n": games,
-                    "governance_tag": governance_tag
-                })
+                    by_cr.append({
+                        "champ_id": champ_id,
+                        "role": role,
+                        "games": games,
+                        "wins": wins,
+                        "losses": losses,
+                        "p_hat": round(p_hat, 4),
+                        "p_hat_ci": [round(ci_lower, 4), round(ci_upper, 4)],
+                        "kda_adj": round(kda_adj, 2),
+                        "obj_rate": round(obj_rate, 3),
+                        "cp_25": round(cp_25, 1),
+                        "build_core": build_core,
+                        "avg_time_to_core": round(avg_time_to_core, 2),
+                        "rune_keystone": rune_keystone,
+                        "effective_n": games,
+                        "governance_tag": governance_tag
+                    })
 
                 # ✅ Create pack for this patch and queue_id
-            pack = {
-                "puuid": puuid,
+                pack = {
+                    "puuid": puuid,
                     "patch": patch,
                     "queue_id": queue_id,  # Store queue_id in pack
-                "generation_timestamp": datetime.utcnow().isoformat(),
-                "total_games": sum(entry['games'] for entry in by_cr),
-                "by_cr": by_cr
-            }
-            
-            # Add match date range for this patch (filtered by queue_id)
-            # Calculate date range for this specific queue_id
-            queue_earliest = None
-            queue_latest = None
-            for match in matches_data:
-                match_queue_id = match['info'].get('queueId', 420)
-                if match_queue_id == queue_id:
-                    game_version = match['info'].get('gameVersion', '0.0.0.0')
-                    match_patch = '.'.join(game_version.split('.')[:2])
-                    if match_patch == patch:
-                        game_creation = match['info'].get('gameCreation', 0)
-                        if game_creation:
-                            match_date = datetime.fromtimestamp(game_creation / 1000, tz=timezone.utc)
-                            if queue_earliest is None or match_date < queue_earliest:
-                                queue_earliest = match_date
-                            if queue_latest is None or match_date > queue_latest:
-                                queue_latest = match_date
-            
-            if queue_earliest:
-                pack["earliest_match_date"] = queue_earliest.isoformat()
-            if queue_latest:
-                pack["latest_match_date"] = queue_latest.isoformat()
-            
-            # Add games count for Past Season and Past 365 Days (for this queue_id)
+                    "generation_timestamp": datetime.utcnow().isoformat(),
+                    "total_games": sum(entry['games'] for entry in by_cr),
+                    "by_cr": by_cr
+                }
+
+                # Add match date range for this patch (filtered by queue_id)
+                # Calculate date range for this specific queue_id
+                queue_earliest = None
+                queue_latest = None
+                for match in matches_data:
+                    match_queue_id = match['info'].get('queueId', 420)
+                    if match_queue_id == queue_id:
+                        game_version = match['info'].get('gameVersion', '0.0.0.0')
+                        match_patch = '.'.join(game_version.split('.')[:2])
+                        if match_patch == patch:
+                            game_creation = match['info'].get('gameCreation', 0)
+                            if game_creation:
+                                match_date = datetime.fromtimestamp(game_creation / 1000, tz=timezone.utc)
+                                if queue_earliest is None or match_date < queue_earliest:
+                                    queue_earliest = match_date
+                                if queue_latest is None or match_date > queue_latest:
+                                    queue_latest = match_date
+
+                if queue_earliest:
+                    pack["earliest_match_date"] = queue_earliest.isoformat()
+                if queue_latest:
+                    pack["latest_match_date"] = queue_latest.isoformat()
+
+                # Add games count for Past Season and Past 365 Days (for this queue_id)
                 queue_past_season_games = 0
                 queue_past_365_games = 0
                 for match in matches_data:
@@ -774,11 +863,11 @@ class PlayerDataManager:
                                 # Check Past 365 Days
                                 if match_date >= past_365_days_start:
                                     queue_past_365_games += 1
-                
+
                 pack["past_season_games"] = queue_past_season_games
                 pack["past_365_days_games"] = queue_past_365_games
-            
-            packs.append(pack)
+
+                packs.append(pack)
 
         print(f"     ⏱️  Aggregation calculation + Pack generation: {time.time()-t2:.3f}s")
 
@@ -790,7 +879,7 @@ class PlayerDataManager:
         match_data: Dict,
         timeline_data: Optional[Dict]
     ) -> Dict[str, Any]:
-        """从单场比赛提取统计数据"""
+        """Extract statistics from a single game"""
         # Basic stats
         win = player_data['win']
         kills = player_data['kills']
@@ -846,7 +935,7 @@ class PlayerDataManager:
         }
 
     def _calculate_time_to_core(self, timeline_data: Dict, participant_id: int) -> float:
-        """计算time to core (minutes)"""
+        """Calculate time to core (minutes)"""
         core_items_found = []
 
         for frame in timeline_data.get('info', {}).get('frames', []):
@@ -863,13 +952,13 @@ class PlayerDataManager:
                             if len(core_items_found) >= 2:
                                 return core_items_found[1]['time']
 
-        # 未找到2件核心装备
+        # Did not find 2 core items
         if timeline_data['info']['frames']:
             return timeline_data['info']['frames'][-1]['timestamp'] / 60000.0
         return 30.0
 
     def get_status(self, puuid: str) -> Dict[str, Any]:
-        """获取数据准备状态"""
+        """Get data preparation status"""
         if puuid not in self.jobs:
             return {"status": DataStatus.NOT_STARTED}
 
@@ -877,25 +966,25 @@ class PlayerDataManager:
 
     async def wait_for_data(self, puuid: str, timeout: int = 120) -> Optional[Dict[str, Any]]:
         """
-        等待数据准备完成
+        Wait for data preparation completion
 
         Args:
-            puuid: 玩家PUUID
-            timeout: 超时时间（秒）
+            puuid: Player PUUID
+            timeout: Timeout in seconds
 
         Returns:
-            Player-Pack数据，或None（如果失败/超时）
+            Player-Pack data, or None (if failed/timeout)
         """
         if puuid not in self.jobs:
             return None
 
         job = self.jobs[puuid]
 
-        # 如果已经完成，直接返回
+        # If already completed, return directly
         if job.status == DataStatus.COMPLETED and job.player_pack:
             return job.player_pack
 
-        # 等待完成
+        # Wait for completion
         for _ in range(timeout):
             if job.status == DataStatus.COMPLETED:
                 return job.player_pack
@@ -904,19 +993,19 @@ class PlayerDataManager:
 
             await asyncio.sleep(1)
 
-        # 超时
+        # Timeout
         print(f"⚠️  Data wait timeout: {puuid}")
         return None
 
     def get_data(self, puuid: str) -> Optional[Dict[str, Any]]:
         """
-        获取准备好的数据（同步，不等待）
+        Get prepared data (synchronous, no waiting)
 
         Returns:
-            Player-Pack数据，或None
+            Player-Pack data, or None
         """
         if puuid not in self.jobs:
-            # 尝试从磁盘缓存加载
+            # Try to load from disk cache
             cache_file = self.cache_dir / puuid / "pack_current.json"
             if cache_file.exists():
                 with open(cache_file, 'r', encoding='utf-8') as f:
@@ -962,11 +1051,9 @@ class PlayerDataManager:
             # Calculate time filter if needed
             cutoff_timestamp = None
             cutoff_end_timestamp = None
-            
-            if time_range == "2024-01-01":
-                cutoff_timestamp = datetime(2024, 1, 9, tzinfo=timezone.utc).timestamp()
-                cutoff_end_timestamp = datetime(2025, 1, 6, 23, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
-            elif time_range == "past-365":
+
+            # Only support past-365 days time range
+            if time_range == "past-365":
                 cutoff_timestamp = (datetime.now(timezone.utc) - timedelta(days=365)).timestamp()
             
             # Build file pattern based on queue_id
@@ -991,8 +1078,9 @@ class PlayerDataManager:
                         continue
                 
                 # Apply time range filter
+                has_match_in_range = True  # Default: include pack if no time filter
                 if cutoff_timestamp:
-                    has_match_in_range = False
+                    has_match_in_range = False  # Reset for time filtering
                     pack_earliest = pack.get("earliest_match_date")
                     pack_latest = pack.get("latest_match_date")
                     
@@ -1073,8 +1161,9 @@ class PlayerDataManager:
                     if not has_match_in_range:
                         print(f"❌ [get_role_stats] Pack {pack_file.name} does NOT match time range, skipping")
                         continue
-                
-                        by_cr_data.extend(pack.get("by_cr", []))
+
+                # Add pack data to aggregation (after time filter)
+                by_cr_data.extend(pack.get("by_cr", []))
 
             print(f"🔍 [get_role_stats] After filtering, found {len(by_cr_data)} by_cr entries")
 
@@ -1128,7 +1217,7 @@ class PlayerDataManager:
     def get_best_champions(self, puuid: str, limit: int = 5, time_range: str = None, queue_id: int = None) -> List[Dict[str, Any]]:
         """
         从Player-Pack中提取最佳英雄数据（按游戏数排序）
-        
+
         Args:
             puuid: Player PUUID
             limit: Maximum number of champions to return
@@ -1141,19 +1230,19 @@ class PlayerDataManager:
                 ...
             ]
         """
+        print(f"🔍 [get_best_champions] Called with limit={limit}, time_range={time_range}, queue_id={queue_id}")
         player_dir = self.cache_dir / puuid
         if not player_dir.exists():
+            print(f"⚠️  [get_best_champions] Player dir does not exist: {player_dir}")
             return []
 
         try:
             # Calculate time filter if needed
             cutoff_timestamp = None
             cutoff_end_timestamp = None
-            
-            if time_range == "2024-01-01":
-                cutoff_timestamp = datetime(2024, 1, 9, tzinfo=timezone.utc).timestamp()
-                cutoff_end_timestamp = datetime(2025, 1, 6, 23, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
-            elif time_range == "past-365":
+
+            # Only support past-365 days time range
+            if time_range == "past-365":
                 cutoff_timestamp = (datetime.now(timezone.utc) - timedelta(days=365)).timestamp()
             
             # Build file pattern based on queue_id
@@ -1164,7 +1253,8 @@ class PlayerDataManager:
                 pack_pattern = "pack_*.json"
             
             pack_files = sorted(player_dir.glob(pack_pattern))
-            
+            print(f"🔍 [get_best_champions] Found {len(pack_files)} pack files with pattern {pack_pattern}")
+
             # 聚合所有pack文件中的champion数据
             champion_stats = defaultdict(lambda: {
                 "games": 0,
@@ -1172,10 +1262,13 @@ class PlayerDataManager:
                 "total_kda": 0.0
             })
 
+            print(f"🔍 [get_best_champions] Starting to iterate {len(pack_files)} pack files...")
             for pack_file in pack_files:
+                print(f"         Reading {pack_file.name}...")
                 with open(pack_file, 'r', encoding='utf-8') as f:
                     pack = json.load(f)
-                
+                print(f"         Loaded {pack_file.name}, queue_id={pack.get('queue_id')}")
+
                 # Verify queue_id matches if specified
                 if queue_id is not None:
                     pack_queue_id = pack.get('queue_id', 420)
@@ -1183,8 +1276,9 @@ class PlayerDataManager:
                         continue
                 
                 # Apply time range filter
+                has_match_in_range = True  # Default: include pack if no time filter
                 if cutoff_timestamp:
-                    has_match_in_range = False
+                    has_match_in_range = False  # Reset for time filtering
                     pack_earliest = pack.get("earliest_match_date")
                     pack_latest = pack.get("latest_match_date")
                     
@@ -1237,24 +1331,27 @@ class PlayerDataManager:
                             else:
                                 if pack_timestamp >= cutoff_timestamp:
                                     has_match_in_range = True
-                    
-                    if not has_match_in_range:
+
+                print(f"         After time filter: has_match_in_range={has_match_in_range}, cutoff_timestamp={cutoff_timestamp}")
+                if not has_match_in_range:
+                    print(f"         ❌ Pack {pack_file.name} skipped (has_match_in_range={has_match_in_range})")
+                    continue
+
+                by_cr_data = pack.get("by_cr", [])
+                print(f"         Pack {pack_file.name}: {len(by_cr_data)} by_cr entries")
+
+                for cr in by_cr_data:
+                    champ_id = cr.get("champ_id")
+                    if not champ_id:
                         continue
-                
-                    by_cr_data = pack.get("by_cr", [])
 
-                    for cr in by_cr_data:
-                        champ_id = cr.get("champ_id")
-                        if not champ_id:
-                            continue
+                    games = cr.get("games", 0)
+                    wins = cr.get("wins", 0)
+                    kda_adj = cr.get("kda_adj", 0)
 
-                        games = cr.get("games", 0)
-                        wins = cr.get("wins", 0)
-                        kda_adj = cr.get("kda_adj", 0)
-
-                        champion_stats[champ_id]["games"] += games
-                        champion_stats[champ_id]["wins"] += wins
-                        champion_stats[champ_id]["total_kda"] += kda_adj * games
+                    champion_stats[champ_id]["games"] += games
+                    champion_stats[champ_id]["wins"] += wins
+                    champion_stats[champ_id]["total_kda"] += kda_adj * games
 
             # 转换为数组格式
             best_champions = []
@@ -1393,7 +1490,13 @@ class PlayerDataManager:
                     print(f"⚠️  Failed to parse match: {e}")
                     continue
 
-            print(f"✅ Returning {len(matches)} matches with timeline files")
+            # Sort by game_creation timestamp (newest first)
+            matches.sort(key=lambda x: x['game_creation'], reverse=True)
+
+            # Limit to requested number
+            matches = matches[:limit]
+
+            print(f"✅ Returning {len(matches)} matches with timeline files (sorted by date, limited to {limit})")
             return matches
 
         except Exception as e:
@@ -1401,6 +1504,49 @@ class PlayerDataManager:
             import traceback
             traceback.print_exc()
             return []
+
+    def _cleanup_cache_if_needed(self):
+        """
+        Clean up old cache if total cache size exceeds 20GB
+        Deletes oldest player directories first
+        """
+        try:
+            import shutil
+
+            # Calculate total cache size
+            total_size = 0
+            player_dirs = []
+
+            for player_dir in self.cache_dir.iterdir():
+                if player_dir.is_dir():
+                    dir_size = sum(f.stat().st_size for f in player_dir.rglob('*') if f.is_file())
+                    # Get oldest file mtime as directory age
+                    oldest_mtime = min((f.stat().st_mtime for f in player_dir.rglob('*') if f.is_file()), default=0)
+                    player_dirs.append((player_dir, dir_size, oldest_mtime))
+                    total_size += dir_size
+
+            # Convert to GB
+            total_size_gb = total_size / (1024 ** 3)
+
+            if total_size_gb > 20:
+                print(f"⚠️  Cache size {total_size_gb:.2f}GB exceeds 20GB limit, cleaning up...")
+
+                # Sort by oldest first
+                player_dirs.sort(key=lambda x: x[2])
+
+                # Delete oldest directories until under 18GB (2GB buffer)
+                for player_dir, dir_size, mtime in player_dirs:
+                    if total_size_gb <= 18:
+                        break
+
+                    print(f"🗑️  Deleting old cache: {player_dir.name} ({dir_size / (1024**2):.1f}MB)")
+                    shutil.rmtree(player_dir)
+                    total_size_gb -= dir_size / (1024 ** 3)
+
+                print(f"✅ Cache cleaned up, new size: {total_size_gb:.2f}GB")
+
+        except Exception as e:
+            print(f"⚠️  Cache cleanup failed: {e}")
 
     async def _fetch_timelines_background(
         self,

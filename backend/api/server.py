@@ -664,7 +664,7 @@ async def fetch_player_data(request: PlayerDataFetchRequest, background_tasks: B
                     region=request.region,
                     game_name=request.game_name,
                     tag_line=request.tag_line,
-                    days=request.days
+                    max_matches=request.days
                 )
 
                 # Step 3: Monitor job progress
@@ -769,7 +769,7 @@ class AgentRequest(BaseModel):
     match_id: Optional[str] = Field(None, description="Match ID for timeline-deep-dive agent")
     friend_game_name: Optional[str] = Field(None, description="Friend's game name for friend-comparison agent")
     friend_tag_line: Optional[str] = Field(None, description="Friend's tag line for friend-comparison agent")
-    time_range: Optional[str] = Field(None, description="Time range filter: '2024-01-01' for 2024 full year, 'past-365' for past 365 days")
+    time_range: Optional[str] = Field(None, description="Time range filter: 'past-365' for past 365 days")
     queue_id: Optional[int] = Field(None, description="Queue ID filter: 420 for Ranked Solo/Duo, 440 for Ranked Flex, 400 for Normal")
 
 class AgentResponse(BaseModel):
@@ -827,8 +827,6 @@ async def weakness_analysis(request: AgentRequest):
                     error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                 elif queue_id == 420:
                     error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "2024-01-01":
-                    error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
                 else:
@@ -1011,8 +1009,6 @@ async def annual_summary(request: AgentRequest):
                     error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                 elif queue_id == 420:
                     error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "2024-01-01":
-                    error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
                 else:
@@ -1099,9 +1095,7 @@ async def champion_mastery(request: AgentRequest):
             # Check if data exists for the selected time range before generating analysis
             champion_data = load_champion_data(packs_dir, request.champion_id, time_range=time_range)
             if not champion_data:
-                if time_range == "2024-01-01":
-                    error_msg = "No data found for Season 2024"
-                elif time_range == "past-365":
+                if time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
                 else:
                     error_msg = f"No data found for champion_id {request.champion_id}"
@@ -1367,7 +1361,7 @@ async def friend_comparison(request: AgentRequest):
                 region=request.region,
                 game_name=request.friend_game_name,
                 tag_line=request.friend_tag_line,
-                days=30
+                max_matches=30
             )
 
             # Wait for friend data preparation to complete
@@ -1407,8 +1401,6 @@ async def friend_comparison(request: AgentRequest):
                     error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                 elif queue_id == 420:
                     error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "2024-01-01":
-                    error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
                 else:
@@ -1500,8 +1492,6 @@ async def role_specialization(request: AgentRequest):
                     error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                 elif queue_id == 420:
                     error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "2024-01-01":
-                    error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
                 else:
@@ -1589,8 +1579,6 @@ async def champion_recommendation(request: AgentRequest):
                     error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                 elif queue_id == 420:
                     error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "2024-01-01":
-                    error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
                 else:
@@ -1678,8 +1666,6 @@ async def multi_version_comparison(request: AgentRequest):
                     error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                 elif queue_id == 420:
                     error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "2024-01-01":
-                    error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
                 else:
@@ -2129,8 +2115,6 @@ async def version_comparison(request: AgentRequest):
                     error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                 elif queue_id == 420:
                     error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "2024-01-01":
-                    error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
                 else:
@@ -2239,8 +2223,6 @@ async def comparison_hub(request: AgentRequest):
                         error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                     elif queue_id == 420:
                         error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                    elif time_range == "2024-01-01":
-                        error_msg = "No data found for Season 2024"
                     elif time_range == "past-365":
                         error_msg = "No data found for Past 365 Days"
                     else:
@@ -2288,14 +2270,14 @@ async def comparison_hub(request: AgentRequest):
                 friend_puuid = friend_account['puuid']
                 print(f"✅ Got friend PUUID: {friend_puuid[:20]}...")
 
-                # Trigger friend data preparation (full year data)
+                # Trigger friend data preparation
                 print(f"📊 Preparing friend data...")
                 friend_job = await player_data_manager.prepare_player_data(
                     puuid=friend_puuid,
                     region=request.region,
                     game_name=request.friend_game_name,
                     tag_line=request.friend_tag_line,
-                    days=365  # Full year data
+                    max_matches=100  # 100 per queue: Solo/Duo+Flex+Normal, total ~100-300 matches
                 )
 
                 # Wait for friend data
@@ -2328,8 +2310,6 @@ async def comparison_hub(request: AgentRequest):
                         error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                     elif queue_id == 420:
                         error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                    elif time_range == "2024-01-01":
-                        error_msg = "No data found for Season 2024"
                     elif time_range == "past-365":
                         error_msg = "No data found for Past 365 Days"
                     else:
@@ -2483,8 +2463,6 @@ async def version_trends(request: AgentRequest):
                     error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                 elif queue_id == 420:
                     error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "2024-01-01":
-                    error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
                 else:
@@ -2560,8 +2538,6 @@ async def performance_insights(request: AgentRequest):
                     error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
                 elif queue_id == 420:
                     error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "2024-01-01":
-                    error_msg = "No data found for Season 2024"
                 elif time_range == "past-365":
                     error_msg = "No data found for Past 365 Days"
                 else:
@@ -2685,11 +2661,11 @@ async def get_player_summary(
     Query params:
     - days: Number of days to fetch data from (legacy, optional)
     - count: Number of matches to fetch (optional, takes priority over days/time_range)
-    - time_range: Time range preset ("2024-01-01" or "past-365")
+    - time_range: Time range preset ("past-365")
 
     Priority: count > time_range > days (default 365)
 
-    Example: /api/player/s1ne/na1/summary?time_range=2024-01-01
+    Example: /api/player/s1ne/na1/summary?time_range=past-365
     """
     # Strip whitespace from URL parameters
     game_name = game_name.strip()
@@ -2765,54 +2741,28 @@ async def get_player_summary(
         puuid = account['puuid']
         print(f"✅ [1/2] Got PUUID ({time.time()-step_start:.2f}s): {puuid[:20]}...")
 
-        # Step 3: Get summoner info - try inferred platform first, then try other platforms if needed
+        # Step 3: Get summoner info
         step_start = time.time()
-        summoner = None
-        summoner_error = None
-        
+
         try:
             summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=platform)
         except Exception as e:
             error_msg = str(e)
             # Check if it's a decrypt error (API key issue)
             if "decrypting" in error_msg.lower() or "400" in error_msg:
-                summoner_error = error_msg
-                print(f"⚠️  Decrypt error on {platform}: {error_msg}")
-                print(f"⚠️  This usually means the API key used to get the PUUID cannot decrypt it.")
-                print(f"⚠️  Trying other platforms with different API keys...")
-            else:
-                # Re-raise if it's not a decrypt error
-                raise
-        
-        # If not found or decrypt error, try other platforms
-        if not summoner:
-            print(f"⚠️  Summoner not found on {platform}, trying other platforms...")
-            fallback_platforms = ['kr', 'na1', 'euw1', 'eun1', 'br1', 'jp1']
-            for plat in fallback_platforms:
-                if plat != platform:
-                    print(f"🔍 Trying platform: {plat}")
-                    try:
-                        summoner = await riot_client.get_summoner_by_puuid(puuid=puuid, platform=plat)
-                        if summoner:
-                            print(f"✅ Found summoner on {plat}")
-                            platform = plat  # Update platform to the one that worked
-                            break
-                    except Exception as e:
-                        error_msg = str(e)
-                        if "decrypting" in error_msg.lower():
-                            print(f"⚠️  Decrypt error on {plat} as well: {error_msg}")
-                            continue
-                        else:
-                            # Re-raise if it's not a decrypt error
-                            raise
-        
-        if not summoner:
-            if summoner_error and "decrypting" in summoner_error.lower():
+                print(f"❌ PUUID解密失败: {error_msg}")
+                print(f"   这通常说明API key在获取Account和Summoner信息时发生了变化")
+                print(f"   可能原因：429 rate limit重试时切换了API key")
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Riot API authentication error: The API key cannot decrypt the PUUID. This usually happens when the PUUID was obtained with a different API key. Please ensure RIOT_API_KEY_PRIMARY is the same key used to get the account. Error: {summoner_error}"
+                    detail=f"Riot API authentication error: The API key cannot decrypt the PUUID. This indicates the API key changed between Account API and Summoner API calls (likely due to rate limit retry). Error: {error_msg}"
                 )
-            raise HTTPException(status_code=404, detail="Summoner not found on any platform")
+            else:
+                # Re-raise other errors
+                raise
+
+        if not summoner:
+            raise HTTPException(status_code=404, detail=f"Summoner not found for PUUID on platform {platform}")
         print(f"✅ [2/2] Got summoner info ({time.time()-step_start:.2f}s)")
 
         # Step 4: Start background data preparation (non-blocking)
@@ -2822,7 +2772,7 @@ async def get_player_summary(
             region=platform,
             game_name=game_name,
             tag_line=tag_line,
-            days=days  # days parameter kept for compatibility but not used for fetching
+            max_matches=days  # max_matches per queue (100 by default)
         )
 
         # Step 4: Try to get role stats and champion stats
@@ -3222,7 +3172,7 @@ async def get_player_champions(
     Get player's champion statistics filtered by time_range and queue_id
     
     Query params:
-    - time_range: Time range filter ("2024-01-01" or "past-365")
+    - time_range: Time range filter ("past-365")
     - queue_id: Queue ID filter (420 for Ranked Solo/Duo, 440 for Ranked Flex, 400 for Normal, None for all)
     - limit: Maximum number of champions to return (default: 50)
     """
@@ -3267,7 +3217,7 @@ async def get_player_role_stats(
     Get player's role statistics filtered by time_range and queue_id
     
     Query params:
-    - time_range: Time range filter ("2024-01-01" or "past-365")
+    - time_range: Time range filter ("past-365")
     - queue_id: Queue ID filter (420 for Ranked Solo/Duo, 440 for Ranked Flex, 400 for Normal)
     """
     # Strip whitespace from URL parameters

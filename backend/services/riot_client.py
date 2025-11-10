@@ -299,7 +299,8 @@ class RiotAPIClient:
                     # Rate limited - get retry after header
                     retry_after = response.headers.get("Retry-After", "1")
                     await asyncio.sleep(int(retry_after))
-                    return await self._make_request(method, url, **kwargs)
+                    # ⚠️  重要：重试时必须保留use_primary_key参数，否则会导致PUUID解密失败
+                    return await self._make_request(method, url, use_primary_key=use_primary_key, **kwargs)
                 else:
                     response_text = await response.text()
                     # Provide more helpful error messages for common issues

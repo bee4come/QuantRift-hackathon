@@ -43,3 +43,8 @@ data/temp/
 test_output/
 playwright-report/
 test-results/
+
+backend/data/player_packs/
+backend/data/matches/
+backend/api/data/
+claudedocs/
