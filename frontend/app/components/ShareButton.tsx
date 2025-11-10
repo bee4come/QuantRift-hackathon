@@ -43,6 +43,10 @@ export default function ShareButton({
     setError(null);
 
     try {
+      console.log('[ShareButton] Creating share for agent:', agentType);
+      console.log('[ShareButton] Report content length:', reportContent?.length || 0);
+      console.log('[ShareButton] Player info:', playerInfo);
+
       const response = await fetch('/api/share/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -58,7 +62,10 @@ export default function ShareButton({
         })
       });
 
+      console.log('[ShareButton] Response status:', response.status);
+
       const data = await response.json();
+      console.log('[ShareButton] Response data:', data);
 
       if (data.success) {
         const url = `${window.location.origin}/share/${data.share_id}`;

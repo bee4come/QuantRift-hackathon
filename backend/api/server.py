@@ -4223,6 +4223,10 @@ async def create_share(request: ShareCreateRequest):
         JSON with success status and share_id
     """
     try:
+        print(f"[ShareAPI] Creating share for {request.gameName}#{request.tagLine}")
+        print(f"[ShareAPI] Agent type: {request.agent_type}")
+        print(f"[ShareAPI] Report content length: {len(request.report_content) if request.report_content else 0}")
+
         # Generate unique share ID (8 characters)
         import uuid
         share_id = str(uuid.uuid4())[:8]
@@ -4245,11 +4249,15 @@ async def create_share(request: ShareCreateRequest):
             }
         }
 
-        # Save to file
-        share_dir = Path("data/shared_reports")
+        # Save to file (use absolute path)
+        backend_dir = Path(__file__).parent.parent
+        share_dir = backend_dir / "data" / "shared_reports"
         share_dir.mkdir(parents=True, exist_ok=True)
 
         share_file = share_dir / f"{share_id}.json"
+
+        print(f"[ShareAPI] Saving to: {share_file}")
+
         with open(share_file, 'w', encoding='utf-8') as f:
             json.dump(share_data, f, ensure_ascii=False, indent=2)
 
@@ -4259,7 +4267,9 @@ async def create_share(request: ShareCreateRequest):
 
     except Exception as e:
         print(f"❌ Error creating share: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to create share: {str(e)}")
 
 
 @app.get("/api/share/{share_id}")
@@ -4274,7 +4284,9 @@ async def get_share(share_id: str):
         JSON with share data including report content and player info
     """
     try:
-        share_file = Path(f"data/shared_reports/{share_id}.json")
+        # Use absolute path
+        backend_dir = Path(__file__).parent.parent
+        share_file = backend_dir / "data" / "shared_reports" / f"{share_id}.json"
 
         if not share_file.exists():
             raise HTTPException(status_code=404, detail="Share not found")
@@ -4290,6 +4302,8 @@ async def get_share(share_id: str):
         raise
     except Exception as e:
         print(f"❌ Error getting share: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
