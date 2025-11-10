@@ -4352,12 +4352,14 @@ async def chat_endpoint(
     region: str = "na1"
 ):
     """
-    SSE streaming chat endpoint with multi-turn conversation support
+    SSE streaming chat endpoint with hybrid routing (rule-based + LLM)
 
     Workflow:
     1. Get or create chat session
-    2. ChatMasterAgent decides action (answer, ask, call subagent, custom)
-    3. Execute action and stream response
+    2. HybridRouter decides action using:
+       - Fast rule-based matching for common patterns (< 1ms)
+       - LLM fallback for complex queries (2-5s)
+    3. Stream routing decision and agent execution
     4. Update session history
 
     Query Parameters:
@@ -4403,7 +4405,7 @@ async def chat_endpoint(
                 region=region
             )
 
-            yield sse("routing", f"Session: {session.session_id[:8]}... (Turn {len(session.history) // 2 + 1})")
+            yield sse("routing", f"Session {session.session_id[:8]}... Turn {len(session.history) // 2 + 1}")
 
             # Step 3: Wait for data preparation
             yield sse("executing", "Preparing player data...")
@@ -4417,107 +4419,43 @@ async def chat_endpoint(
             # Step 4: Load player data for context
             player_data = await get_player_summary_data(puuid, packs_dir)
 
-            # Step 5: ChatMasterAgent decision
-            from src.agents.chat.chat_master_agent import ChatMasterAgent
-
-            chat_master = ChatMasterAgent(model="haiku")
-            decision = chat_master.process_message(
-                user_message=message,
-                session_history=session.get_history(),
-                player_data=player_data
-            )
-
             # Add user message to session
             session.add_message("user", message)
 
-            # Step 6: Execute decision
-            if decision.action == "answer_directly":
-                # Direct answer without calling sub-agent
-                session.add_message("assistant", decision.content)
-                yield sse("report", decision.content)
-                yield sse("done", "")
+            # Step 5: Use hybrid router with streaming
+            from src.agents.chat.router import stream_chat_with_routing
+            from pathlib import Path
 
-            elif decision.action == "ask_user":
-                # Ask clarification question
-                session.add_message("assistant", decision.content)
-                yield sse("question", decision.content)
-                if decision.options:
-                    yield sse("options", json.dumps(decision.options))
-                yield sse("done", "")
+            # Stream routing decision and agent execution
+            full_response = ""
+            for sse_message in stream_chat_with_routing(
+                user_message=message,
+                puuid=puuid,
+                packs_dir=Path(packs_dir),
+                session_history=session.get_history()[:-1],  # Exclude the just-added user message
+                player_data=player_data,
+                model="haiku",
+                rule_confidence_threshold=0.7
+            ):
+                yield sse_message
 
-            elif decision.action == "call_subagent":
-                # Call analysis sub-agent
-                subagent_id = decision.subagent_id
-                params = decision.params or {}
+                # Accumulate response for session storage
+                if '"type": "chunk"' in sse_message or '"type": "complete"' in sse_message:
+                    try:
+                        msg_data = json.loads(sse_message.split("data: ")[1])
+                        if msg_data.get("type") == "chunk":
+                            full_response += msg_data.get("content", "")
+                        elif msg_data.get("type") == "complete":
+                            if msg_data.get("detailed"):
+                                full_response = msg_data.get("detailed")
+                    except:
+                        pass
 
-                schema = chat_master.get_subagent_schema(subagent_id)
-                if not schema:
-                    yield sse("error", f"Unknown sub-agent: {subagent_id}")
-                    return
+            # Store assistant response in session
+            if full_response:
+                session.add_message("assistant", full_response)
 
-                agent_name = schema["name"]
-                yield sse("routing", f"Using {agent_name}...")
-
-                # Execute sub-agent with streaming
-                try:
-                    async for agent_message in execute_agent(subagent_id, packs_dir, puuid, region, **params):
-                        yield agent_message
-                except Exception as e:
-                    yield sse("error", f"Sub-agent execution error: {str(e)}")
-                    return
-
-                yield sse("done", "")
-
-            elif decision.action == "custom_analysis":
-                # Custom analysis using quantitative metrics
-                yield sse("planning", "📋 Parsing analysis request...")
-
-                try:
-                    from src.agents.chat.custom_analysis.agent import CustomAnalysisAgent
-                    from src.agents.chat.custom_analysis.query_parser import parse_query_with_llm
-                    from src.agents.shared.bedrock_adapter import BedrockLLM
-
-                    # Parse query into two GroupFilters
-                    parser_llm = BedrockLLM(model="haiku")
-                    group1_filter, group2_filter = parse_query_with_llm(message, parser_llm)
-
-                    yield sse("planning", f"✅ Comparing: {group1_filter.name} vs {group2_filter.name}")
-
-                    # Initialize custom analysis agent
-                    custom_agent = CustomAnalysisAgent(model="haiku")
-
-                    # Stream custom analysis
-                    full_report = ""
-                    for message_data in custom_agent.run_stream(
-                        user_query=message,
-                        packs_dir=packs_dir,
-                        group1_filter=group1_filter,
-                        group2_filter=group2_filter
-                    ):
-                        yield message_data
-                        # Accumulate report content
-                        if '"type": "chunk"' in message_data:
-                            import json
-                            try:
-                                msg_json = json.loads(message_data.split("data: ")[1])
-                                full_report += msg_json.get("content", "")
-                            except:
-                                pass
-
-                    # Store in session
-                    session.add_message("assistant", full_report)
-
-                except Exception as e:
-                    print(f"❌ Custom analysis error: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    yield sse("error", f"Custom analysis error: {str(e)}")
-                    return
-
-                yield sse("done", "")
-
-            else:
-                yield sse("error", f"Unknown action type: {decision.action}")
+            yield sse("done", "")
 
         except Exception as e:
             print(f"❌ Chat endpoint error: {e}")

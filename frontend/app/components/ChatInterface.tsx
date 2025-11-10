@@ -82,24 +82,65 @@ export default function ChatInterface({ gameName, tagLine }: ChatInterfaceProps)
           const data = JSON.parse(event.data);
 
           switch (data.type) {
+            // Status messages
             case 'thinking':
             case 'routing':
             case 'planning':
             case 'executing':
-              // Show status updates
-              setStreamingMessage(data.content);
+              setStreamingMessage(`_${data.content}_`);
               break;
 
+            // Routing system messages
+            case 'routing_start':
+              setStreamingMessage(`_Analyzing: ${data.query}_`);
+              break;
+
+            case 'routing_method':
+              const method = data.method === 'rule' ? 'Rule-based' : 'AI-powered';
+              setStreamingMessage(`_${method} routing (confidence: ${Math.round(data.confidence * 100)}%)_`);
+              break;
+
+            case 'routing_decision':
+              if (data.subagent) {
+                setStreamingMessage(`_Calling ${data.subagent} agent..._`);
+              }
+              break;
+
+            case 'agent_start':
+              setStreamingMessage(`_Starting ${data.agent} analysis..._`);
+              break;
+
+            // Thinking process
+            case 'thinking_start':
+              setStreamingMessage('_Thinking..._');
+              break;
+
+            case 'thinking':
+              setStreamingMessage(`_Thinking: ${data.content.substring(0, 100)}..._`);
+              break;
+
+            case 'thinking_end':
+              setStreamingMessage('_Generating response..._');
+              break;
+
+            // Progress updates
             case 'progress':
-              // Show progress updates
               setStreamingMessage(prev => prev + '\n' + data.content);
               break;
 
+            // Content chunks
             case 'report':
             case 'chunk':
-              // Accumulate response chunks
               fullResponse += data.content;
               setStreamingMessage(fullResponse);
+              break;
+
+            // Completion
+            case 'complete':
+              if (data.detailed) {
+                fullResponse = data.detailed;
+                setStreamingMessage(fullResponse);
+              }
               break;
 
             case 'done':
@@ -116,8 +157,9 @@ export default function ChatInterface({ gameName, tagLine }: ChatInterfaceProps)
               eventSource.close();
               break;
 
+            // Errors
             case 'error':
-              setStreamingMessage(`Error: ${data.content}`);
+              setStreamingMessage(`Error: ${data.content || data.error}`);
               setIsLoading(false);
               eventSource.close();
               break;
