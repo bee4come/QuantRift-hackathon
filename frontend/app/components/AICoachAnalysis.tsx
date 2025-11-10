@@ -1983,6 +1983,11 @@ export default function AICoachAnalysis({
           analysisData={selectedAgent.analysisData}
           selectedRankType={selectedAgent.selectedRankType}
           selectedTimeRange={selectedAgent.selectedTimeRange}
+          playerInfo={{
+            gameName: gameName,
+            tagLine: tagLine,
+            region: region
+          }}
         />
       )}
 

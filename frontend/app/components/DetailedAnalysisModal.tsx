@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ShinyText from './ui/ShinyText';
 import ClickSpark from './ui/ClickSpark';
+import ShareButton from './ShareButton';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { useModal } from '../context/ModalContext';
 
@@ -275,6 +276,11 @@ interface DetailedAnalysisModalProps {
   analysisData?: any;
   selectedRankType?: number | null;
   selectedTimeRange?: string;
+  playerInfo?: {
+    gameName: string;
+    tagLine: string;
+    region?: string;
+  };
 }
 
 export default function DetailedAnalysisModal({
@@ -286,7 +292,8 @@ export default function DetailedAnalysisModal({
   detailedReport,
   analysisData,
   selectedRankType,
-  selectedTimeRange
+  selectedTimeRange,
+  playerInfo
 }: DetailedAnalysisModalProps) {
   const colors = useAdaptiveColors();
   const { setIsModalOpen } = useModal();
@@ -381,20 +388,39 @@ export default function DetailedAnalysisModal({
                   )}
                 </div>
 
-                {/* Close Button */}
-                <button
-                  onClick={handleClose}
-                  className="absolute top-6 right-6 p-2 rounded-lg border transition-all backdrop-blur-sm hover:opacity-80"
-                  style={{
-                    backgroundColor: 'rgba(255, 69, 58, 0.15)',
-                    borderColor: 'rgba(255, 69, 58, 0.3)',
-                    color: '#FF453A',
-                    zIndex: 20
-                  }}
-                  title="Close"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                {/* Action Buttons */}
+                <div className="absolute top-6 right-6 flex items-center gap-2" style={{ zIndex: 20 }}>
+                  {/* Share Button */}
+                  {playerInfo && agentId && (
+                    <div className="pointer-events-auto">
+                      <ShareButton
+                        agentType={agentId}
+                        agentName={agentName}
+                        reportContent={detailedReport}
+                        playerInfo={playerInfo}
+                        metadata={{
+                          total_games: analysisData?.summary?.total_games || analysisData?.metadata?.total_games,
+                          time_range: selectedTimeRange,
+                          model: 'sonnet'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Close Button */}
+                  <button
+                    onClick={handleClose}
+                    className="p-2 rounded-lg border transition-all backdrop-blur-sm hover:opacity-80 pointer-events-auto"
+                    style={{
+                      backgroundColor: 'rgba(255, 69, 58, 0.15)',
+                      borderColor: 'rgba(255, 69, 58, 0.3)',
+                      color: '#FF453A'
+                    }}
+                    title="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Content */}

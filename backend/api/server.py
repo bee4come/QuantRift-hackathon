@@ -4195,6 +4195,108 @@ async def get_player_summary_data(puuid: str, packs_dir: str) -> Dict[str, Any]:
         }
 
 
+# ============================================================================
+# Share API Endpoints
+# ============================================================================
+
+class ShareCreateRequest(BaseModel):
+    """Request model for creating a share"""
+    agent_type: str
+    gameName: str
+    tagLine: str
+    region: str = "na1"
+    report_content: str
+    total_games: Optional[int] = None
+    time_range: Optional[str] = None
+    model: str = "haiku"
+
+
+@app.post("/api/share/create")
+async def create_share(request: ShareCreateRequest):
+    """
+    Create shareable link for agent report
+
+    Args:
+        request: ShareCreateRequest with agent type, player info, and report content
+
+    Returns:
+        JSON with success status and share_id
+    """
+    try:
+        # Generate unique share ID (8 characters)
+        import uuid
+        share_id = str(uuid.uuid4())[:8]
+
+        # Prepare share data
+        share_data = {
+            "share_id": share_id,
+            "agent_type": request.agent_type,
+            "player": {
+                "gameName": request.gameName,
+                "tagLine": request.tagLine,
+                "region": request.region
+            },
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "report_content": request.report_content,
+            "metadata": {
+                "total_games": request.total_games,
+                "time_range": request.time_range,
+                "model": request.model
+            }
+        }
+
+        # Save to file
+        share_dir = Path("data/shared_reports")
+        share_dir.mkdir(parents=True, exist_ok=True)
+
+        share_file = share_dir / f"{share_id}.json"
+        with open(share_file, 'w', encoding='utf-8') as f:
+            json.dump(share_data, f, ensure_ascii=False, indent=2)
+
+        print(f"✅ Created share: {share_id} for {request.gameName}#{request.tagLine}")
+
+        return {"success": True, "share_id": share_id}
+
+    except Exception as e:
+        print(f"❌ Error creating share: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/share/{share_id}")
+async def get_share(share_id: str):
+    """
+    Get shared report content
+
+    Args:
+        share_id: Unique share identifier
+
+    Returns:
+        JSON with share data including report content and player info
+    """
+    try:
+        share_file = Path(f"data/shared_reports/{share_id}.json")
+
+        if not share_file.exists():
+            raise HTTPException(status_code=404, detail="Share not found")
+
+        with open(share_file, 'r', encoding='utf-8') as f:
+            share_data = json.load(f)
+
+        print(f"✅ Retrieved share: {share_id}")
+
+        return share_data
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error getting share: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Chat API Endpoint
+# ============================================================================
+
 @app.get("/v1/chat")
 async def chat_endpoint(
     message: str,
