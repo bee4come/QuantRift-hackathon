@@ -7,33 +7,28 @@
 
 ## 1.1 Multi-Agent Coaching Architecture
 
-QuantRift implements **18 specialized AI agents**, each focused on a specific coaching aspect:
+QuantRift implements **9 specialized AI agents**, each focused on a specific coaching aspect:
 
 ### Agent Categories
 
-**Performance Analysis (7 agents)**
-- **Weakness Analysis**: Identifies low-winrate champions (<45% WR, 5+ games) and weak roles
-- **Champion Mastery**: Analyzes expertise depth and champion-specific mechanics
-- **Progress Tracker**: Tracks performance trends and improvement over time
-- **Detailed Analysis**: Comprehensive per-patch, per-champion breakdown
-- **Peer Comparison**: Benchmarks against similar-ranked players
-- **Role Specialization**: Identifies role-specific performance gaps
-- **Timeline Deep Dive**: Frame-by-frame match analysis
+**Performance Analysis (3 agents)**
+- **Performance Insights**: Comprehensive analysis combining weakness detection, detailed breakdown, and progress tracking. Identifies low-winrate champions (<45% WR, 5+ games), weak roles, and performance trends over time
+- **Champion Mastery**: Analyzes expertise depth and champion-specific mechanics across all game modes
+- **Role Specialization**: Identifies role-specific performance gaps and specialization strengths
 
-**Meta & Adaptation (3 agents)**
-- **Champion Recommendation**: Suggests champions matching playstyle (with optional Thompson Sampling RL)
-- **Multi-Version**: Cross-patch trend analysis
-- **Version Comparison**: Coach card generation
+**Comparison & Benchmarking (1 agent)**
+- **Comparison Hub**: Unified comparison tool supporting both friend-to-friend comparisons and peer benchmarking against similar-ranked players
 
-**Tactical Coaching (4 agents)**
-- **Drafting Coach**: Ban/pick recommendations using counter matrix and power curves
-- **Build Simulator**: Item build optimization using statistical comparison
-- **Team Synergy**: Composition analysis
-- **Postgame Review**: Single-match quantitative diagnosis (rule-engine + optional LLM)
+**Temporal Analysis (2 agents)**
+- **Annual Summary**: Full-season review (40-50 patches) providing year-in-review performance highlights
+- **Version Trends**: Cross-patch trend analysis combining multi-version adaptation assessment and version-to-version comparison
 
-**Specialized Analysis (2 agents)**
-- **Annual Summary**: Full-season review (40-50 patches)
-- **Risk Forecaster**: Power curve prediction and risk assessment
+**Tactical Coaching (2 agents)**
+- **Build Simulator**: Item build optimization using statistical comparison of historical match data
+- **Match Analysis**: Deep dive into recent match timeline, combining frame-by-frame analysis with postgame quantitative diagnosis
+
+**Strategic Recommendations (1 agent)**
+- **Champion Recommendation**: Suggests champions matching playstyle with optional Thompson Sampling reinforcement learning
 
 ## 1.2 Standardized Player-Pack Data Format
 
@@ -840,62 +835,19 @@ export default function Page({ params }: ...) {
 
 ---
 
-# SECTION 5: SYSTEM ARCHITECTURE OVERVIEW
-
-## 5.1 Three-Tier Stack
-
-```
-Frontend (Next.js 15 + React 19)
-    ↓ (REST API calls + SSE streaming)
-Backend API (FastAPI + 18 Agents)
-    ├─ Agent Layer (specialized coaching agents)
-    ├─ Shared Services (insight_detector, cache, metrics)
-    └─ External APIs (Riot, OP.GG, Data Dragon)
-        ↓
-AWS Bedrock Runtime (Claude models)
-```
-
-## 5.2 Data Pipeline
-
-```
-Riot API (Raw match data)
-    ↓ (Bronze Layer)
-Player-Pack Generation
-    ↓ (Silver Layer)
-Statistical Metrics Calculation
-    ↓ (Gold Layer)
-Agent Consumption
-```
-
-## 5.3 Technologies
-
-**AI/ML**:
-- AWS Bedrock (Claude 3.5 Haiku, Claude 4.5 Sonnet)
-- Thompson Sampling (multi-armed bandit)
-- Wilson confidence intervals (robust statistics)
-
-**Backend**:
-- FastAPI, Uvicorn (async web framework)
-- boto3 (AWS SDK)
-- SQLite (caching), DuckDB (analytics)
-- NumPy, SciPy, Pandas (data processing)
-
-**Frontend**:
-- Next.js 15, React 19, TypeScript
-- Tailwind CSS, Framer Motion
-- Server-sent events (streaming)
-
----
-
 # CONCLUSION
 
-QuantRift demonstrates **production-grade AI-powered analytics** combining:
+This technical deep dive documents the implementation methodology behind QuantRift's AI-powered coaching platform. For high-level architecture, technology stack, and deployment information, refer to the [README.md](./README.md).
 
-1. **Specialized agents** (18 total) for different coaching aspects
-2. **Quantitative metrics** (20 statistical indicators) for data-driven decisions
-3. **AWS Bedrock integration** (Claude models) for LLM-powered insights
-4. **Automated preprocessing** (insight detection) to optimize costs
-5. **Real-time streaming** for responsive user experience
-6. **Multi-source data** integration with intelligent caching
+**Key Technical Innovations**:
+
+1. **9 specialized AI agents** with automated insight detection reducing LLM token costs by 60-70%
+2. **20 quantitative metrics** using Wilson confidence intervals for robust statistical analysis on small sample sizes
+3. **AWS Bedrock integration** with model selection strategy (Haiku for 80% of requests, Sonnet for complex synthesis)
+4. **Zero-LLM preprocessing** via InsightDetector identifying 9 insight categories before LLM processing
+5. **Real-time streaming** via Server-Sent Events for responsive user experience
+6. **Multi-source data integration** with intelligent caching and rate limit management
+
+The platform demonstrates production-grade implementation combining quantitative analysis, AI-powered insights, and scalable architecture to deliver actionable coaching feedback beyond traditional stat dashboards.
 
 The platform goes beyond traditional stat dashboards to provide **actionable, personalized coaching feedback** answering "why are you struggling?" and "what should you do differently?" powered by AI and quantitative analysis.
