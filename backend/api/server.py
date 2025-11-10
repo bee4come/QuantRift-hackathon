@@ -36,7 +36,7 @@ from src.combatpower.services.build_tracker import build_tracker
 from src.combatpower.custom_build_manager import custom_build_manager
 from services.player_data_manager import player_data_manager, DataStatus
 from services.opgg_mcp_service import opgg_mcp_service
-from services.report_cache import report_cache
+from services.report_cache import report_cache, cached_agent_stream
 import requests
 import os
 import time as time_module
@@ -803,19 +803,29 @@ async def weakness_analysis(request: AgentRequest):
 
             print(f"✅ Player data ready: {packs_dir}")
 
-            # Step 3: Create ADK agent instance
-            agent = WeaknessAnalysisAgent(model=request.model or "haiku")
-
-            # Step 4: Execute agent with streaming
+            # Step 3: Get parameters
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
-            print(f"🔍 Params: time_range={time_range}, queue_id={queue_id}, recent_count={request.recent_count or 5}")
+            recent_count = request.recent_count or 5
 
-            for message in agent.run_stream(
-                packs_dir=packs_dir,
-                recent_count=request.recent_count or 5,
+            print(f"🔍 Params: time_range={time_range}, queue_id={queue_id}, recent_count={recent_count}")
+
+            # Step 4: Execute with caching
+            agent = WeaknessAnalysisAgent(model=request.model or "haiku")
+
+            for message in cached_agent_stream(
+                agent_id='weakness-analysis',
+                agent_run_stream_func=lambda: agent.run_stream(
+                    packs_dir=packs_dir,
+                    recent_count=recent_count,
+                    time_range=time_range,
+                    queue_id=queue_id
+                ),
+                puuid=request.puuid,
+                packs_dir=Path(packs_dir),
                 time_range=time_range,
-                queue_id=queue_id
+                queue_id=queue_id,
+                recent_count=recent_count
             ):
                 yield message
 
@@ -2346,41 +2356,45 @@ async def performance_insights(request: AgentRequest):
                 yield f"data: {{\"error\": \"Player data not ready\"}}\n\n"
                 return
 
-            # Use Weakness Analysis tools (includes most complete analysis)
-            from src.agents.player_analysis.weakness_analysis.tools import (
-                load_recent_data, identify_weaknesses, format_analysis_for_prompt
-            )
-            from src.agents.player_analysis.weakness_analysis.prompts import build_narrative_prompt as build_weakness_prompt
-
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
-            print(f"🔍 [Performance Insights] Received time_range: {time_range}, queue_id: {queue_id}")
-            recent_data = load_recent_data(packs_dir, request.recent_count or 20, time_range=time_range, queue_id=queue_id)
-            
-            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
-            print(f"📊 Loaded {len(recent_data)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
-            
-            # Check if no data found for the selected filters
-            if len(recent_data) == 0:
-                if queue_id == 400:
-                    error_msg = "No Normal game data found. Please play some Normal games first."
-                elif queue_id == 440:
-                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
-                elif queue_id == 420:
-                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "past-365":
-                    error_msg = "No data found for Past 365 Days"
-                else:
-                    error_msg = "No data found"
-                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
-                return
-            
-            weaknesses = identify_weaknesses(recent_data)
-            formatted = format_analysis_for_prompt(weaknesses)
-            prompts = build_weakness_prompt(weaknesses, formatted)
+            recent_count = request.recent_count or 20
 
-            # Enhance prompt to include strengths, weaknesses, growth trends
-            enhanced_prompt = prompts['user'] + """
+            print(f"🔍 [Performance Insights] time_range: {time_range}, queue_id: {queue_id}, recent_count: {recent_count}")
+
+            # Define the analysis generation function
+            def generate_analysis():
+                from src.agents.player_analysis.weakness_analysis.tools import (
+                    load_recent_data, identify_weaknesses, format_analysis_for_prompt
+                )
+                from src.agents.player_analysis.weakness_analysis.prompts import build_narrative_prompt as build_weakness_prompt
+
+                recent_data = load_recent_data(packs_dir, recent_count, time_range=time_range, queue_id=queue_id)
+
+                queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
+                print(f"📊 Loaded {len(recent_data)} patches (time_range: {time_range}, queue: {queue_name})")
+
+                # Check if no data found
+                if len(recent_data) == 0:
+                    if queue_id == 400:
+                        error_msg = "No Normal game data found. Please play some Normal games first."
+                    elif queue_id == 440:
+                        error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
+                    elif queue_id == 420:
+                        error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
+                    elif time_range == "past-365":
+                        error_msg = "No data found for Past 365 Days"
+                    else:
+                        error_msg = "No data found"
+                    yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                    return
+
+                weaknesses = identify_weaknesses(recent_data)
+                formatted = format_analysis_for_prompt(weaknesses)
+                prompts = build_weakness_prompt(weaknesses, formatted)
+
+                # Enhance prompt
+                enhanced_prompt = prompts['user'] + """
 
 Please include the following sections in your analysis:
 1. 💪 **Strength Analysis** - Areas where the player performs best
@@ -2389,12 +2403,24 @@ Please include the following sections in your analysis:
 
 Ensure the analysis is comprehensive and actionable."""
 
-            for message in stream_agent_with_thinking(
-                prompt=enhanced_prompt,
-                system_prompt=prompts['system'],
-                model="haiku",  # Force use of Haiku 4.5
-                max_tokens=8000,  # Reduced for faster response
-                enable_thinking=False  # Disabled for speed
+                for message in stream_agent_with_thinking(
+                    prompt=enhanced_prompt,
+                    system_prompt=prompts['system'],
+                    model="haiku",
+                    max_tokens=8000,
+                    enable_thinking=False
+                ):
+                    yield message
+
+            # Execute with caching
+            for message in cached_agent_stream(
+                agent_id='performance-insights',
+                agent_run_stream_func=generate_analysis,
+                puuid=request.puuid,
+                packs_dir=Path(packs_dir),
+                time_range=time_range,
+                queue_id=queue_id,
+                recent_count=recent_count
             ):
                 yield message
 

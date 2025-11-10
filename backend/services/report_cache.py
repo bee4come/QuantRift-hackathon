@@ -308,3 +308,60 @@ class ReportCache:
 
 # Global cache instance
 report_cache = ReportCache()
+
+
+# Streaming cache wrapper helper
+def cached_agent_stream(agent_id: str, agent_run_stream_func, puuid: str, packs_dir: Path, **kwargs):
+    """
+    Wrapper for agent streaming with automatic caching
+
+    Args:
+        agent_id: Agent identifier
+        agent_run_stream_func: Agent's run_stream function
+        puuid: Player PUUID
+        packs_dir: Path to player packs
+        **kwargs: Parameters passed to agent (time_range, queue_id, etc.)
+
+    Yields:
+        SSE stream messages
+    """
+    import json
+
+    # Check cache
+    cached_report = report_cache.get(
+        puuid=puuid,
+        agent_id=agent_id,
+        packs_dir=packs_dir,
+        **kwargs
+    )
+
+    if cached_report:
+        print(f"💾 Cache HIT for {agent_id}")
+        # Stream cached report
+        yield f'data: {{"type": "chunk", "content": {json.dumps(cached_report["report_content"])}}}\n\n'
+        yield f'data: {{"type": "complete"}}\n\n'
+        return
+
+    print(f"❌ Cache MISS for {agent_id} - generating new report")
+
+    # Generate and cache new report
+    report_content = ""
+    for message in agent_run_stream_func():
+        # Extract content from SSE message
+        if '"type": "chunk"' in message:
+            try:
+                msg_data = json.loads(message.split("data: ")[1])
+                report_content += msg_data.get("content", "")
+            except:
+                pass
+        yield message
+
+    # Cache the generated report
+    if report_content:
+        report_cache.set(
+            puuid=puuid,
+            agent_id=agent_id,
+            packs_dir=packs_dir,
+            report_content=report_content,
+            **kwargs
+        )
