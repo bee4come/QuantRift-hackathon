@@ -401,7 +401,7 @@ export default function DetailedAnalysisModal({
                         metadata={{
                           total_games: analysisData?.summary?.total_games || analysisData?.metadata?.total_games,
                           time_range: selectedTimeRange,
-                          model: 'sonnet'
+                          model: 'haiku'
                         }}
                       />
                     </div>
