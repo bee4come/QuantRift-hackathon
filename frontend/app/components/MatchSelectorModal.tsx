@@ -126,8 +126,11 @@ export default function MatchSelectorModal({
                 {/* Close Button */}
                 <ClickSpark inline={true}>
                   <button
-                    onClick={onClose}
-                    className="p-2 rounded-lg border transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClose();
+                    }}
+                    className="p-2 rounded-lg border transition-all hover:opacity-80"
                     style={{
                       backgroundColor: 'rgba(255, 69, 58, 0.15)',
                       borderColor: 'rgba(255, 69, 58, 0.3)',
@@ -260,36 +263,20 @@ export default function MatchSelectorModal({
                     : 'Select a match to analyze its timeline'}
                 </p>
 
-                <div className="flex gap-3">
-                  <ClickSpark>
-                    <button
-                      onClick={onClose}
-                      className="px-6 py-2.5 rounded-lg border font-medium transition-all"
-                      style={{
-                        backgroundColor: 'rgba(142, 142, 147, 0.15)',
-                        borderColor: 'rgba(142, 142, 147, 0.3)',
-                        color: '#8E8E93'
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </ClickSpark>
-
-                  <ClickSpark>
-                    <button
-                      onClick={handleConfirm}
-                      disabled={!selectedMatch}
-                      className="px-6 py-2.5 rounded-lg border font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                      style={{
-                        backgroundColor: 'rgba(10, 132, 255, 0.2)',
-                        borderColor: 'rgba(10, 132, 255, 0.4)',
-                        color: '#5AC8FA'
-                      }}
-                    >
-                      <ShinyText text="Analyze Timeline →" speed={2} />
-                    </button>
-                  </ClickSpark>
-                </div>
+                <ClickSpark>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={!selectedMatch}
+                    className="px-6 py-2.5 rounded-lg border font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      backgroundColor: 'rgba(10, 132, 255, 0.2)',
+                      borderColor: 'rgba(10, 132, 255, 0.4)',
+                      color: '#5AC8FA'
+                    }}
+                  >
+                    <ShinyText text="Analyze" speed={2} />
+                  </button>
+                </ClickSpark>
               </div>
             </div>
           </motion.div>
