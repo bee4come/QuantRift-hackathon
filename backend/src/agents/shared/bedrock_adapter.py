@@ -70,7 +70,7 @@ class BedrockLLM:
 
     def __init__(
         self,
-        model: str = "sonnet",
+        model: str = "haiku",
         region: str = None,
         read_timeout: int = 600,
         connect_timeout: int = 60,

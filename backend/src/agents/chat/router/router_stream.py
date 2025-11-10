@@ -127,8 +127,22 @@ class RouterStreamGenerator:
                 return
 
             elif routing_result.action == 'custom_analysis':
-                # Custom analysis (future implementation)
-                yield f"data: {json.dumps({'type': 'complete', 'detailed': 'Custom comparative analysis is under development. Please use specific agent queries for now.'})}\n\n"
+                # Custom analysis - Router executes with AI capability
+                yield f"data: {json.dumps({'type': 'thinking', 'content': 'Analyzing custom query with AI...'})}\n\n"
+
+                # Execute custom analysis using ChatMasterAgent's AI capability
+                from ..chat_master_agent import ChatMasterAgent
+                master_agent = ChatMasterAgent(model=model)
+
+                analysis_result = master_agent.execute_custom_analysis(
+                    user_message=user_message,
+                    player_data=player_data or {},
+                    packs_dir=str(packs_dir)
+                )
+
+                # Stream the result
+                yield f"data: {json.dumps({'type': 'chunk', 'content': analysis_result})}\n\n"
+                yield f"data: {json.dumps({'type': 'complete'})}\n\n"
                 return
 
             elif routing_result.action == 'call_subagent':

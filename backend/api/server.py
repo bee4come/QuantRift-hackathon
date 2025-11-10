@@ -971,9 +971,20 @@ async def annual_summary(request: AgentRequest):
                 yield f"data: {{\"type\": \"analysis\", \"data\": {json.dumps(analysis, ensure_ascii=False)}}}\n\n"
                 print(f"✅ Sent analysis data for frontend widgets")
 
-            # Step 5: Create ADK agent and stream report
+            # Step 5: Create ADK agent and stream report with caching
             agent = AnnualSummaryAgent(model=request.model or "haiku")
-            for message in agent.run_stream(packs_dir, time_range, queue_id):
+            for message in cached_agent_stream(
+                agent_id='annual-summary',
+                agent_run_stream_func=lambda: agent.run_stream(
+                    packs_dir=packs_dir,
+                    time_range=time_range,
+                    queue_id=queue_id
+                ),
+                puuid=request.puuid,
+                packs_dir=Path(packs_dir),
+                time_range=time_range,
+                queue_id=queue_id
+            ):
                 yield message
 
         except Exception as e:
@@ -1497,15 +1508,22 @@ async def champion_recommendation(request: AgentRequest):
 
             print(f"✅ Player data ready: {packs_dir}")
 
-            # Step 3: Create ADK agent instance
-            agent = ChampionRecommendationAgent(model=request.model or "haiku")
-
-            # Step 4: Execute agent with streaming
+            # Step 3: Get params
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
+            print(f"🔍 [Champion Recommendation] Params: time_range={time_range}, queue_id={queue_id}")
 
-            for message in agent.run_stream(
-                packs_dir=packs_dir,
+            # Step 4: Create ADK agent and stream with caching
+            agent = ChampionRecommendationAgent(model=request.model or "haiku")
+            for message in cached_agent_stream(
+                agent_id='champion-recommendation',
+                agent_run_stream_func=lambda: agent.run_stream(
+                    packs_dir=packs_dir,
+                    time_range=time_range,
+                    queue_id=queue_id
+                ),
+                puuid=request.puuid,
+                packs_dir=Path(packs_dir),
                 time_range=time_range,
                 queue_id=queue_id
             ):
@@ -1551,12 +1569,19 @@ async def multi_version_comparison(request: AgentRequest):
             # Step 3: Create ADK agent instance
             agent = MultiVersionAgent(model=request.model or "haiku")
 
-            # Step 4: Execute agent with streaming
+            # Step 4: Execute agent with streaming and caching
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
 
-            for message in agent.run_stream(
-                packs_dir=packs_dir,
+            for message in cached_agent_stream(
+                agent_id='multi-version',
+                agent_run_stream_func=lambda: agent.run_stream(
+                    packs_dir=packs_dir,
+                    time_range=time_range,
+                    queue_id=queue_id
+                ),
+                puuid=request.puuid,
+                packs_dir=Path(packs_dir),
                 time_range=time_range,
                 queue_id=queue_id
             ):
@@ -2321,8 +2346,15 @@ async def version_trends(request: AgentRequest):
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
 
-            for message in agent.run_stream(
-                packs_dir=packs_dir,
+            for message in cached_agent_stream(
+                agent_id='version-trends',
+                agent_run_stream_func=lambda: agent.run_stream(
+                    packs_dir=packs_dir,
+                    time_range=time_range,
+                    queue_id=queue_id
+                ),
+                puuid=request.puuid,
+                packs_dir=Path(packs_dir),
                 time_range=time_range,
                 queue_id=queue_id
             ):
@@ -4025,20 +4057,42 @@ async def execute_agent(agent_id: str, packs_dir: str, puuid: str, region: str, 
         from src.agents.player_analysis.weakness_analysis.agent import WeaknessAnalysisAgent
 
         agent = WeaknessAnalysisAgent(model="haiku")
-        for message in agent.run_stream(packs_dir, recent_count, time_range, queue_id):
+        for message in cached_agent_stream(
+            agent_id='weakness-analysis',
+            agent_run_stream_func=lambda: agent.run_stream(packs_dir, recent_count, time_range, queue_id),
+            puuid=puuid,
+            packs_dir=Path(packs_dir),
+            recent_count=recent_count,
+            time_range=time_range,
+            queue_id=queue_id
+        ):
             yield message
 
     elif agent_id == "annual-summary":
         from src.agents.player_analysis.annual_summary.agent import AnnualSummaryAgent
 
         agent = AnnualSummaryAgent(model="haiku")
-        for message in agent.run_stream(packs_dir, time_range, queue_id):
+        for message in cached_agent_stream(
+            agent_id='annual-summary',
+            agent_run_stream_func=lambda: agent.run_stream(packs_dir, time_range, queue_id),
+            puuid=puuid,
+            packs_dir=Path(packs_dir),
+            time_range=time_range,
+            queue_id=queue_id
+        ):
             yield message
 
     elif agent_id == "champion-recommendation":
         from src.agents.player_analysis.champion_recommendation.agent import ChampionRecommendationAgent
         agent = ChampionRecommendationAgent(model="haiku")
-        for message in agent.run_stream(packs_dir, time_range, queue_id):
+        for message in cached_agent_stream(
+            agent_id='champion-recommendation',
+            agent_run_stream_func=lambda: agent.run_stream(packs_dir, time_range, queue_id),
+            puuid=puuid,
+            packs_dir=Path(packs_dir),
+            time_range=time_range,
+            queue_id=queue_id
+        ):
             yield message
 
     elif agent_id == "role-specialization":
@@ -4049,7 +4103,16 @@ async def execute_agent(agent_id: str, packs_dir: str, puuid: str, region: str, 
 
         from src.agents.player_analysis.role_specialization.agent import RoleSpecializationAgent
         agent = RoleSpecializationAgent(model="haiku")
-        for message in agent.run_stream(packs_dir, role.upper(), recent_count, time_range, queue_id):
+        for message in cached_agent_stream(
+            agent_id='role-specialization',
+            agent_run_stream_func=lambda: agent.run_stream(packs_dir, role.upper(), recent_count, time_range, queue_id),
+            puuid=puuid,
+            packs_dir=Path(packs_dir),
+            role=role.upper(),
+            recent_count=recent_count,
+            time_range=time_range,
+            queue_id=queue_id
+        ):
             yield message
 
     elif agent_id == "champion-mastery":
@@ -4060,7 +4123,16 @@ async def execute_agent(agent_id: str, packs_dir: str, puuid: str, region: str, 
 
         from src.agents.player_analysis.champion_mastery.agent import ChampionMasteryAgent
         agent = ChampionMasteryAgent(model="haiku")
-        for message in agent.run_stream(packs_dir, int(champion_id), recent_count, time_range, queue_id):
+        for message in cached_agent_stream(
+            agent_id='champion-mastery',
+            agent_run_stream_func=lambda: agent.run_stream(packs_dir, int(champion_id), recent_count, time_range, queue_id),
+            puuid=puuid,
+            packs_dir=Path(packs_dir),
+            champion_id=int(champion_id),
+            recent_count=recent_count,
+            time_range=time_range,
+            queue_id=queue_id
+        ):
             yield message
 
     elif agent_id == "timeline-deep-dive":
@@ -4071,13 +4143,29 @@ async def execute_agent(agent_id: str, packs_dir: str, puuid: str, region: str, 
 
         from src.agents.player_analysis.timeline_deep_dive.agent import TimelineDeepDiveAgent
         agent = TimelineDeepDiveAgent(model="haiku")
-        for message in agent.run_stream(packs_dir, match_id, recent_count, time_range, queue_id):
+        for message in cached_agent_stream(
+            agent_id='timeline-deep-dive',
+            agent_run_stream_func=lambda: agent.run_stream(packs_dir, match_id, recent_count, time_range, queue_id),
+            puuid=puuid,
+            packs_dir=Path(packs_dir),
+            match_id=match_id,
+            recent_count=recent_count,
+            time_range=time_range,
+            queue_id=queue_id
+        ):
             yield message
 
     elif agent_id == "version-trends":
         from src.agents.player_analysis.multi_version.agent import MultiVersionAgent
         agent = MultiVersionAgent(model="haiku")
-        for message in agent.run_stream(packs_dir, time_range, queue_id):
+        for message in cached_agent_stream(
+            agent_id='version-trends',
+            agent_run_stream_func=lambda: agent.run_stream(packs_dir, time_range, queue_id),
+            puuid=puuid,
+            packs_dir=Path(packs_dir),
+            time_range=time_range,
+            queue_id=queue_id
+        ):
             yield message
 
     elif agent_id == "friend-comparison":
@@ -4112,8 +4200,20 @@ async def execute_agent(agent_id: str, packs_dir: str, puuid: str, region: str, 
         from services.riot_client import get_summoner_name_by_puuid
         player_name = f"Player#{region}"  # Fallback
 
-        for message in agent.run_stream(
-            packs_dir=packs_dir,
+        for message in cached_agent_stream(
+            agent_id='friend-comparison',
+            agent_run_stream_func=lambda: agent.run_stream(
+                packs_dir=packs_dir,
+                friend_packs_dir=friend_packs_dir,
+                player_name=player_name,
+                friend_name=friend_name,
+                recent_count=recent_count,
+                time_range=time_range,
+                queue_id=queue_id
+            ),
+            puuid=puuid,
+            packs_dir=Path(packs_dir),
+            friend_puuid=friend_puuid,
             friend_packs_dir=friend_packs_dir,
             player_name=player_name,
             friend_name=friend_name,
@@ -4135,8 +4235,20 @@ async def execute_agent(agent_id: str, packs_dir: str, puuid: str, region: str, 
 
         from src.agents.player_analysis.build_simulator.agent import BuildSimulatorAgent
         agent = BuildSimulatorAgent(model_id="haiku")
-        for message in agent.run_stream(
-            packs_dir=packs_dir,
+        for message in cached_agent_stream(
+            agent_id='build-simulator',
+            agent_run_stream_func=lambda: agent.run_stream(
+                packs_dir=packs_dir,
+                champion_id=int(champion_id),
+                build_a=build_a,
+                build_b=build_b,
+                role=role,
+                recent_count=recent_count,
+                time_range=time_range,
+                queue_id=queue_id
+            ),
+            puuid=puuid,
+            packs_dir=Path(packs_dir),
             champion_id=int(champion_id),
             build_a=build_a,
             build_b=build_b,

@@ -184,7 +184,7 @@ class RoleSpecializationAgent:
             yield message
 
 
-def create_role_specialization_agent(model: str = "sonnet") -> RoleSpecializationAgent:
+def create_role_specialization_agent(model: str = "haiku") -> RoleSpecializationAgent:
     """
     Factory function: Create Role Specialization Analysis Agent
 

@@ -184,7 +184,7 @@ class ChampionMasteryAgent:
             yield message
 
 
-def create_champion_mastery_agent(model: str = "sonnet") -> ChampionMasteryAgent:
+def create_champion_mastery_agent(model: str = "haiku") -> ChampionMasteryAgent:
     """
     Factory function: Create Champion Mastery Analysis Agent
 

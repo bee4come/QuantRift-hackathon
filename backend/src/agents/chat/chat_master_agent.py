@@ -16,9 +16,9 @@ from src.agents.chat.router.schema import METRICS_DICTIONARY
 ANALYSIS_SUBAGENTS = {
     "weakness-analysis": {
         "name": "Performance Insights",
-        "description": "Identifies weaknesses, low winrate champions, and improvement areas across recent matches",
+        "description": "Analyzes overall performance, identifies strengths and weaknesses, recent trends, and improvement areas. Use for general performance queries like 'how am I doing', 'analyze my performance', 'recent performance'",
         "params": {},
-        "keywords": ["weakness", "problem", "improve", "bad performance", "what's wrong", "弱点", "问题", "提升"]
+        "keywords": ["weakness", "problem", "improve", "bad performance", "what's wrong", "analyze", "performance", "recent", "how am I", "怎么样", "弱点", "问题", "提升", "表现", "分析"]
     },
 
     "annual-summary": {
@@ -179,6 +179,165 @@ class ChatMasterAgent:
 
         return decision
 
+    def execute_custom_analysis(
+        self,
+        user_message: str,
+        player_data: Dict[str, Any],
+        packs_dir: str
+    ) -> str:
+        """
+        Execute custom analysis using LLM with direct data access
+
+        This method gives the router AI capability to handle non-standard queries
+        that don't fit into existing specialized agents.
+
+        Args:
+            user_message: User's query
+            player_data: Player statistics and context
+            packs_dir: Path to player pack data
+
+        Returns:
+            Analysis result as markdown text
+        """
+        from pathlib import Path
+        import json
+
+        # Load available pack data
+        packs_path = Path(packs_dir)
+        available_packs = []
+        pack_data_summary = {}
+
+        if packs_path.exists():
+            pack_files = sorted(packs_path.glob("pack_*.json"))
+
+            for pack_file in pack_files:
+                try:
+                    with open(pack_file, 'r') as f:
+                        pack_data = json.load(f)
+
+                        # Extract pack info
+                        patch = pack_data.get('patch', 'unknown')
+                        queue_id = pack_data.get('queue_id', 420)
+                        total_games = pack_data.get('total_games', 0)
+                        by_cr = pack_data.get('by_cr', [])
+
+                        pack_info = {
+                            'file': pack_file.name,
+                            'patch': patch,
+                            'queue_id': queue_id,
+                            'total_games': total_games,
+                            'champion_role_count': len(by_cr),
+                            'date_range': f"{pack_data.get('earliest_match_date', 'N/A')} to {pack_data.get('latest_match_date', 'N/A')}"
+                        }
+
+                        # Sample data for context (first 3 champion+role entries)
+                        if by_cr and len(by_cr) > 0:
+                            pack_info['sample_entries'] = [
+                                {
+                                    'champ_id': entry.get('champ_id'),
+                                    'role': entry.get('role'),
+                                    'games': entry.get('games'),
+                                    'wins': entry.get('wins'),
+                                    'p_hat': entry.get('p_hat'),
+                                    'kda_adj': entry.get('kda_adj'),
+                                    'governance_tag': entry.get('governance_tag')
+                                }
+                                for entry in by_cr[:3]
+                            ]
+
+                        available_packs.append(pack_info)
+                        pack_data_summary[patch] = pack_data  # Store full data for reference
+
+                except Exception as e:
+                    print(f"Error loading {pack_file}: {e}")
+                    continue
+
+        # Load schema documentation
+        schema_path = Path(__file__).parent / "PLAYER_PACK_SCHEMA.md"
+        schema_doc = ""
+        if schema_path.exists():
+            with open(schema_path, 'r') as f:
+                schema_doc = f.read()
+
+        # Build comprehensive analysis prompt
+        prompt = f"""You are an AI analyst for a League of Legends analytics system with direct data access.
+
+# USER QUERY
+{user_message}
+
+# PLAYER CONTEXT
+- Total games: {player_data.get('total_games', 'unknown')}
+- Patches played: {', '.join(player_data.get('patches', []))}
+- Date range: {player_data.get('earliest_date', 'N/A')} to {player_data.get('latest_date', 'N/A')}
+
+# AVAILABLE DATA PACKS
+You have access to {len(available_packs)} pack files with detailed statistics:
+
+{json.dumps(available_packs, indent=2, ensure_ascii=False)}
+
+# DATA SCHEMA & STRUCTURE
+
+{schema_doc}
+
+# YOUR TASK
+
+Analyze the user's query using the available pack data. You have complete information about:
+1. **Data structure**: Each pack contains `by_cr` array with champion+role stats
+2. **Key metrics**: p_hat (winrate), kda_adj, cp_25 (combat power), obj_rate, etc.
+3. **Data quality**: governance_tag (CONFIDENT/CAUTION/CONTEXT)
+4. **Temporal data**: Multiple patches available for trend analysis
+5. **Comparison capability**: Can compare across patches, champions, roles
+
+## Analysis Guidelines
+
+1. **Identify the comparison type** from user query:
+   - Time period comparison? (patch A vs patch B)
+   - Champion comparison? (champion X vs champion Y)
+   - Role comparison? (TOP vs MID)
+   - Performance tier comparison? (best champions vs worst)
+
+2. **Access the data mentally**:
+   - Reference specific patches in available_packs
+   - Mention specific champion+role combinations
+   - Use actual metrics (winrate, KDA, combat power)
+   - Note sample sizes and governance tags
+
+3. **Provide insights**:
+   - Calculate or estimate differences
+   - Identify trends or patterns
+   - Highlight statistically significant changes (large sample + big difference)
+   - Note data quality concerns (CAUTION/CONTEXT tags)
+
+4. **Be specific and actionable**:
+   - Use numbers from the data
+   - Explain WHY differences exist (if known)
+   - Suggest next steps or deeper analysis
+   - Recommend specialized agents for detailed reports
+
+5. **Acknowledge limitations**:
+   - If sample size is small, say so
+   - If data is missing, explain what's available instead
+   - If query is too complex, suggest breaking it down
+
+## Output Format
+- Use markdown formatting
+- Start with a brief summary (2-3 sentences)
+- Provide structured analysis with headers
+- Include specific data points and numbers
+- End with actionable recommendations
+- Keep under 600 words
+
+Generate your analysis now:"""
+
+        # Generate analysis
+        result = self.llm.generate_sync(
+            prompt=prompt,
+            max_tokens=3000,
+            temperature=0.5
+        )
+
+        return result["text"]
+
     def _build_decision_prompt(
         self,
         user_message: str,
@@ -287,14 +446,16 @@ If a user asks about data not covered by these metrics, explain what's available
 
 **Rules**:
 1. **Always prefer existing sub-agents over custom analysis** - custom_analysis is only for comparative queries
-2. Extract parameters from user message when possible (e.g., "top lane" → role=TOP)
-3. If user says "analyze" without context, look at conversation history
-4. For simple data questions, use answer_directly with player_data
-5. **custom_analysis decision criteria**:
+2. **Be proactive - default to call_subagent for analysis requests** - only use ask_user if truly ambiguous
+3. Extract parameters from user message when possible (e.g., "top lane" → role=TOP)
+4. **For general performance queries without specific focus, use weakness-analysis** (e.g., "how am I doing", "analyze me", "recent performance", "玩得怎么样")
+5. If user says "analyze" without context, look at conversation history
+6. For simple data questions, use answer_directly with player_data
+7. **custom_analysis decision criteria**:
    - User explicitly mentions "compare", "vs", "versus"
    - Query involves TWO distinct groups (time periods, roles, champion sets)
    - No existing sub-agent can handle the comparison
-6. Be concise and helpful
+8. Be concise and helpful
 
 **Important Parameter Extraction**:
 - Role: top/jungle/mid/adc/support/bot → TOP/JUNGLE/MID/ADC/SUPPORT
@@ -336,18 +497,29 @@ User: "Recommend some champions for me" (or "推荐几个适合我的英雄")
 }}
 ```
 
-Example 4 - Need Clarification:
-User: "Analyze my performance" (or "分析一下我的表现")
+Example 4 - General Performance Query:
+User: "Analyze my performance" or "How am I doing" or "我玩得怎么样" or "最近表现如何"
 ```json
 {{
-  "action": "ask_user",
-  "content": "I can analyze your performance from multiple perspectives. What would you like to focus on?",
-  "options": ["Overall weakness analysis", "Specific role performance", "Champion mastery", "Season summary"],
-  "reason": "Query too broad, need clarification"
+  "action": "call_subagent",
+  "subagent_id": "weakness-analysis",
+  "params": {{}},
+  "reason": "General performance query - use weakness-analysis for overall assessment"
 }}
 ```
 
-Example 5 - Comparative Analysis:
+Example 5 - Needs Clarification (truly ambiguous):
+User: "analyze" (no context, no history)
+```json
+{{
+  "action": "ask_user",
+  "content": "I can help analyze your performance. What would you like to know?",
+  "options": ["Overall performance and weaknesses", "Specific champion analysis", "Role-specific performance", "Season summary"],
+  "reason": "Single word query without context is truly ambiguous"
+}}
+```
+
+Example 6 - Comparative Analysis:
 User: "Compare my last 30 days vs previous 30 days" (or "对比我最近30天和之前30天的表现")
 ```json
 {{
@@ -356,7 +528,7 @@ User: "Compare my last 30 days vs previous 30 days" (or "对比我最近30天和
 }}
 ```
 
-Example 6 - Simple Data Question:
+Example 7 - Simple Data Question:
 User: "How many games have I played?" (or "我一共打了多少场比赛？")
 ```json
 {{

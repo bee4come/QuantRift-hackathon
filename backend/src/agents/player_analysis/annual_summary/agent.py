@@ -275,7 +275,7 @@ def main():
 
     # Output parameters
     parser.add_argument("--output-dir", default="output/annual_summary", help="Output directory")
-    parser.add_argument("--model", default="sonnet", choices=["sonnet", "haiku"], help="LLM model")
+    parser.add_argument("--model", default="haiku", choices=["sonnet", "haiku"], help="LLM model")
 
     args = parser.parse_args()
 

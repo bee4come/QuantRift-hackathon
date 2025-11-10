@@ -58,6 +58,10 @@ class RuleRouter:
                 r"(what\s*(is|are)?\s*wrong|哪里不好|哪里差)",
                 r"(need\s*to\s*improve|需要提升)",
                 r"(分析.*弱点|帮我.*分析)",
+                r"(analyze.*performance|recent.*performance|分析.*表现)",
+                r"(how.*doing|how.*play|表现.*如何|打得.*怎么样)",
+                r"(最近.*玩|最近.*表现|最近.*怎么样)",
+                r"(我.*玩.*怎么样|玩得.*怎么样)",
             ],
             "annual-summary": [
                 r"\b(season|annual|year|赛季|全年|年度|overall|总结|summary)\b",
@@ -77,7 +81,8 @@ class RuleRouter:
             ],
             "champion-mastery": [
                 r"\b(mastery|精通|掌握|专精|specific.*champion|某个英雄)\b",
-                r"(how.*with.*\w+|玩.*怎么样)",  # "How am I with Yasuo?"
+                r"(how.*with.*\w+)",  # "How am I with Yasuo?"
+                r"(玩.*[A-Z]\w+.*怎么样|[A-Z]\w+.*玩.*怎么样)",  # Must mention champion name (capitalized)
             ],
             "timeline-deep-dive": [
                 r"\b(match|game|对局|比赛|specific.*game|某场|replay|复盘)\b",
