@@ -1016,44 +1016,49 @@ async def champion_mastery(request: AgentRequest):
 
             print(f"✅ Player data ready: {packs_dir}")
 
-            # Load data and build prompt
-            from src.agents.player_analysis.champion_mastery.tools import (
-                generate_comprehensive_mastery_analysis,
-                format_analysis_for_prompt,
-                load_champion_data
-            )
-            from src.agents.player_analysis.champion_mastery.prompts import build_narrative_prompt
-
             time_range = getattr(request, 'time_range', None)
-            
-            # Check if data exists for the selected time range before generating analysis
-            champion_data = load_champion_data(packs_dir, request.champion_id, time_range=time_range)
-            if not champion_data:
-                if time_range == "past-365":
-                    error_msg = "No data found for Past 365 Days"
-                else:
-                    error_msg = f"No data found for champion_id {request.champion_id}"
-                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
-                return
-            
-            analysis = generate_comprehensive_mastery_analysis(
-                champion_id=request.champion_id,
-                packs_dir=packs_dir,
-                time_range=time_range
-            )
-            formatted_data = format_analysis_for_prompt(analysis)
-            prompts = build_narrative_prompt(analysis, formatted_data)
 
-            # Stream generation
-            model = "haiku"  # Force use of Haiku 4.5
-            print(f"🚀 Using model: {model} with extended thinking")
+            # Define analysis generation function
+            def generate_analysis():
+                from src.agents.player_analysis.champion_mastery.tools import (
+                    generate_comprehensive_mastery_analysis,
+                    format_analysis_for_prompt,
+                    load_champion_data
+                )
+                from src.agents.player_analysis.champion_mastery.prompts import build_narrative_prompt
 
-            for message in stream_agent_with_thinking(
-                prompt=prompts['user'],
-                system_prompt=prompts['system'],
-                model=model,
-                max_tokens=8000,  # Reduced for faster response
-                enable_thinking=False  # Disabled for speed
+                # Check if data exists
+                champion_data = load_champion_data(packs_dir, request.champion_id, time_range=time_range)
+                if not champion_data:
+                    error_msg = "No data found for Past 365 Days" if time_range == "past-365" else f"No data found for champion_id {request.champion_id}"
+                    yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                    return
+
+                analysis = generate_comprehensive_mastery_analysis(
+                    champion_id=request.champion_id,
+                    packs_dir=packs_dir,
+                    time_range=time_range
+                )
+                formatted_data = format_analysis_for_prompt(analysis)
+                prompts = build_narrative_prompt(analysis, formatted_data)
+
+                for message in stream_agent_with_thinking(
+                    prompt=prompts['user'],
+                    system_prompt=prompts['system'],
+                    model="haiku",
+                    max_tokens=8000,
+                    enable_thinking=False
+                ):
+                    yield message
+
+            # Execute with caching
+            for message in cached_agent_stream(
+                agent_id='champion-mastery',
+                agent_run_stream_func=generate_analysis,
+                puuid=request.puuid,
+                packs_dir=Path(packs_dir),
+                time_range=time_range,
+                champion_id=request.champion_id
             ):
                 yield message
 
