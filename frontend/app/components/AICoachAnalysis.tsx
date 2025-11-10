@@ -1926,6 +1926,48 @@ export default function AICoachAnalysis({
           />
         ))}
       </div>
+
+      {/* Chat Entry - Full Width */}
+      <div className="mt-8 flex justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="w-full max-w-4xl"
+        >
+          <a
+            href={`/chat?gameName=${encodeURIComponent(gameName)}&tagLine=${encodeURIComponent(tagLine)}`}
+            className="block fluid-glass-dark p-6 rounded-2xl border-2 border-white/10 hover:border-blue-500/50 transition-all group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl flex items-center justify-center" style={{
+                  backgroundColor: 'rgba(10, 132, 255, 0.2)',
+                  border: '2px solid rgba(10, 132, 255, 0.4)'
+                }}>
+                  <FileText className="w-8 h-8" style={{ color: '#5AC8FA' }} />
+                </div>
+                <div>
+                  <ShinyText
+                    text="💬 AI Chat Analysis"
+                    speed={3}
+                    className="text-2xl font-bold mb-1"
+                  />
+                  <p className="text-sm" style={{ color: '#8E8E93' }}>
+                    Chat with AI for custom analysis beyond predefined reports
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-blue-400 group-hover:translate-x-2 transition-transform">
+                <span className="text-sm font-medium">Start Chat</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </a>
+        </motion.div>
+      </div>
         </div>
       )}
 

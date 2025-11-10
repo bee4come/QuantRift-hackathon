@@ -12,7 +12,7 @@ from .prompts import build_narrative_prompt
 class ProgressTrackerAgent:
     """Progress Tracker Agent - Track player improvement trends over recent 10-20 patches"""
 
-    def __init__(self, model: str = "sonnet"):
+    def __init__(self, model: str = "haiku"):
         self.config = get_config()
         self.llm = BedrockLLM(model=model)
 

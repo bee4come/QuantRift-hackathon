@@ -12,7 +12,7 @@ from .prompts import build_narrative_prompt
 class FriendComparisonAgent:
     """Friend Comparison Agent - Compare two players directly"""
 
-    def __init__(self, model: str = "sonnet"):
+    def __init__(self, model: str = "haiku"):
         self.config = get_config()
         self.llm = BedrockLLM(model=model)
 
@@ -87,3 +87,51 @@ class FriendComparisonAgent:
             print(f"\n💾 Output saved to {output_dir}")
 
         return comparison, report_text
+
+    def run_stream(
+        self,
+        packs_dir: str,
+        friend_packs_dir: str,
+        player_name: str,
+        friend_name: str,
+        recent_count: int = 5,
+        time_range: Optional[str] = None,
+        queue_id: Optional[int] = None
+    ):
+        """
+        Run friend comparison analysis with SSE streaming output
+
+        Args:
+            packs_dir: Player's pack directory path
+            friend_packs_dir: Friend's pack directory path
+            player_name: Player's display name
+            friend_name: Friend's display name
+            recent_count: Number of recent matches (unused, kept for interface consistency)
+            time_range: Time range filter (unused, kept for interface consistency)
+            queue_id: Queue ID filter (unused, kept for interface consistency)
+
+        Yields:
+            SSE formatted messages for streaming response
+        """
+        from src.agents.shared.stream_helper import stream_agent_with_thinking
+
+        # Load both players' data
+        player_data = load_player_data(packs_dir)
+        friend_data = load_player_data(friend_packs_dir)
+
+        # Compare two players
+        comparison = compare_two_players(player_data, friend_data, player_name, friend_name)
+
+        # Format for prompt
+        formatted_data = format_comparison_for_prompt(comparison, player_name, friend_name)
+        prompts = build_narrative_prompt(comparison, formatted_data, player_name, friend_name)
+
+        # Stream report generation
+        for message in stream_agent_with_thinking(
+            prompt=prompts["user"],
+            system_prompt=prompts["system"],
+            model=self.llm.model_id,
+            max_tokens=14000,
+            enable_thinking=False
+        ):
+            yield message

@@ -150,10 +150,9 @@ export default function PlayerProfileClient({ gameName, tagLine }: PlayerProfile
       
       if (storedTaskId) {
         setFetchTaskId(storedTaskId);
-        
-        // Check task status
-        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-        const response = await fetch(`${BACKEND_URL}/v1/player/fetch-status/${storedTaskId}`);
+
+        // Check task status via Next.js API route (avoids CORS)
+        const response = await fetch(`/api/player/fetch-status/${storedTaskId}`);
         
         if (response.ok) {
           const taskStatus = await response.json();

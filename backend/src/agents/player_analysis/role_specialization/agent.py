@@ -29,7 +29,7 @@ class RoleSpecializationAgent:
     - Champion pool expansion recommendations
     """
 
-    def __init__(self, model: str = "sonnet"):
+    def __init__(self, model: str = "haiku"):
         """
         Initialize Role Specialization Analysis Agent
 
@@ -136,6 +136,52 @@ class RoleSpecializationAgent:
             print(f"   - {report_file}")
 
         return analysis, report_text
+
+    def run_stream(
+        self,
+        packs_dir: str,
+        role: str,
+        recent_count: int = 5,
+        time_range: Optional[str] = None,
+        queue_id: Optional[int] = None
+    ):
+        """
+        Run role specialization analysis with SSE streaming output
+
+        Args:
+            packs_dir: Pack file directory path
+            role: Role (TOP/JUNGLE/MID/ADC/SUPPORT)
+            recent_count: Number of recent matches (unused, kept for interface consistency)
+            time_range: Time range filter (unused, kept for interface consistency)
+            queue_id: Queue ID filter (unused, kept for interface consistency)
+
+        Yields:
+            SSE formatted messages for streaming response
+        """
+        from src.agents.shared.stream_helper import stream_agent_with_thinking
+
+        # 1. Generate comprehensive analysis
+        analysis = generate_comprehensive_role_analysis(
+            role=role,
+            packs_dir=packs_dir,
+            all_packs_data=None
+        )
+
+        # 2. Format data
+        formatted_analysis = format_analysis_for_prompt(analysis)
+
+        # 3. Build prompts
+        prompts = build_narrative_prompt(analysis, formatted_analysis)
+
+        # 4. Stream report generation
+        for message in stream_agent_with_thinking(
+            prompt=prompts["user"],
+            system_prompt=prompts["system"],
+            model=self.llm.model_id,
+            max_tokens=16000,
+            enable_thinking=False
+        ):
+            yield message
 
 
 def create_role_specialization_agent(model: str = "sonnet") -> RoleSpecializationAgent:

@@ -27,7 +27,7 @@ class PostgameReviewAgent:
         model: LLM模型选择（"sonnet" 或 "haiku"）
     """
 
-    def __init__(self, use_llm: bool = False, model: str = "sonnet"):
+    def __init__(self, use_llm: bool = False, model: str = "haiku"):
         self.config = get_config()
         self.engine = PostgameReviewEngine()
         self.use_llm = use_llm

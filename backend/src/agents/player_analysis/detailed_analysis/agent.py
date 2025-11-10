@@ -15,7 +15,7 @@ from .detailed_analyzer import DetailedAnalyzer as OriginalAnalyzer
 class DetailedAnalysisAgent:
     """Detailed Analysis Agent Wrapper"""
 
-    def __init__(self, model: str = "sonnet"):
+    def __init__(self, model: str = "haiku"):
         self.model_name = model
         self.analyzer = None
 

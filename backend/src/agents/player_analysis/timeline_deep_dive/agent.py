@@ -371,6 +371,94 @@ Your analysis:
 
         return response.get("text", "Report generation failed")
 
+    def run_stream(
+        self,
+        packs_dir: str,
+        match_id: str,
+        recent_count: int = 5,
+        time_range: Optional[str] = None,
+        queue_id: Optional[int] = None
+    ):
+        """
+        Run timeline deep dive analysis with SSE streaming output
+
+        Args:
+            packs_dir: Pack file directory path
+            match_id: Match ID to analyze
+            recent_count: Number of recent matches (unused, kept for interface consistency)
+            time_range: Time range filter (unused, kept for interface consistency)
+            queue_id: Queue ID filter (unused, kept for interface consistency)
+
+        Yields:
+            SSE formatted messages for streaming response
+        """
+        from src.agents.shared.stream_helper import stream_agent_with_thinking
+
+        # Load timeline files
+        timeline_files = self._load_timeline_files(packs_dir, match_id=match_id)
+
+        if not timeline_files:
+            # No timeline data found - return error
+            error_msg = f"No timeline data found for match {match_id}"
+            yield f"data: {{\"type\": \"error\", \"content\": \"{error_msg}\"}}\n\n"
+            return
+
+        # Analyze laning phase
+        laning_results = self._analyze_laning_phase(timeline_files, target_puuid=None)
+
+        # Aggregate results
+        aggregated_data = self._aggregate_results(laning_results)
+
+        # Build prompt for LLM
+        compressed_samples = []
+        for timeline_data in timeline_files[:2]:
+            for participant_id in range(1, 3):
+                compressed = self.timeline_compressor.compress_timeline(timeline_data, participant_id)
+                compressed_text = self.timeline_compressor.format_for_llm(compressed)
+                compressed_samples.append(compressed_text)
+
+        compressed_timeline_text = "\n\n".join(compressed_samples)
+
+        prompt = f"""Based on the following Timeline deep analysis data, generate a professional player performance insight report.
+
+Summary Statistics:
+- Matches analyzed: {aggregated_data.get('total_matches_analyzed', 0)}
+- Average CS efficiency: {aggregated_data.get('laning_phase_summary', {}).get('avg_cs_efficiency', 0):.1%}
+- Average CS/min: {aggregated_data.get('laning_phase_summary', {}).get('avg_cs_per_min', 0)}
+- Average KD: {aggregated_data.get('laning_phase_summary', {}).get('avg_kd_ratio', 0)}
+- Grade distribution: {aggregated_data.get('laning_phase_summary', {}).get('grade_distribution', {})}
+
+Compressed Timeline Sample Data (token-optimized):
+```
+{compressed_timeline_text}
+```
+
+Please generate a report with the following sections:
+
+1. **Laning Phase Performance Overview** (3-5 sentences)
+2. **Core Issues Identified** (2-3 most critical problems)
+3. **Actionable Improvement Recommendations** (3-5 specific suggestions)
+4. **Training Plan Suggestions** (2-3 specific practice directions)
+
+Output in Markdown format, use emojis for readability."""
+
+        system_prompt = """You are a League of Legends senior analyst, skilled at extracting deep insights from Timeline data.
+Your analysis:
+1. Data-driven and objective
+2. Provides actionable recommendations, not generic advice
+3. Concise professional language with clear priorities
+4. Uses emojis for enhanced readability"""
+
+        # Stream report generation
+        for message in stream_agent_with_thinking(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            model=self.llm.model_id,
+            max_tokens=4000,
+            enable_thinking=False
+        ):
+            yield message
+
 
 def main():
     """Test Timeline Deep Dive Agent"""

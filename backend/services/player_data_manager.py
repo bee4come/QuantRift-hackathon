@@ -1230,10 +1230,8 @@ class PlayerDataManager:
                 ...
             ]
         """
-        print(f"🔍 [get_best_champions] Called with limit={limit}, time_range={time_range}, queue_id={queue_id}")
         player_dir = self.cache_dir / puuid
         if not player_dir.exists():
-            print(f"⚠️  [get_best_champions] Player dir does not exist: {player_dir}")
             return []
 
         try:
@@ -1251,9 +1249,8 @@ class PlayerDataManager:
                 pack_pattern = f"pack_*_{queue_id}.json"
             else:
                 pack_pattern = "pack_*.json"
-            
+
             pack_files = sorted(player_dir.glob(pack_pattern))
-            print(f"🔍 [get_best_champions] Found {len(pack_files)} pack files with pattern {pack_pattern}")
 
             # 聚合所有pack文件中的champion数据
             champion_stats = defaultdict(lambda: {
@@ -1262,12 +1259,10 @@ class PlayerDataManager:
                 "total_kda": 0.0
             })
 
-            print(f"🔍 [get_best_champions] Starting to iterate {len(pack_files)} pack files...")
+            # Read all pack files (removed verbose logging for performance)
             for pack_file in pack_files:
-                print(f"         Reading {pack_file.name}...")
                 with open(pack_file, 'r', encoding='utf-8') as f:
                     pack = json.load(f)
-                print(f"         Loaded {pack_file.name}, queue_id={pack.get('queue_id')}")
 
                 # Verify queue_id matches if specified
                 if queue_id is not None:
@@ -1332,13 +1327,10 @@ class PlayerDataManager:
                                 if pack_timestamp >= cutoff_timestamp:
                                     has_match_in_range = True
 
-                print(f"         After time filter: has_match_in_range={has_match_in_range}, cutoff_timestamp={cutoff_timestamp}")
                 if not has_match_in_range:
-                    print(f"         ❌ Pack {pack_file.name} skipped (has_match_in_range={has_match_in_range})")
                     continue
 
                 by_cr_data = pack.get("by_cr", [])
-                print(f"         Pack {pack_file.name}: {len(by_cr_data)} by_cr entries")
 
                 for cr in by_cr_data:
                     champ_id = cr.get("champ_id")

@@ -124,6 +124,62 @@ class MultiVersionAgent:
 
         return analysis, report
 
+    def run_stream(
+        self,
+        packs_dir: str,
+        time_range: Optional[str] = None,
+        queue_id: Optional[int] = None
+    ):
+        """
+        Run multi-version analysis with SSE streaming output
+
+        Unified method for both agent card and chat interfaces
+
+        Args:
+            packs_dir: Player-Pack directory path
+            time_range: Time range filter (e.g., "2024-01-01", "past-365", None)
+            queue_id: Queue ID filter (420=Solo/Duo, 440=Flex, 400=Normal, None=All)
+
+        Yields:
+            SSE formatted messages for streaming
+        """
+        from src.agents.shared.stream_helper import stream_agent_with_thinking
+
+        # Load all packs with filters
+        all_packs = load_all_packs(packs_dir, time_range=time_range, queue_id=queue_id)
+
+        # Check if no data found
+        if not all_packs or len(all_packs) == 0:
+            yield f"data: {{\"error\": \"No version data found\"}}\n\n"
+            return
+
+        # Analyze trends
+        trends = analyze_trends(all_packs)
+
+        # Identify key transitions
+        transitions = identify_key_transitions(trends)
+
+        # Generate comprehensive analysis
+        analysis = generate_comprehensive_analysis(trends, transitions)
+
+        # Build prompt (note: build_multi_version_prompt returns a single user prompt)
+        user_prompt = build_multi_version_prompt(analysis)
+
+        # Create a simple system prompt for multi-version analysis
+        system_prompt = """You are a senior League of Legends data analyst and coach.
+Generate professional cross-patch adaptation analysis reports based on player performance data across multiple game versions.
+Focus on data-driven insights, highlight key points, and provide actionable recommendations."""
+
+        # Stream response
+        for message in stream_agent_with_thinking(
+            prompt=user_prompt,
+            system_prompt=system_prompt,
+            model=self.llm.model_id,
+            max_tokens=8000,
+            enable_thinking=False
+        ):
+            yield message
+
 
 def main():
     """Command-line entry point"""

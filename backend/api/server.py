@@ -783,18 +783,18 @@ class AgentResponse(BaseModel):
 
 @app.post("/v1/agents/weakness-analysis")
 async def weakness_analysis(request: AgentRequest):
-    """Weakness Diagnosis - Weakness diagnosis analysis (SSE Stream output, supports extended thinking + model switching)"""
+    """Weakness Diagnosis - ADK-compliant agent endpoint with SSE streaming"""
     from fastapi.responses import StreamingResponse
-    from src.agents.shared.stream_helper import stream_agent_with_thinking
+    from src.agents.player_analysis.weakness_analysis.agent import WeaknessAnalysisAgent
 
     async def generate_stream():
         try:
-            print(f"\n{'='*60}\n🎯 Weakness Analysis Stream (Model: {request.model or 'haiku'})\n{'='*60}")
+            print(f"\n{'='*60}\n🎯 Weakness Analysis (ADK) - Model: {request.model or 'haiku'}\n{'='*60}")
 
-            # Step 0: Wait for data preparation to complete
+            # Step 1: Wait for data preparation
             await player_data_manager.wait_for_data(puuid=request.puuid, timeout=120)
 
-            # Get packs directory
+            # Step 2: Get packs directory
             packs_dir = player_data_manager.get_packs_dir(request.puuid)
             if not packs_dir:
                 yield f"data: {{\"error\": \"Player data not ready\"}}\n\n"
@@ -802,59 +802,19 @@ async def weakness_analysis(request: AgentRequest):
 
             print(f"✅ Player data ready: {packs_dir}")
 
-            # Step 1: Load data and build prompt
-            from src.agents.player_analysis.weakness_analysis.tools import (
-                load_recent_data,
-                identify_weaknesses,
-                format_analysis_for_prompt
-            )
-            from src.agents.player_analysis.weakness_analysis.prompts import build_narrative_prompt
-            from src.agents.shared.insight_detector import InsightDetector
+            # Step 3: Create ADK agent instance
+            agent = WeaknessAnalysisAgent(model=request.model or "haiku")
 
+            # Step 4: Execute agent with streaming
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
-            print(f"🔍 [Weakness Analysis] Received time_range: {time_range}, queue_id: {queue_id}")
-            recent_data = load_recent_data(packs_dir, request.recent_count or 5, time_range=time_range, queue_id=queue_id)
-            
-            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
-            print(f"📊 Loaded {len(recent_data)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
-            
-            # Check if no data found for the selected filters
-            if len(recent_data) == 0:
-                if queue_id == 400:
-                    error_msg = "No Normal game data found. Please play some Normal games first."
-                elif queue_id == 440:
-                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
-                elif queue_id == 420:
-                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "past-365":
-                    error_msg = "No data found for Past 365 Days"
-                else:
-                    error_msg = "No data found"
-                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
-                return
-            
-            weaknesses = identify_weaknesses(recent_data)
+            print(f"🔍 Params: time_range={time_range}, queue_id={queue_id}, recent_count={request.recent_count or 5}")
 
-            # Automated insight detection
-            insight_detector = InsightDetector()
-            insights = insight_detector.detect_insights(weaknesses)
-            weaknesses['automated_insights'] = [insight.to_dict() for insight in insights]
-            weaknesses['insight_summary'] = insight_detector.generate_summary(insights)
-
-            formatted_data = format_analysis_for_prompt(weaknesses)
-            prompts = build_narrative_prompt(weaknesses, formatted_data)
-
-            # Step 2: Use generic stream helper (supports model switching)
-            model = "haiku"  # Force use of Haiku 4.5
-            print(f"🚀 Using model: {model} with extended thinking")
-
-            for message in stream_agent_with_thinking(
-                prompt=prompts['user'],
-                system_prompt=prompts['system'],
-                model=model,
-                max_tokens=8000,  # Reduced for faster response
-                enable_thinking=False  # Disabled for speed
+            for message in agent.run_stream(
+                packs_dir=packs_dir,
+                recent_count=request.recent_count or 5,
+                time_range=time_range,
+                queue_id=queue_id
             ):
                 yield message
 
@@ -965,18 +925,21 @@ async def _extract_postgame_features(timeline_data: dict, target_puuid: str, mat
 
 @app.post("/v1/agents/annual-summary")
 async def annual_summary(request: AgentRequest):
-    """Annual Summary - Annual summary analysis (SSE Stream output, supports extended thinking + model switching)"""
+    """Annual Summary - ADK-compliant agent endpoint with SSE streaming"""
     from fastapi.responses import StreamingResponse
-    from src.agents.shared.stream_helper import stream_agent_with_thinking
+    from src.agents.player_analysis.annual_summary.agent import AnnualSummaryAgent
+    from src.agents.player_analysis.annual_summary.tools import (
+        load_all_annual_packs, generate_comprehensive_annual_analysis
+    )
 
     async def generate_stream():
         try:
-            print(f"\n{'='*60}\n📅 Annual Summary Stream (Model: {request.model or 'haiku'})\n{'='*60}")
+            print(f"\n{'='*60}\n📅 Annual Summary (ADK) - Model: {request.model or 'haiku'}\n{'='*60}")
 
-            # Step 0: Wait for data preparation to complete
+            # Step 1: Wait for data preparation
             await player_data_manager.wait_for_data(puuid=request.puuid, timeout=120)
 
-            # Get packs directory
+            # Step 2: Get packs directory
             packs_dir = player_data_manager.get_packs_dir(request.puuid)
             if not packs_dir:
                 yield f"data: {{\"error\": \"Player data not ready\"}}\n\n"
@@ -984,62 +947,22 @@ async def annual_summary(request: AgentRequest):
 
             print(f"✅ Player data ready: {packs_dir}")
 
-            # Step 1: Load player pack data and build prompt
-            from src.agents.player_analysis.annual_summary.tools import (
-                load_all_annual_packs,
-                format_analysis_for_prompt,
-                generate_comprehensive_annual_analysis
-            )
-            from src.agents.player_analysis.annual_summary.prompts import build_narrative_prompt
-
-            # Load packs with optional time range and queue_id filter
+            # Step 3: Get params
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
-            print(f"🔍 [Annual Summary] Received time_range parameter: {time_range}, queue_id: {queue_id}")
+            print(f"🔍 Params: time_range={time_range}, queue_id={queue_id}")
+
+            # Step 4: Load data and generate analysis for frontend widgets
             all_packs_dict = load_all_annual_packs(packs_dir, time_range=time_range, queue_id=queue_id)
+            if len(all_packs_dict) > 0:
+                analysis = generate_comprehensive_annual_analysis(all_packs_dict)
+                # Send analysis data for frontend widgets
+                yield f"data: {{\"type\": \"analysis\", \"data\": {json.dumps(analysis, ensure_ascii=False)}}}\n\n"
+                print(f"✅ Sent analysis data for frontend widgets")
 
-            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
-            print(f"📊 Loaded {len(all_packs_dict)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
-
-            # Check if no data found for the selected filters
-            if len(all_packs_dict) == 0:
-                if queue_id == 400:
-                    error_msg = "No Normal game data found. Please play some Normal games first."
-                elif queue_id == 440:
-                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
-                elif queue_id == 420:
-                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "past-365":
-                    error_msg = "No data found for Past 365 Days"
-                else:
-                    error_msg = "No data found"
-                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
-                return
-
-            analysis = generate_comprehensive_annual_analysis(all_packs_dict)
-            formatted_analysis = format_analysis_for_prompt(analysis)
-            prompts = build_narrative_prompt(analysis, formatted_analysis, time_range=time_range)
-            
-            # Log analysis summary for debugging
-            if analysis.get("summary"):
-                summary = analysis["summary"]
-                print(f"📊 [Annual Summary] Analysis summary: {summary.get('total_games', 0)} games, {summary.get('overall_winrate', 0):.1%} winrate, {summary.get('patches_covered', 0)} patches")
-
-            # Step 1.5: Send analysis data first (for frontend widgets)
-            yield f"data: {{\"type\": \"analysis\", \"data\": {json.dumps(analysis, ensure_ascii=False)}}}\n\n"
-            print(f"✅ Sent analysis data for frontend widgets")
-
-            # Step 2: Use generic stream helper (supports model switching)
-            model = "haiku"  # Force use of Haiku 4.5 for best speed
-            print(f"🚀 Using model: Haiku 4.5")
-
-            for message in stream_agent_with_thinking(
-                prompt=prompts['user'],
-                system_prompt=prompts['system'],
-                model=model,
-                max_tokens=8000,  # Reduced for faster response
-                enable_thinking=False  # Disabled for speed
-            ):
+            # Step 5: Create ADK agent and stream report
+            agent = AnnualSummaryAgent(model=request.model or "haiku")
+            for message in agent.run_stream(packs_dir, time_range, queue_id):
                 yield message
 
         except Exception as e:
@@ -1539,18 +1462,18 @@ async def role_specialization(request: AgentRequest):
 
 @app.post("/v1/agents/champion-recommendation")
 async def champion_recommendation(request: AgentRequest):
-    """Champion Recommendation - Champion recommendation (SSE Stream output, supports extended thinking + model switching)"""
+    """Champion Recommendation - ADK-compliant agent endpoint with SSE streaming"""
     from fastapi.responses import StreamingResponse
-    from src.agents.shared.stream_helper import stream_agent_with_thinking
+    from src.agents.player_analysis.champion_recommendation.agent import ChampionRecommendationAgent
 
     async def generate_stream():
         try:
-            print(f"\n{'='*60}\n🎯 Champion Recommendation Stream (Model: {request.model or 'haiku'})\n{'='*60}")
+            print(f"\n{'='*60}\n🎯 Champion Recommendation (ADK) - Model: {request.model or 'haiku'}\n{'='*60}")
 
-            # Step 0: Wait for data preparation to complete
+            # Step 1: Wait for data preparation
             await player_data_manager.wait_for_data(puuid=request.puuid, timeout=120)
 
-            # Get packs directory
+            # Step 2: Get packs directory
             packs_dir = player_data_manager.get_packs_dir(request.puuid)
             if not packs_dir:
                 yield f"data: {{\"error\": \"Player data not ready\"}}\n\n"
@@ -1558,48 +1481,17 @@ async def champion_recommendation(request: AgentRequest):
 
             print(f"✅ Player data ready: {packs_dir}")
 
-            # Step 1: Load player pack data and build prompt
-            from src.agents.player_analysis.champion_recommendation.tools import (
-                analyze_champion_pool,
-                generate_recommendations,
-                format_analysis_for_prompt
-            )
-            from src.agents.player_analysis.champion_recommendation.prompts import build_narrative_prompt
+            # Step 3: Create ADK agent instance
+            agent = ChampionRecommendationAgent(model=request.model or "haiku")
 
+            # Step 4: Execute agent with streaming
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
-            print(f"🔍 [Champion Recommendation] Received time_range: {time_range}, queue_id: {queue_id}")
-            champion_pool = analyze_champion_pool(packs_dir, time_range=time_range, queue_id=queue_id)
-            
-            # Check if no data found for the selected filters
-            if champion_pool.get("total_champions", 0) == 0 or len(champion_pool.get("core_champions", [])) == 0:
-                if queue_id == 400:
-                    error_msg = "No Normal game data found. Please play some Normal games first."
-                elif queue_id == 440:
-                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
-                elif queue_id == 420:
-                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "past-365":
-                    error_msg = "No data found for Past 365 Days"
-                else:
-                    error_msg = "No data found"
-                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
-                return
-            
-            recommendations = generate_recommendations(champion_pool)
-            formatted_data = format_analysis_for_prompt(champion_pool, recommendations)
-            prompts = build_narrative_prompt(champion_pool, recommendations, formatted_data)
 
-            # Step 2: Use generic stream helper (supports model switching)
-            model = "haiku"  # Force use of Haiku 4.5 for best speed
-            print(f"🚀 Using model: Haiku 4.5")
-
-            for message in stream_agent_with_thinking(
-                prompt=prompts['user'],
-                system_prompt=prompts['system'],
-                model=model,
-                max_tokens=8000,  # Reduced for faster response
-                enable_thinking=False  # Disabled for speed
+            for message in agent.run_stream(
+                packs_dir=packs_dir,
+                time_range=time_range,
+                queue_id=queue_id
             ):
                 yield message
 
@@ -1621,18 +1513,18 @@ async def champion_recommendation(request: AgentRequest):
 
 @app.post("/v1/agents/multi-version")
 async def multi_version_comparison(request: AgentRequest):
-    """Multi-Version Analysis - Cross-version performance trend analysis (SSE Stream output)"""
+    """Multi-Version Analysis - ADK-compliant agent endpoint with SSE streaming"""
     from fastapi.responses import StreamingResponse
-    from src.agents.shared.stream_helper import stream_agent_with_thinking
+    from src.agents.player_analysis.multi_version.agent import MultiVersionAgent
 
     async def generate_stream():
         try:
-            print(f"\n{'='*60}\n🎮 Multi-Version Analysis Stream (Model: {request.model or 'haiku'})\n{'='*60}")
+            print(f"\n{'='*60}\n🎮 Multi-Version Analysis (ADK) - Model: {request.model or 'haiku'}\n{'='*60}")
 
-            # Step 0: Wait for data preparation to complete
+            # Step 1: Wait for data preparation
             await player_data_manager.wait_for_data(puuid=request.puuid, timeout=120)
 
-            # Get packs directory
+            # Step 2: Get packs directory
             packs_dir = player_data_manager.get_packs_dir(request.puuid)
             if not packs_dir:
                 yield f"data: {{\"error\": \"Player data not ready\"}}\n\n"
@@ -1640,57 +1532,17 @@ async def multi_version_comparison(request: AgentRequest):
 
             print(f"✅ Player data ready: {packs_dir}")
 
-            # Step 1: Load player pack data and build prompt
-            from src.agents.player_analysis.multi_version.tools import (
-                load_all_packs,
-                analyze_trends,
-                identify_key_transitions,
-                generate_comprehensive_analysis
-            )
-            from src.agents.player_analysis.multi_version.prompts import build_multi_version_prompt
+            # Step 3: Create ADK agent instance
+            agent = MultiVersionAgent(model=request.model or "haiku")
 
-            # Load all patch data with optional time range and queue_id filter
+            # Step 4: Execute agent with streaming
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
-            print(f"🔍 [Multi-Version] Received time_range: {time_range}, queue_id: {queue_id}")
-            all_packs = load_all_packs(packs_dir, time_range=time_range, queue_id=queue_id)
-            
-            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
-            print(f"📊 Loaded {len(all_packs)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
-            
-            # Check if no data found
-            if len(all_packs) == 0:
-                if queue_id == 400:
-                    error_msg = "No Normal game data found. Please play some Normal games first."
-                elif queue_id == 440:
-                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
-                elif queue_id == 420:
-                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "past-365":
-                    error_msg = "No data found for Past 365 Days"
-                else:
-                    error_msg = "No data found"
-                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
-                return
 
-            # Analyze trends
-            trends = analyze_trends(all_packs)
-
-            # Identify key turning points
-            transitions = identify_key_transitions(trends)
-
-            # Generate comprehensive analysis
-            analysis = generate_comprehensive_analysis(trends, transitions)
-
-            # Build AI prompt
-            prompt = build_multi_version_prompt(analysis)
-            print(f"✅ Prompt constructed ({len(prompt)} chars)")
-
-            # Step 2: Stream generate AI analysis
-            for message in stream_agent_with_thinking(
-                prompt=prompt,
-                model="haiku",  # Force use of Haiku 4.5
-                enable_thinking=False  # Multi-version analysis does not show thinking
+            for message in agent.run_stream(
+                packs_dir=packs_dir,
+                time_range=time_range,
+                queue_id=queue_id
             ):
                 yield message
 
@@ -2427,59 +2279,36 @@ async def match_analysis(request: AgentRequest):
 
 @app.post("/v1/agents/version-trends")
 async def version_trends(request: AgentRequest):
-    """Version Trends - Version trend analysis (Multi-Version + Version Comparison merged) (SSE Stream output)"""
+    """Version Trends - ADK-compliant agent endpoint with SSE streaming"""
     from fastapi.responses import StreamingResponse
-    from src.agents.shared.stream_helper import stream_agent_with_thinking
+    from src.agents.player_analysis.multi_version.agent import MultiVersionAgent
 
     async def generate_stream():
         try:
-            print(f"\n{'='*60}\n📊 Version Trends Stream\n{'='*60}")
+            print(f"\n{'='*60}\n📊 Version Trends (ADK) - Model: {request.model or 'haiku'}\n{'='*60}")
 
+            # Step 1: Wait for data preparation
             await player_data_manager.wait_for_data(puuid=request.puuid, timeout=120)
+
+            # Step 2: Get packs directory
             packs_dir = player_data_manager.get_packs_dir(request.puuid)
             if not packs_dir:
                 yield f"data: {{\"error\": \"Player data not ready\"}}\n\n"
                 return
 
-            # Use Multi-Version complete analysis tools
-            from src.agents.player_analysis.multi_version.tools import (
-                load_all_packs, analyze_trends, identify_key_transitions, generate_comprehensive_analysis
-            )
-            from src.agents.player_analysis.multi_version.prompts import build_multi_version_prompt
+            print(f"✅ Player data ready: {packs_dir}")
 
-            # Load packs with optional time range and queue_id filter
+            # Step 3: Create ADK agent instance
+            agent = MultiVersionAgent(model=request.model or "haiku")
+
+            # Step 4: Execute agent with streaming
             time_range = getattr(request, 'time_range', None)
             queue_id = getattr(request, 'queue_id', None)
-            print(f"🔍 [Version Trends] Received time_range: {time_range}, queue_id: {queue_id}")
-            all_packs = load_all_packs(packs_dir, time_range=time_range, queue_id=queue_id)
-            queue_name = {420: "Solo/Duo", 440: "Flex", 400: "Normal"}.get(queue_id, "All") if queue_id else "All"
-            print(f"📊 Loaded {len(all_packs)} patches" + (f" (time_range: {time_range}, queue: {queue_name})" if time_range or queue_id else ""))
-            
-            # Check if no data found for the selected filters
-            if len(all_packs) == 0:
-                if queue_id == 400:
-                    error_msg = "No Normal game data found. Please play some Normal games first."
-                elif queue_id == 440:
-                    error_msg = "No Ranked Flex data found. Please play some Ranked Flex games first."
-                elif queue_id == 420:
-                    error_msg = "No Ranked Solo/Duo data found. Please play some Ranked Solo/Duo games first."
-                elif time_range == "past-365":
-                    error_msg = "No data found for Past 365 Days"
-                else:
-                    error_msg = "No data found"
-                yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
-                return
-            
-            trends = analyze_trends(all_packs)
-            transitions = identify_key_transitions(trends)
-            analysis = generate_comprehensive_analysis(trends, transitions)
 
-            prompt = build_multi_version_prompt(analysis)
-
-            for message in stream_agent_with_thinking(
-                prompt=prompt,
-                model="haiku",  # Force use of Haiku 4.5
-                enable_thinking=False
+            for message in agent.run_stream(
+                packs_dir=packs_dir,
+                time_range=time_range,
+                queue_id=queue_id
             ):
                 yield message
 
@@ -4128,6 +3957,435 @@ async def get_player_recent_matches(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting recent matches: {str(e)}")
+
+
+# ============================================================================
+# Chat Endpoint - SSE Streaming
+# ============================================================================
+
+from fastapi.responses import StreamingResponse
+from src.agents.chat.meta_chat_agent import MetaChatAgent
+
+
+async def execute_agent(agent_id: str, packs_dir: str, puuid: str, region: str, **params):
+    """
+    Execute a specific agent and yield SSE messages
+
+    Args:
+        agent_id: Agent identifier (e.g., "weakness-analysis", "annual-summary")
+        packs_dir: Path to player pack directory
+        puuid: Player PUUID
+        region: Player region
+        **params: Additional agent-specific parameters (role, champion_id, match_id, etc.)
+
+    Yields:
+        SSE formatted messages
+    """
+    from src.agents.shared.stream_helper import stream_agent_with_thinking
+
+    # Default parameters
+    recent_count = params.get('recent_count', 5)
+    time_range = params.get('time_range', None)
+    queue_id = params.get('queue_id', None)
+
+    # Agent-specific execution logic (unified interface)
+    if agent_id == "weakness-analysis":
+        from src.agents.player_analysis.weakness_analysis.agent import WeaknessAnalysisAgent
+
+        agent = WeaknessAnalysisAgent(model="haiku")
+        for message in agent.run_stream(packs_dir, recent_count, time_range, queue_id):
+            yield message
+
+    elif agent_id == "annual-summary":
+        from src.agents.player_analysis.annual_summary.agent import AnnualSummaryAgent
+
+        agent = AnnualSummaryAgent(model="haiku")
+        for message in agent.run_stream(packs_dir, time_range, queue_id):
+            yield message
+
+    elif agent_id == "champion-recommendation":
+        from src.agents.player_analysis.champion_recommendation.agent import ChampionRecommendationAgent
+        agent = ChampionRecommendationAgent(model="haiku")
+        for message in agent.run_stream(packs_dir, time_range, queue_id):
+            yield message
+
+    elif agent_id == "role-specialization":
+        role = params.get('role')
+        if not role:
+            yield f"data: {{\"error\": \"Role specialization requires a role parameter (TOP/JUNGLE/MID/ADC/SUPPORT).\"}}\n\n"
+            return
+
+        from src.agents.player_analysis.role_specialization.agent import RoleSpecializationAgent
+        agent = RoleSpecializationAgent(model="haiku")
+        for message in agent.run_stream(packs_dir, role.upper(), recent_count, time_range, queue_id):
+            yield message
+
+    elif agent_id == "champion-mastery":
+        champion_id = params.get('champion_id')
+        if not champion_id:
+            yield f"data: {{\"error\": \"Champion mastery requires a champion_id parameter.\"}}\n\n"
+            return
+
+        from src.agents.player_analysis.champion_mastery.agent import ChampionMasteryAgent
+        agent = ChampionMasteryAgent(model="haiku")
+        for message in agent.run_stream(packs_dir, int(champion_id), recent_count, time_range, queue_id):
+            yield message
+
+    elif agent_id == "timeline-deep-dive":
+        match_id = params.get('match_id')
+        if not match_id:
+            yield f"data: {{\"error\": \"Timeline analysis requires a match_id parameter.\"}}\n\n"
+            return
+
+        from src.agents.player_analysis.timeline_deep_dive.agent import TimelineDeepDiveAgent
+        agent = TimelineDeepDiveAgent(model="haiku")
+        for message in agent.run_stream(packs_dir, match_id, recent_count, time_range, queue_id):
+            yield message
+
+    elif agent_id == "version-trends":
+        from src.agents.player_analysis.multi_version.agent import MultiVersionAgent
+        agent = MultiVersionAgent(model="haiku")
+        for message in agent.run_stream(packs_dir, time_range, queue_id):
+            yield message
+
+    elif agent_id == "friend-comparison":
+        friend_name = params.get('friend_name')
+        if not friend_name:
+            yield f"data: {{\"error\": \"Friend comparison requires friend_name parameter (name#tag).\"}}\n\n"
+            return
+
+        # Parse friend name (format: "name#tag")
+        try:
+            friend_game_name, friend_tag = friend_name.split('#', 1)
+        except ValueError:
+            yield f"data: {{\"error\": \"Invalid friend name format. Expected format: name#tag\"}}\n\n"
+            return
+
+        # Get friend's PUUID and packs_dir
+        friend_account = await riot_client.get_account_by_riot_id(friend_game_name, friend_tag, region)
+        if not friend_account:
+            yield f"data: {{\"error\": \"Friend player {friend_name} not found\"}}\n\n"
+            return
+
+        friend_puuid = friend_account['puuid']
+        friend_packs_dir = player_data_manager.get_packs_dir(friend_puuid)
+        if not friend_packs_dir:
+            yield f"data: {{\"error\": \"Friend player data not available\"}}\n\n"
+            return
+
+        from src.agents.player_analysis.friend_comparison.agent import FriendComparisonAgent
+        agent = FriendComparisonAgent(model="haiku")
+
+        # Get current player name from PUUID
+        from services.riot_client import get_summoner_name_by_puuid
+        player_name = f"Player#{region}"  # Fallback
+
+        for message in agent.run_stream(
+            packs_dir=packs_dir,
+            friend_packs_dir=friend_packs_dir,
+            player_name=player_name,
+            friend_name=friend_name,
+            recent_count=recent_count,
+            time_range=time_range,
+            queue_id=queue_id
+        ):
+            yield message
+
+    elif agent_id == "build-simulator":
+        champion_id = params.get('champion_id')
+        if not champion_id:
+            yield f"data: {{\"error\": \"Build simulator requires champion_id parameter.\"}}\n\n"
+            return
+
+        build_a = params.get('build_a')
+        build_b = params.get('build_b')
+        role = params.get('role', 'TOP')
+
+        from src.agents.player_analysis.build_simulator.agent import BuildSimulatorAgent
+        agent = BuildSimulatorAgent(model_id="haiku")
+        for message in agent.run_stream(
+            packs_dir=packs_dir,
+            champion_id=int(champion_id),
+            build_a=build_a,
+            build_b=build_b,
+            role=role,
+            recent_count=recent_count,
+            time_range=time_range,
+            queue_id=queue_id
+        ):
+            yield message
+
+    else:
+        yield f"data: {{\"error\": \"Unknown agent: {agent_id}\"}}\n\n"
+
+
+async def get_player_summary_data(puuid: str, packs_dir: str) -> Dict[str, Any]:
+    """
+    Load player summary data for ChatMasterAgent context
+
+    Returns basic statistics needed for decision making:
+    - Total games
+    - Recent match count
+    - Patches played
+    - Recent match list (for match ID extraction)
+
+    Args:
+        puuid: Player PUUID
+        packs_dir: Path to player packs directory
+
+    Returns:
+        Dict with player context data
+    """
+    import os
+    import json
+    from pathlib import Path
+
+    try:
+        # Load all available pack files
+        packs_path = Path(packs_dir)
+        if not packs_path.exists():
+            return {
+                "total_games": 0,
+                "recent_match_count": 0,
+                "patches": [],
+                "recent_matches": []
+            }
+
+        pack_files = sorted(packs_path.glob("pack_*.json"))
+
+        total_games = 0
+        patches = []
+        all_matches = []
+
+        for pack_file in pack_files:
+            with open(pack_file, 'r') as f:
+                pack_data = json.load(f)
+
+            # Extract patch
+            patch = pack_file.stem.replace("pack_", "")
+            patches.append(patch)
+
+            # Count games
+            by_champion = pack_data.get("by_champion_role", {})
+            for champ_data in by_champion.values():
+                for role_data in champ_data.values():
+                    total_games += role_data.get("total_games", 0)
+
+        # Get recent match list from matches_data.json if available
+        matches_data_file = packs_path / "matches_data.json"
+        if matches_data_file.exists():
+            with open(matches_data_file, 'r') as f:
+                matches_data = json.load(f)
+                all_matches = matches_data.get("matches", [])[:20]  # Last 20 matches
+
+        return {
+            "total_games": total_games,
+            "recent_match_count": len(all_matches),
+            "patches": patches,
+            "recent_matches": all_matches  # List of match objects with match_id, champion, outcome, etc.
+        }
+
+    except Exception as e:
+        print(f"⚠️ Error loading player summary data: {e}")
+        return {
+            "total_games": 0,
+            "recent_match_count": 0,
+            "patches": [],
+            "recent_matches": []
+        }
+
+
+@app.get("/v1/chat")
+async def chat_endpoint(
+    message: str,
+    game_name: str,
+    tag_line: str,
+    session_id: Optional[str] = None,
+    region: str = "na1"
+):
+    """
+    SSE streaming chat endpoint with multi-turn conversation support
+
+    Workflow:
+    1. Get or create chat session
+    2. ChatMasterAgent decides action (answer, ask, call subagent, custom)
+    3. Execute action and stream response
+    4. Update session history
+
+    Query Parameters:
+        message: User's message
+        game_name: Player game name
+        tag_line: Player tag line
+        session_id: Optional session ID for conversation continuity
+        region: Player region (default: na1)
+    """
+    async def event_generator():
+        try:
+            # Format SSE message
+            def sse(event_type: str, content: str) -> str:
+                return f"data: {json.dumps({'type': event_type, 'content': content})}\n\n"
+
+            yield sse("thinking", "Processing your request...")
+
+            # Step 1: Get player PUUID
+            account = await riot_client.get_account_by_riot_id(game_name, tag_line, region)
+            if not account:
+                yield sse("error", f"Player {game_name}#{tag_line} not found")
+                return
+
+            puuid = account["puuid"]
+
+            # Step 2: Get or create session
+            from src.agents.chat.session_manager import get_session_manager
+
+            session_manager = get_session_manager()
+
+            if not session_id:
+                # Generate new session ID
+                import time
+                new_session_id = f"{game_name}_{tag_line}_{int(time.time())}"
+            else:
+                new_session_id = session_id
+
+            session = session_manager.get_or_create_session(
+                session_id=new_session_id,
+                puuid=puuid,
+                game_name=game_name,
+                tag_line=tag_line,
+                region=region
+            )
+
+            yield sse("routing", f"Session: {session.session_id[:8]}... (Turn {len(session.history) // 2 + 1})")
+
+            # Step 3: Wait for data preparation
+            yield sse("executing", "Preparing player data...")
+            await player_data_manager.wait_for_data(puuid=puuid, timeout=120)
+
+            packs_dir = player_data_manager.get_packs_dir(puuid)
+            if not packs_dir:
+                yield sse("error", "Player data not ready")
+                return
+
+            # Step 4: Load player data for context
+            player_data = await get_player_summary_data(puuid, packs_dir)
+
+            # Step 5: ChatMasterAgent decision
+            from src.agents.chat.chat_master_agent import ChatMasterAgent
+
+            chat_master = ChatMasterAgent(model="haiku")
+            decision = chat_master.process_message(
+                user_message=message,
+                session_history=session.get_history(),
+                player_data=player_data
+            )
+
+            # Add user message to session
+            session.add_message("user", message)
+
+            # Step 6: Execute decision
+            if decision.action == "answer_directly":
+                # Direct answer without calling sub-agent
+                session.add_message("assistant", decision.content)
+                yield sse("report", decision.content)
+                yield sse("done", "")
+
+            elif decision.action == "ask_user":
+                # Ask clarification question
+                session.add_message("assistant", decision.content)
+                yield sse("question", decision.content)
+                if decision.options:
+                    yield sse("options", json.dumps(decision.options))
+                yield sse("done", "")
+
+            elif decision.action == "call_subagent":
+                # Call analysis sub-agent
+                subagent_id = decision.subagent_id
+                params = decision.params or {}
+
+                schema = chat_master.get_subagent_schema(subagent_id)
+                if not schema:
+                    yield sse("error", f"Unknown sub-agent: {subagent_id}")
+                    return
+
+                agent_name = schema["name"]
+                yield sse("routing", f"Using {agent_name}...")
+
+                # Execute sub-agent with streaming
+                try:
+                    async for agent_message in execute_agent(subagent_id, packs_dir, puuid, region, **params):
+                        yield agent_message
+                except Exception as e:
+                    yield sse("error", f"Sub-agent execution error: {str(e)}")
+                    return
+
+                yield sse("done", "")
+
+            elif decision.action == "custom_analysis":
+                # Custom analysis using quantitative metrics
+                yield sse("planning", "📋 Parsing analysis request...")
+
+                try:
+                    from src.agents.chat.custom_analysis.agent import CustomAnalysisAgent
+                    from src.agents.chat.custom_analysis.query_parser import parse_query_with_llm
+                    from src.agents.shared.bedrock_adapter import BedrockLLM
+
+                    # Parse query into two GroupFilters
+                    parser_llm = BedrockLLM(model="haiku")
+                    group1_filter, group2_filter = parse_query_with_llm(message, parser_llm)
+
+                    yield sse("planning", f"✅ Comparing: {group1_filter.name} vs {group2_filter.name}")
+
+                    # Initialize custom analysis agent
+                    custom_agent = CustomAnalysisAgent(model="haiku")
+
+                    # Stream custom analysis
+                    full_report = ""
+                    for message_data in custom_agent.run_stream(
+                        user_query=message,
+                        packs_dir=packs_dir,
+                        group1_filter=group1_filter,
+                        group2_filter=group2_filter
+                    ):
+                        yield message_data
+                        # Accumulate report content
+                        if '"type": "chunk"' in message_data:
+                            import json
+                            try:
+                                msg_json = json.loads(message_data.split("data: ")[1])
+                                full_report += msg_json.get("content", "")
+                            except:
+                                pass
+
+                    # Store in session
+                    session.add_message("assistant", full_report)
+
+                except Exception as e:
+                    print(f"❌ Custom analysis error: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    yield sse("error", f"Custom analysis error: {str(e)}")
+                    return
+
+                yield sse("done", "")
+
+            else:
+                yield sse("error", f"Unknown action type: {decision.action}")
+
+        except Exception as e:
+            print(f"❌ Chat endpoint error: {e}")
+            import traceback
+            traceback.print_exc()
+            yield sse("error", f"Error: {str(e)}")
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 
 # ============================================================================

@@ -12,7 +12,7 @@ from .prompts import build_narrative_prompt
 class PeerComparisonAgent:
     """Peer Comparison Agent - Compare player vs same rank average"""
 
-    def __init__(self, model: str = "sonnet"):
+    def __init__(self, model: str = "haiku"):
         self.config = get_config()
         self.llm = BedrockLLM(model=model)
 

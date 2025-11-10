@@ -45,7 +45,7 @@ class AnnualSummaryAgent(DataAutoFetcher):
         3. Provide matches_dir (auto-convert to Pack format)
     """
 
-    def __init__(self, model: str = "sonnet", use_optimized_prompts: bool = True):
+    def __init__(self, model: str = "haiku", use_optimized_prompts: bool = True):
         """
         Initialize Annual Summary Agent
 
@@ -213,6 +213,49 @@ class AnnualSummaryAgent(DataAutoFetcher):
         with open(report_file, 'w', encoding='utf-8') as f:
             f.write(report)
         print(f"📄 Summary report saved: {report_file}")
+
+    def run_stream(
+        self,
+        packs_dir: str,
+        time_range: Optional[str] = None,
+        queue_id: Optional[int] = None
+    ):
+        """
+        Run annual summary analysis with SSE streaming output
+
+        Unified method for both agent card and chat interfaces
+
+        Args:
+            packs_dir: Player-Pack directory path
+            time_range: Time range filter (e.g., "2024-01-01", "past-365", None)
+            queue_id: Queue ID filter (420=Solo/Duo, 440=Flex, 400=Normal, None=All)
+
+        Yields:
+            SSE formatted messages for streaming
+        """
+        from src.agents.shared.stream_helper import stream_agent_with_thinking
+
+        # Load all annual packs
+        all_packs = load_all_annual_packs(packs_dir, time_range=time_range, queue_id=queue_id)
+
+        if not all_packs or len(all_packs.get('packs', {})) == 0:
+            yield f"data: {{\"error\": \"No annual data found\"}}\n\n"
+            return
+
+        # Generate comprehensive analysis
+        analysis = generate_comprehensive_annual_analysis(all_packs)
+        formatted = format_analysis_for_prompt(analysis)
+        prompts = build_narrative_prompt(analysis, formatted, time_range)
+
+        # Stream response
+        for message in stream_agent_with_thinking(
+            prompt=prompts['user'],
+            system_prompt=prompts['system'],
+            model=self.llm.model_id,
+            max_tokens=8000,
+            enable_thinking=False
+        ):
+            yield message
 
 
 def main():

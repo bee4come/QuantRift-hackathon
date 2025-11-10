@@ -1,9 +1,9 @@
 """
-Bedrock LLM Adapter for Google ADK
-将 AWS Bedrock boto3 客户端适配为 ADK 兼容的 LLM 接口
+Bedrock LLM Adapter for QuantRift ADK
+Adapts AWS Bedrock boto3 client to ADK-compatible LLM interface
 
-Phase 4 Day 4: 添加并行报告生成支持
-Option A Day 1: 集成结构化日志
+Phase 4 Day 4: Added parallel report generation support
+Option A Day 1: Integrated structured logging
 """
 
 import json
@@ -53,17 +53,19 @@ class BedrockModel:
 
 class BedrockLLM:
     """
-    ADK 兼容的 Bedrock LLM 适配器
+    ADK-compatible Bedrock LLM adapter
 
-    将 boto3 Bedrock Runtime 调用适配为 ADK Agent 可以使用的 LLM 接口。
-    支持 Claude Sonnet 4.5 和 Haiku 3.5 模型。
+    Adapts boto3 Bedrock Runtime calls to QuantRift ADK Agent interface.
+    Supports Claude Sonnet 4.5 and Haiku 4.5 models.
 
     Example:
-        >>> from google.adk.agents import Agent
-        >>> from shared.bedrock_adapter import BedrockLLM
+        >>> from src.agents.shared.bedrock_adapter import BedrockLLM
+        >>> from src.agents.player_analysis.weakness_analysis.agent import WeaknessAnalysisAgent
         >>>
-        >>> llm = BedrockLLM(model="sonnet")
-        >>> agent = Agent(model=llm, name="PlayerAnalyst")
+        >>> llm = BedrockLLM(model="haiku")
+        >>> agent = WeaknessAnalysisAgent(model="haiku")
+        >>> for chunk in agent.run_stream(packs_dir, recent_count=5):
+        ...     print(chunk, end="")
     """
 
     def __init__(

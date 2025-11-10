@@ -177,3 +177,72 @@ class BuildSimulatorAgent:
         print(f"\n💾 Output saved:")
         print(f"   - {analysis_file}")
         print(f"   - {report_file}")
+
+    def run_stream(
+        self,
+        packs_dir: str,
+        champion_id: int,
+        build_a: List[int] = None,
+        build_b: List[int] = None,
+        role: str = None,
+        recent_count: int = 5,
+        time_range: str = None,
+        queue_id: int = None
+    ):
+        """
+        Run build simulator analysis with SSE streaming output
+
+        Args:
+            packs_dir: Pack file directory path (unused, kept for interface consistency)
+            champion_id: Champion ID to analyze builds for
+            build_a: First build option (list of item IDs)
+            build_b: Second build option (list of item IDs)
+            role: Role (TOP/JUNGLE/MIDDLE/BOTTOM/UTILITY)
+            recent_count: Number of recent matches (unused, kept for interface consistency)
+            time_range: Time range filter (unused, kept for interface consistency)
+            queue_id: Queue ID filter (unused, kept for interface consistency)
+
+        Yields:
+            SSE formatted messages for streaming response
+        """
+        from src.agents.shared.stream_helper import stream_agent_with_thinking
+
+        # If no builds specified, use default popular builds for this champion
+        if not build_a or not build_b:
+            # Default: compare two popular build paths
+            # This could be enhanced to fetch from meta data
+            build_a = build_a or [3071, 3142, 3053]  # Example builds
+            build_b = build_b or [3078, 3074, 3053]
+
+        # If no role specified, use TOP as default
+        if not role:
+            role = "TOP"
+
+        # Compare builds
+        comparison_data = compare_build_options(
+            champion_id=champion_id,
+            role=role,
+            build_a=build_a,
+            build_b=build_b,
+            game_duration_min=None,
+            game_duration_max=None,
+            parquet_path=self.parquet_path,
+            min_samples=10
+        )
+
+        # Format for prompt
+        formatted_data = format_build_comparison_for_prompt(comparison_data)
+
+        user_prompt = USER_PROMPT_TEMPLATE.format(
+            comparison_data=formatted_data
+        )
+
+        # Stream report generation
+        for message in stream_agent_with_thinking(
+            prompt=user_prompt,
+            system_prompt=SYSTEM_PROMPT,
+            model=self.llm.model_id,
+            max_tokens=8000,
+            enable_thinking=False
+        ):
+            yield message

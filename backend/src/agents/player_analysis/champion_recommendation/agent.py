@@ -13,7 +13,7 @@ from .reinforcement_learning import create_default_recommender
 class ChampionRecommendationAgent:
     """Champion Recommendation Agent - Recommends new champions based on playstyle and meta (with Reinforcement Learning support)"""
 
-    def __init__(self, model: str = "sonnet", enable_rl: bool = False):
+    def __init__(self, model: str = "haiku", enable_rl: bool = False):
         self.config = get_config()
         self.llm = BedrockLLM(model=model)
         self.enable_rl = enable_rl
@@ -122,3 +122,58 @@ class ChampionRecommendationAgent:
             return None
 
         return self.rl_recommender.get_state_summary()
+
+    def run_stream(
+        self,
+        packs_dir: str,
+        time_range: Optional[str] = None,
+        queue_id: Optional[int] = None
+    ):
+        """
+        Run champion recommendation analysis with SSE streaming output
+
+        Unified method for both agent card and chat interfaces
+
+        Args:
+            packs_dir: Player-Pack directory path
+            time_range: Time range filter (e.g., "2024-01-01", "past-365", None)
+            queue_id: Queue ID filter (420=Solo/Duo, 440=Flex, 400=Normal, None=All)
+
+        Yields:
+            SSE formatted messages for streaming
+        """
+        from src.agents.shared.stream_helper import stream_agent_with_thinking
+
+        # Analyze champion pool
+        champion_pool = analyze_champion_pool(packs_dir, time_range=time_range, queue_id=queue_id)
+
+        # Check if no core champions found
+        if not champion_pool["core_champions"]:
+            yield f"data: {{\"error\": \"No core champions found. Play at least 20 games with a champion to get recommendations.\"}}\n\n"
+            return
+
+        # Generate recommendations
+        recommendations = generate_recommendations(champion_pool)
+
+        # Apply RL re-ranking if enabled
+        if self.enable_rl and self.rl_recommender and recommendations:
+            base_scores = {rec["champion_id"]: rec["综合评分"] for rec in recommendations}
+            recommendations = self.rl_recommender.rank_recommendations(
+                candidates=recommendations,
+                base_scores=base_scores,
+                bandit_weight=0.3
+            )
+
+        # Format data and build prompts
+        formatted_data = format_analysis_for_prompt(champion_pool, recommendations)
+        prompts = build_narrative_prompt(champion_pool, recommendations, formatted_data)
+
+        # Stream response
+        for message in stream_agent_with_thinking(
+            prompt=prompts['user'],
+            system_prompt=prompts['system'],
+            model=self.llm.model_id,
+            max_tokens=8000,
+            enable_thinking=False
+        ):
+            yield message
