@@ -48,3 +48,4 @@ backend/data/player_packs/
 backend/data/matches/
 backend/api/data/
 claudedocs/
+backend/data/report_cache

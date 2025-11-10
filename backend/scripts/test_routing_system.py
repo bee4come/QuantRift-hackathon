@@ -10,7 +10,7 @@ import os
 # Add backend to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.agents.router.hybrid_router import get_hybrid_router
+from src.agents.chat.router.hybrid_router import get_hybrid_router
 
 
 # Test queries covering different scenarios

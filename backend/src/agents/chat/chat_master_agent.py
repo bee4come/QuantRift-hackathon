@@ -9,7 +9,7 @@ import json
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from src.agents.shared.bedrock_adapter import BedrockLLM
-from src.agents.router.schema import METRICS_DICTIONARY
+from src.agents.chat.router.schema import METRICS_DICTIONARY
 
 
 # Sub-agent tool schemas

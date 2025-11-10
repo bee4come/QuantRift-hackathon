@@ -830,9 +830,9 @@ export default function AICoachAnalysis({
               return updatedAgentWithReport;
             } else {
               // Reset to idle if no report exists for this filter combination
-              const updatedAgentIdle = {
+              const updatedAgentIdle: AgentState = {
                 ...updatedAgent,
-                status: 'idle',
+                status: 'idle' as AgentStatus,
                 detailedReport: undefined,
                 analysisData: undefined,
                 error: undefined
@@ -891,9 +891,9 @@ export default function AICoachAnalysis({
               return updatedAgentWithReport;
             } else {
               // Reset to idle if no report exists for this filter combination
-              const updatedAgentIdle = {
+              const updatedAgentIdle: AgentState = {
                 ...updatedAgent,
-                status: 'idle',
+                status: 'idle' as AgentStatus,
                 detailedReport: undefined,
                 analysisData: undefined,
                 error: undefined

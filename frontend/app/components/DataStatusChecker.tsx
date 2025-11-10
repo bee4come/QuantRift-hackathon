@@ -12,9 +12,13 @@ interface DataStatus {
   has_data: boolean;
   total_patches: number;
   total_games: number;
+  total_past_season_games?: number;
+  total_past_365_days_games?: number;
   earliest_patch?: string;
   latest_patch?: string;
-  patches?: Array<{ patch: string; games: number }>;
+  earliest_match_date?: string;
+  latest_match_date?: string;
+  patches?: Array<{ patch: string; games: number; earliest_match_date?: string; latest_match_date?: string }>;
 }
 
 interface DataStatusCheckerProps {

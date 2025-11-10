@@ -307,7 +307,7 @@ export default function ShareButton({
                 </button>
 
                 {/* Native Share (Mobile) */}
-                {navigator.share && (
+                {typeof navigator !== 'undefined' && 'share' in navigator && (
                   <button
                     onClick={handleNativeShare}
                     className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:scale-[1.02]"

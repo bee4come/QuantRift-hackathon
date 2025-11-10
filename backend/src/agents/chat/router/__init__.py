@@ -7,6 +7,7 @@ Provides hybrid routing combining rule-based patterns and LLM intelligence.
 from .rule_router import RuleRouter, RuleMatch, get_rule_router
 from .hybrid_router import HybridRouter, HybridRoutingResult, get_hybrid_router
 from .schema import RouterDecision, AgentMetadata, VALID_PARAM_VALUES, METRICS_DICTIONARY
+from .router_stream import RouterStreamGenerator, stream_chat_with_routing
 
 __all__ = [
     "RuleRouter",
@@ -19,4 +20,6 @@ __all__ = [
     "AgentMetadata",
     "VALID_PARAM_VALUES",
     "METRICS_DICTIONARY",
+    "RouterStreamGenerator",
+    "stream_chat_with_routing",
 ]

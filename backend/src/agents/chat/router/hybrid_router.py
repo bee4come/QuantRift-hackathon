@@ -5,10 +5,12 @@ First attempts rule-based routing for speed and accuracy on known patterns.
 Falls back to LLM routing for complex or ambiguous queries.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from dataclasses import dataclass
 from .rule_router import RuleRouter, RuleMatch
-from src.agents.chat.chat_master_agent import ChatMasterAgent, AgentDecision
+
+if TYPE_CHECKING:
+    from ..chat_master_agent import ChatMasterAgent, AgentDecision
 
 
 @dataclass
@@ -46,6 +48,8 @@ class HybridRouter:
             rule_confidence_threshold: Minimum confidence to use rule routing
             llm_model: LLM model for ChatMasterAgent (haiku/sonnet)
         """
+        from ..chat_master_agent import ChatMasterAgent
+
         self.rule_router = RuleRouter()
         self.llm_router = ChatMasterAgent(model=llm_model)
         self.confidence_threshold = rule_confidence_threshold
