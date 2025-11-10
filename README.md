@@ -7,8 +7,9 @@
 
 </div>
 
----
-**QuantRift** is a comprehensive, production-ready analytics platform that provides deep insights into League of Legends player performance through quantitative analysis and AI-powered coaching agents.
+<h4 align="center">
+  Quantitative analysis and AI-powered coaching agents for League of Legends.
+</h4>
 
 ## 📑 Table of Contents
 
@@ -17,14 +18,7 @@
 - [🎯 Project Overview](#-project-overview)
   - [Key Features](#key-features)
 - [🚀 Quick Start](#-quick-start)
-- [📊 AI Module System](#-ai-module-system)
-  - [📈 Performance Analysis Modules](#-performance-analysis-modules)
-  - [🔄 Trend & Adaptation Modules](#-trend--adaptation-modules)
-  - [🎯 Champion & Role Modules](#-champion--role-modules)
-  - [⚙️ Optimization Modules](#️-optimization-modules)
-  - [🔍 Filter System](#-filter-system)
-    - [Filter Support by Agent](#filter-support-by-agent)
-    - [Available Filters](#available-filters)
+- [📊 AI Module System & Filter Support](#-ai-module-system--filter-support)
 - [🛠️ Technology Stack](#️-technology-stack)
   - [🎨 Frontend](#-frontend)
   - [⚙️ Backend](#️-backend)
@@ -32,6 +26,7 @@
     - [Bronze → Silver → Gold Pipeline](#bronze--silver--gold-pipeline)
   - [🌐 External Services](#-external-services)
   - [🚀 Deployment](#-deployment)
+- [📚 Technical Documentation](#-technical-documentation)
 - [🔮 Future Planning](#-future-planning)
 - [👥 Authors](#-authors)
 - [📄 License](#-license)
@@ -94,53 +89,35 @@ QuantRift combines rigorous statistical methods, extensive match data processing
 - Backend API: <http://localhost:8000>
 - API Docs: <http://localhost:8000/docs>
 
-## 📊 AI Module System
+## 📊 AI Module System & Filter Support
 
-QuantRift features **9 specialized AI modules** powered by AWS Bedrock (Claude 3.5 Haiku and Claude 4.5 Sonnet):
+QuantRift includes **9 specialized AI modules** (powered by AWS Bedrock, Claude 3.5 Haiku & Claude 4.5 Sonnet), each offering focused performance analysis. _Currently, all filterable analysis is limited to the **past 365 days** due to platform constraints._
 
-### 📈 Performance Analysis Modules
+| Module                        | Description                                                                              | Filter Support                |
+|-------------------------------|------------------------------------------------------------------------------------------|-------------------------------|
+| 📅 **Annual Summary**         | Year-in-review performance highlights, with tri-period analysis                          | Past 365 days                 |
+| 💡 **Performance Insights**   | Comprehensive strengths/weaknesses analysis and growth opportunities                     | _Requires meta_dir parameter_ |
+| 📊 **Comparison Hub**         | Compare your performance to friends or players of similar rank                           | Past 365 days                 |
+| 👥 **Friend Comparison**      | Head-to-head stats versus specific friends                                               | Past 365 days                 |
+| 🎮 **Match Analysis**         | Detailed review of a single match timeline and post-game                                 | None (single match analysis)  |
+| 📈 **Version Trends**         | Cross-patch performance analysis and adaptation tracking                                 | Past 365 days                 |
+| ⭐ **Champion Recommendation** | Personalized suggestions based on trends, meta, and your playstyle                       | Past 365 days                 |
+| 🎭 **Role Specialization**    | Role-specific performance insights and optimization                                     | Past 365 days                 |
+| 🏆 **Champion Mastery**       | Deep analysis of champion expertise and mechanical skill                                 | Past 365 days (all queues)    |
+| 🔧 **Build Simulator**        | Optimization of item builds and itemization strategies                                   | Past 365 days                 |
+| 📈 **Progress Tracker**       | Track development and progress over time with customizable metrics                       | Past 365 days                 |
 
-1. **📅 Annual Summary**: Year-in-review performance highlights with tri-period analysis
-2. **💡 Performance Insights**: Comprehensive analysis of strengths, weaknesses, and growth opportunities
-3. **📊 Comparison Hub**: Compare performance with friends or players of similar rank
-4. **🎮 Match Analysis**: Deep dive into recent match timeline and post-game review
+**Filter Details:**
 
-### 🔄 Trend & Adaptation Modules
+- **Time Range**: All AI modules that support filtering operate on match data from the **past 365 days**.
+- **Queue Type**: Where applicable, you can further filter by ranked queue type (Solo/Duo or Flex) or view all queues.
 
-1. **📈 Version Trends**: Cross-patch performance analysis and adaptation tracking
+These modules and current filter support help you get actionable, personal analysis focused on your 1-year League of Legends history.
 
-### 🎯 Champion & Role Modules
 
-1. **⭐ Champion Recommendation**: Personalized champion suggestions based on playstyle and meta
-2. **🎭 Role Specialization**: Role-specific performance insights and optimization
-3. **🏆 Champion Mastery**: Deep analysis of champion expertise and mechanics
+## 📚 Technical Documentation
 
-### ⚙️ Optimization Modules
-
-1. **🔧 Build Simulator**: Optimize item builds and itemization strategies
-
-### 🔍 Filter System
-
-All AI modules support flexible filtering to focus analysis on specific time periods and game modes:
-
-#### Filter Support by Agent
-
-- **📅 Annual Summary**: Supports time range and queue type filters
-- **💡 Performance Insights**: Not available (requires meta_dir parameter)
-- **📊 Comparison Hub**: Supports time range and queue type filters
-- **👥 Friend Comparison**: Supports time range and queue type filters
-- **🎮 Match Analysis**: No filters (analyzes single match)
-- **📈 Version Trends**: Supports time range and queue type filters
-- **⭐ Champion Recommendation**: Supports time range and queue type filters
-- **🎭 Role Specialization**: Supports time range and queue type filters
-- **🏆 Champion Mastery**: Supports time range filter only (uses all game modes)
-- **🔧 Build Simulator**: Supports time range and queue type filters
-- **📈 Progress Tracker**: Supports time range and queue type filters
-
-#### Available Filters
-
-- **Time Range Filters**: Filter analysis by specific time periods (e.g., past season, past year, or all available data)
-- **Queue Type Filters**: Filter by game mode (Ranked Solo/Duo, Ranked Flex, Normal Draft, or all queues)
+For detailed technical implementation information, including agent algorithms, AWS Bedrock integration details, quantitative analysis methodologies, and development challenges, see [tech_detail.md](./tech_detail.md).
 
 ## 🛠️ Technology Stack
 
@@ -213,5 +190,8 @@ This is an open source project developed for [Rift Rewind Hackathon](https://rif
 - **Riot Games** for the official API and game data
 - **AWS Bedrock** for AI model access
 - **Anthropic** for Claude AI models
+- **[Jayde Garrow](https://jaydegarrow.wixsite.com/jaydefonts)** for the PaybAck font used in titles
+- The League of Legends community for inspiration and feedback
+
 - **[Jayde Garrow](https://jaydegarrow.wixsite.com/jaydefonts)** for the PaybAck font used in titles
 - The League of Legends community for inspiration and feedback
